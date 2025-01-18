@@ -1461,6 +1461,12 @@ static std::unique_ptr<printer> create_printer(output_formats format) {
     GGML_ABORT("fatal error");
 }
 
+#define BITNET_DEBUG
+
+#ifdef BITNET_DEBUG
+extern double total_time, make_table_time, convert_time, scale_time;
+#endif
+
 int main(int argc, char ** argv) {
     // try to set locale for unicode characters in markdown
     setlocale(LC_CTYPE, ".UTF-8");
@@ -1639,6 +1645,12 @@ int main(int argc, char ** argv) {
     }
 
     llama_backend_free();
+
+#ifdef BITNET_DEBUG
+    printf("Make table percentage: %f %%\n", (make_table_time / total_time) * 100);
+    printf("Convert percentage: %f %%\n", (convert_time / total_time) * 100);
+    printf("Scale percentage: %f %%\n", (scale_time / total_time) * 100);
+#endif
 
     return 0;
 }

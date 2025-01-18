@@ -502,6 +502,8 @@ static void llama_model_quantize_impl(const std::string & fname_inp, const std::
         case LLAMA_FTYPE_MOSTLY_IQ4_XS:  default_type = GGML_TYPE_IQ4_XS;  break;
         case LLAMA_FTYPE_MOSTLY_IQ3_S:   default_type = GGML_TYPE_IQ3_S;   break;
         case LLAMA_FTYPE_MOSTLY_IQ3_M:   default_type = GGML_TYPE_IQ3_S;   break;
+        // BitNet
+        case LLAMA_FTYPE_MOSTLY_I2_B:    default_type = GGML_TYPE_I2_B;    break;
 
         default: throw std::runtime_error(format("invalid output file type %d\n", ftype));
     }

@@ -209,6 +209,8 @@ add_library(ggml-base
             ../include/ggml-cpp.h
             ../include/ggml-opt.h
             ../include/gguf.h
+            ggml-quants-bitnet.c
+            ggml-quants-bitnet.h
             ggml.c
             ggml-alloc.c
             ggml-backend.cpp
