@@ -1464,7 +1464,7 @@ static std::unique_ptr<printer> create_printer(output_formats format) {
 #define BITNET_DEBUG
 
 #ifdef BITNET_DEBUG
-extern double total_time, make_table_time, convert_time, scale_time;
+extern double total_time, quant_time, make_table_time, convert_time, scale_time;
 #endif
 
 int main(int argc, char ** argv) {
@@ -1647,9 +1647,11 @@ int main(int argc, char ** argv) {
     llama_backend_free();
 
 #ifdef BITNET_DEBUG
-    printf("Make table percentage: %f %%\n", (make_table_time / total_time) * 100);
-    printf("Convert percentage: %f %%\n", (convert_time / total_time) * 100);
-    printf("Scale percentage: %f %%\n", (scale_time / total_time) * 100);
+    printf("Quant time: %.2f seconds (Percentage: %.2f %%)\n", quant_time, (quant_time / total_time) * 100);
+    printf("Make table time: %.2f seconds (Percentage: %.2f %%)\n", make_table_time, (make_table_time / total_time) * 100);
+    printf("Convert time: %.2f seconds (Percentage: %.2f %%)\n", convert_time, (convert_time / total_time) * 100);
+    printf("Scale time: %.2f seconds (Percentage: %.2f %%)\n", scale_time, (scale_time / total_time) * 100);
+    printf("Total time: %.2f seconds\n", total_time);
 #endif
 
     return 0;

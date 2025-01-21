@@ -148,6 +148,12 @@ void ggml_vec_dot_i2_i8_b(int n, float *restrict s, size_t bs, const void *restr
     *s = sumf;
 }
 
+#ifdef BITNET_DEBUG
+extern double make_table_time, convert_time, scale_time;
+extern pthread_mutex_t time_mutex;
+extern int cnt;
+#endif
+
 #define BITNET_MAKE_TABLE2
 #ifndef BITNET_MAKE_TABLE2
 void gemm_make_table(int16_t *restrict table, const int8_t *restrict x, int nr) {
@@ -362,8 +368,20 @@ void gemm_make_table(int16_t *restrict table, const int8_t *restrict y, int nr) 
     sub(table + 252 * nr, table + 240 * nr, y1, nr);
     add(table + 253 * nr, table + 252 * nr, y0, nr);
     sub(table + 255 * nr, table + 252 * nr, y0, nr);
+
+// #ifdef BITNET_DEBUG
+//     pthread_mutex_lock(&time_mutex);
+//     cnt++;
+//     pthread_mutex_unlock(&time_mutex);
+// #endif
 }
 #endif
+
+void ggml_gemm_i2_i8_b_make_table(const int8_t *restrict y, int nrows, int n, int16_t *restrict table){
+    for (int i = 0; i <= nrows; i += 4){
+        gemm_make_table(table + i * 64 * n, y + i * n, n);
+    }
+}
 
 inline static void gemm_look_up(const uint8_t *restrict x, const int16_t *restrict table, int16_t *restrict s, int n,
                                 int nc, int nr) {
@@ -377,13 +395,75 @@ inline static void gemm_look_up(const uint8_t *restrict x, const int16_t *restri
     }
 }
 
+void ggml_gemm_i2_i8_b_LUT(int n, float *restrict s, size_t bs, const void *restrict vx, const void *restrict vy,
+                           int nr, int nc, int16_t *restrict table) {
+    // nr: src1->ne[1], nc: src0->ne[1]
+    assert(n % 4 == 0);
+    // assert(nr % 8 == 0);  // Ensure nr is multiple of 8 for NEON optimization
+
+    const uint8_t *restrict x = vx;
+    const int8_t *restrict y = vy;
+
+    int16_t *restrict ss = (int16_t *)malloc(sizeof(int16_t) * nr * nc);
+    int *restrict ss2 = (int *)malloc(sizeof(int) * nr * nc);
+
+    memset(ss, 0, sizeof(int16_t) * nr * nc);
+    memset(ss2, 0, sizeof(int) * nr * nc);
+
+    static const int group_size = 512;
+
 #ifdef BITNET_DEBUG
-double total_time, make_table_time, convert_time, scale_time;
-pthread_mutex_t time_mutex = PTHREAD_MUTEX_INITIALIZER;
+    double convert_duration = 0.0;
+    double scale_duration = 0.0;
 #endif
 
-void ggml_gemm_i2_i8_b_LUT(int n, float *restrict s, size_t bs, const void *restrict vx, const void *restrict vy,
-                            int nr, int nc) {
+        for (int j = 0; j < n; j += group_size) {
+        int lim = j + group_size < n ? j + group_size : n;
+        for (int i = j; i < lim; i += 4) {
+            const uint8_t *restrict nx = x + (i >> 2);
+
+            gemm_look_up(nx, table + i * 64 * nr, ss, n, nc, nr);
+        }
+
+#ifdef BITNET_DEBUG
+        clock_t start_convert = clock();
+#endif
+        for (int i = 0; i < nc * nr; i++) {
+            ss2[i] += ss[i];
+        }
+#ifdef BITNET_DEBUG
+        clock_t end_convert = clock();
+        convert_duration += (double)(end_convert - start_convert) / CLOCKS_PER_SEC * 1000;
+#endif
+
+        memset(ss, 0, sizeof(int16_t) * nr * nc);
+    }
+
+#ifdef BITNET_DEBUG
+    clock_t start_scale = clock();
+#endif
+    const float *sc = (const float *)(y + nr * n);
+    for (int c = 0; c < nc; c++) {
+        for (int r = 0; r < nr; r++) {
+            s[r * bs + c] = ss2[c * nr + r] * sc[r];  // 将输出转置回来
+        }
+    }
+#ifdef BITNET_DEBUG
+    clock_t end_scale = clock();
+    scale_duration += (double)(end_scale - start_scale) / CLOCKS_PER_SEC * 1000;
+
+    pthread_mutex_lock(&time_mutex);
+    convert_time += convert_duration;
+    scale_time += scale_duration;
+    pthread_mutex_unlock(&time_mutex);
+#endif
+
+    free(ss);
+    free(ss2);
+}
+
+void ggml_gemm_i2_i8_b_LUT2(int n, float *restrict s, size_t bs, const void *restrict vx, const void *restrict vy,
+                           int nr, int nc) {
     // nr: src1->ne[1], nc: src0->ne[1]
     assert(n % 4 == 0);
     // assert(nr % 8 == 0);  // Ensure nr is multiple of 8 for NEON optimization
@@ -402,8 +482,9 @@ void ggml_gemm_i2_i8_b_LUT(int n, float *restrict s, size_t bs, const void *rest
     static const int group_size = 512;
 
 #ifdef BITNET_DEBUG
-    clock_t start = clock();
-    double make_table_duration = 0.0, convert_duration = 0.0, scale_duration = 0.0;
+    double make_table_duration = 0.0;
+    double convert_duration = 0.0;
+    double scale_duration = 0.0;
 #endif
 
     for (int j = 0; j < n; j += group_size) {
@@ -450,11 +531,7 @@ void ggml_gemm_i2_i8_b_LUT(int n, float *restrict s, size_t bs, const void *rest
     clock_t end_scale = clock();
     scale_duration += (double)(end_scale - start_scale) / CLOCKS_PER_SEC * 1000;
 
-    clock_t end = clock();
-    double total_duration = (double)(end - start) / CLOCKS_PER_SEC * 1000;
-
     pthread_mutex_lock(&time_mutex);
-    total_time += total_duration;
     make_table_time += make_table_duration;
     convert_time += convert_duration;
     scale_time += scale_duration;

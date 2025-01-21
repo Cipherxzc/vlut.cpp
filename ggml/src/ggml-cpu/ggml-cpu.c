@@ -1,3 +1,4 @@
+#include <bits/types/clock_t.h>
 #define _CRT_SECURE_NO_DEPRECATE  // Disables "unsafe" warnings on Windows
 #define _USE_MATH_DEFINES         // For M_PI on MSVC
 
@@ -6972,7 +6973,23 @@ void print_tensor(FILE *outfile, const char *name, const struct ggml_tensor *ten
 }
 
 #define BITNET_TRANS
+#define BITNET_DEBUG
+
+#ifdef BITNET_TRANS
+int16_t *table;
+#endif
+
+#ifdef BITNET_DEBUG
+double total_time, quant_time, make_table_time, convert_time, scale_time;
+pthread_mutex_t time_mutex = PTHREAD_MUTEX_INITIALIZER;
+int cnt;
+#endif
+
 static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *params, struct ggml_tensor *dst) {
+#ifdef BITNET_DEBUG
+    clock_t start = clock();
+#endif
+
     const struct ggml_tensor *src0 = dst->src[0];
     const struct ggml_tensor *src1 = dst->src[1];
 
@@ -7028,7 +7045,7 @@ UseGgmlGemm1:;
 
 #ifdef BITNET_TRANS
     const int gemm_lim = 100;
-    bool bitnet_trans = src0->type == GGML_TYPE_I2_B && ne11 > gemm_lim;
+    bool bitnet_trans = ((src0->type == GGML_TYPE_I2_B) && (ne11 > gemm_lim));
 #endif
 
     if (src1->type != vec_dot_type) {
@@ -7041,6 +7058,9 @@ UseGgmlGemm1:;
         assert(params->wsize >= ne13 * nbw3);
         GGML_ASSERT(src1->type == GGML_TYPE_F32);
 
+#ifdef BITNET_DEBUG
+        clock_t quant_start = clock();
+#endif
         for (int64_t i13 = 0; i13 < ne13; ++i13) {
             for (int64_t i12 = 0; i12 < ne12; ++i12) {
 #ifdef BITNET_TRANS
@@ -7063,6 +7083,14 @@ UseGgmlGemm1:;
                 }
             }
         }
+#ifdef BITNET_DEBUG
+        clock_t quant_end = clock();
+        if (bitnet_trans){
+            pthread_mutex_lock(&time_mutex);
+            quant_time += (double)(quant_end - quant_start) / CLOCKS_PER_SEC * 1000;
+            pthread_mutex_unlock(&time_mutex);
+        }
+#endif
     }
 
     if (ith == 0) {
@@ -7094,17 +7122,74 @@ UseGgmlGemm2:;
 
 #ifdef BITNET_TRANS
     if (ggml_n_dims(src0) == 2 && bitnet_trans){
-        const void * src1_wdata      = (src1->type == vec_dot_type) ? src1->data : params->wdata;
+        const int8_t * src1_wdata = (src1->type == vec_dot_type) ? src1->data : params->wdata;
+        int64_t src1_start = (ith * ne00) / nth;
+        int64_t src1_end   = ((ith + 1) * ne00) / nth;
+        // 打表每4行一组
+        src1_start = (src1_start % 4) ? src1_start + 4 - (src1_start % 4): src1_start;
+        src1_end   = (src1_end   % 4) ? src1_end   + 4 - (src1_end   % 4): src1_end;
+
+#ifdef BITNET_DEBUG
+        clock_t make_table_start = clock();
+#endif
+        if (src1_start < src1_end) {
+            ggml_gemm_i2_i8_b_make_table(src1_wdata + src1_start * ne11, src1_end - src1_start, ne11,
+                                         table + src1_start * 64 * ne11);
+        }
+#ifdef BITNET_DEBUG
+        clock_t make_table_end = clock();
+        pthread_mutex_lock(&time_mutex);
+        make_table_time += (double)(make_table_end - make_table_start) / CLOCKS_PER_SEC * 1000;
+        pthread_mutex_unlock(&time_mutex);
+#endif
+
+        ggml_barrier(params->threadpool);
+
+
         int64_t src0_start = (ith * ne01) / nth;
         int64_t src0_end   = ((ith + 1) * ne01) / nth;
-        if (src0_start >= src0_end) return;
+        // 打表每4行一组
+        src0_start = (src0_start % 4) ? src0_start + 4 - (src0_start % 4): src0_start;
+        src0_end   = (src0_end   % 4) ? src0_end   + 4 - (src0_end   % 4): src0_end;
 
-        ggml_gemm_i2_i8_b_LUT(ne00, ((float *)(dst->data)) + src0_start, ne01,
-                              (const char *)src0->data + src0_start * nb01, (const char *)src1_wdata, ne11,
-                              src0_end - src0_start);
+        if (src0_start < src0_end) {
+            ggml_gemm_i2_i8_b_LUT(ne00, ((float *)(dst->data)) + src0_start, ne01,
+                                  (const char *)src0->data + src0_start * nb01, (const char *)src1_wdata, ne11,
+                                  src0_end - src0_start, table);
+        }
+#ifdef BITNET_DEBUG
+        clock_t end = clock();
+        pthread_mutex_lock(&time_mutex);
+        total_time += (double)(end - start) / CLOCKS_PER_SEC * 1000;
+        pthread_mutex_unlock(&time_mutex);
+#endif
         return;
     }
 #endif
+
+// #ifdef BITNET_TRANS
+//     if (ggml_n_dims(src0) == 2 && bitnet_trans) {
+//         const int8_t *src1_wdata = (src1->type == vec_dot_type) ? src1->data : params->wdata;
+//         int64_t src0_start = (ith * ne01) / nth;
+//         int64_t src0_end = ((ith + 1) * ne01) / nth;
+//         // 打表每4行一组
+//         src0_start = (src0_start % 4) ? src0_start + 4 - (src0_start % 4) : src0_start;
+//         src0_end = (src0_end % 4) ? src0_end + 4 - (src0_end % 4) : src0_end;
+
+//         if (src0_start < src0_end) {
+//             ggml_gemm_i2_i8_b_LUT2(ne00, ((float *)(dst->data)) + src0_start, ne01,
+//                                   (const char *)src0->data + src0_start * nb01, (const char *)src1_wdata, ne11,
+//                                   src0_end - src0_start);
+//         }
+// #ifdef BITNET_DEBUG
+//         clock_t end = clock();
+//         pthread_mutex_lock(&time_mutex);
+//         total_time += (double)(end - start) / CLOCKS_PER_SEC * 1000;
+//         pthread_mutex_unlock(&time_mutex);
+// #endif
+//         return;
+//     }
+// #endif
 
     // This is the size of the first dimension of the result, so we can iterate that way. (see the ASSERT above, these
     // are the same numbers)
@@ -12211,6 +12296,16 @@ static void ggml_compute_forward(struct ggml_compute_params *params, struct ggml
     //         }
     //     }
     // }
+
+// #ifdef BITNET_DEBUG
+//     if (tensor->op == GGML_OP_MUL_MAT && tensor->src[0]->type == GGML_TYPE_I2_B){
+//         ggml_barrier(params->threadpool);
+//         if (params->ith == 0){
+//             printf("%d ", cnt);
+//             cnt = 0;
+//         }
+//     }
+// #endif
 }
 
 // Android's libc implementation "bionic" does not support setting affinity
@@ -12941,6 +13036,10 @@ struct ggml_cplan ggml_graph_plan(const struct ggml_cgraph *cgraph, int n_thread
     }
     
     // BitNet I8_B
+#ifdef BITNET_TRANS
+    table = (int16_t *)malloc(work_size * 256);
+#endif
+
     const int MAX_INPUT_LENGTH = 2560;
     work_size += MAX_INPUT_LENGTH * sizeof(float);
 
