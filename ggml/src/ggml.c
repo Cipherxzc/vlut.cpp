@@ -900,6 +900,13 @@ static const struct ggml_type_traits type_traits[GGML_TYPE_COUNT] =
                 .type_size = sizeof(uint8_t),
                 .is_quantized = true,
             },
+        [GGML_TYPE_I1_58_B] =
+            {
+                .type_name = "i1_58_b",
+                .blck_size = 5,
+                .type_size = sizeof(uint8_t),
+                .is_quantized = true,
+            },
         [GGML_TYPE_I8_B] =
             {
                 .type_name = "i8_b",
@@ -1220,7 +1227,7 @@ size_t ggml_nbytes(const struct ggml_tensor * tensor) {
         }
     }
     else {
-        nbytes = tensor->ne[0]*tensor->nb[0]/blck_size;
+        nbytes = (tensor->ne[0] * tensor->nb[0] + blck_size - 1)/blck_size;
         for (int i = 1; i < GGML_MAX_DIMS; ++i) {
             nbytes += (tensor->ne[i] - 1)*tensor->nb[i];
         }
@@ -6516,6 +6523,9 @@ size_t ggml_quantize_chunk(
         // BitNet
         case GGML_TYPE_I2_B:
             result = quantize_i2_b(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
+            break;
+        case GGML_TYPE_I1_58_B:
+            result = quantize_i1_58_b(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
         default:
             assert(false);

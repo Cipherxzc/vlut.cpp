@@ -389,8 +389,9 @@ extern "C" {
         // GGML_TYPE_IQ4_NL_4_8 = 37,
         // GGML_TYPE_IQ4_NL_8_8 = 38,
         GGML_TYPE_I2_B = 39,
-        GGML_TYPE_I8_B = 40,
-        GGML_TYPE_COUNT = 41,
+        GGML_TYPE_I1_58_B = 40,
+        GGML_TYPE_I8_B = 41,
+        GGML_TYPE_COUNT = 42,
     };
 
     // precision

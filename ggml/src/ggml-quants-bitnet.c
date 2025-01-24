@@ -43,3 +43,32 @@ size_t quantize_i2_b(const float *restrict src, void *restrict dst, int64_t nrow
 
     return nrows * row_size;
 }
+
+size_t quantize_i1_58_b(const float *restrict src, void *restrict dst, int64_t nrows, int64_t n_per_row,
+                     const float *imatrix) {
+    // 1.58 bits per weight
+    UNUSED(imatrix);
+
+    size_t row_size = ggml_row_size(GGML_TYPE_I1_58_B, n_per_row);
+
+    int n = nrows * n_per_row;
+
+    const double eps = 1e-6;
+
+    // 3^5 = 243 < 2^8 = 256
+    uint8_t *i1_58_weight = (uint8_t *)dst;
+    for (int i = 0; i * 5 < n; i++) {
+        uint8_t x = 0;
+        for (int j = 4; j >= 0; j--) {
+            uint8_t tmp = 1;  // tmp - 1 为真值
+            double v = (double)src[i * 5 + j];
+            if (fabs(v) > eps) {
+                tmp = v > 0. ? 2 : 0;
+            }
+            x = x * 3 + tmp;
+        }
+        i1_58_weight[i] = x;
+    }
+
+    return nrows * row_size;
+}

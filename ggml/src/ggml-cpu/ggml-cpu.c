@@ -445,9 +445,16 @@ static const struct ggml_type_traits_cpu type_traits_cpu[GGML_TYPE_COUNT] = {
             .vec_dot_type = GGML_TYPE_I8_B,
             .nrows = 1,
         },
-    [GGML_TYPE_I8_B] = {
-        .from_float = quantize_row_i8_b,
-    }
+    [GGML_TYPE_I1_58_B] = 
+        {
+            .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i1_58_i8_b,
+            .vec_dot_type = GGML_TYPE_I8_B,
+            .nrows = 1,
+        },
+    [GGML_TYPE_I8_B] = 
+        {
+            .from_float = quantize_row_i8_b,
+        },
 };
 
 const struct ggml_type_traits_cpu *ggml_get_type_traits_cpu(enum ggml_type type) { return &type_traits_cpu[type]; }
@@ -6958,11 +6965,11 @@ void print_tensor(FILE *outfile, const char *name, const struct ggml_tensor *ten
 
     const uint8_t *data = tensor->data;
     for (int i2 = 0; i2 < tensor->ne[2]; i2++) {
-        for (int i1 = 0; i1 < tensor->ne[1]; i1++) {
-            // for (int i1 = 0; i1 < tensor->ne[1] && i1 < 100; i1++){
+        // for (int i1 = 0; i1 < tensor->ne[1]; i1++) {
+        for (int i1 = 0; i1 < tensor->ne[1] && i1 < 10; i1++){
             const uint8_t *d = data + i2 * tensor->nb[2] + i1 * tensor->nb[1];
-            for (int i0 = 0; i0 < tensor->ne[0] * ggml_type_size(tensor->type); i0++) {
-                // for (int i0 = 0; i0 < tensor->ne[0] * ggml_type_size(tensor->type) && i0 < 100; i0++) {
+            // for (int i0 = 0; i0 < tensor->ne[0] * ggml_type_size(tensor->type); i0++) {
+            for (int i0 = 0; i0 < tensor->ne[0] * ggml_type_size(tensor->type) && i0 < 100; i0++) {
                 fprintf(outfile, "%d ", d[i0]);
             }
             fprintf(outfile, "\n");
@@ -6982,7 +6989,6 @@ int16_t *table;
 #ifdef BITNET_DEBUG
 double total_time, quant_time, make_table_time, convert_time, scale_time;
 pthread_mutex_t time_mutex = PTHREAD_MUTEX_INITIALIZER;
-int cnt;
 #endif
 
 static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *params, struct ggml_tensor *dst) {
@@ -7044,8 +7050,8 @@ UseGgmlGemm1:;
 #endif
 
 #ifdef BITNET_TRANS
-    const int gemm_lim = 100;
-    bool bitnet_trans = ((src0->type == GGML_TYPE_I2_B) && (ne11 > gemm_lim));
+    const int gemm_lim = 0;
+    bool bitnet_trans = (src0->type == GGML_TYPE_I2_B || src0->type == GGML_TYPE_I1_58_B) && (ne11 > gemm_lim);
 #endif
 
     if (src1->type != vec_dot_type) {
@@ -7120,21 +7126,31 @@ UseGgmlGemm1:;
 UseGgmlGemm2:;
 #endif
 
+// #define BITNET_LUT2
+
+#ifndef BITNET_LUT2
 #ifdef BITNET_TRANS
     if (ggml_n_dims(src0) == 2 && bitnet_trans){
         const int8_t * src1_wdata = (src1->type == vec_dot_type) ? src1->data : params->wdata;
+
+        int nrows = src0->type == GGML_TYPE_I2_B ? 4 : 5;
+
         int64_t src1_start = (ith * ne00) / nth;
         int64_t src1_end   = ((ith + 1) * ne00) / nth;
-        // 打表每4行一组
-        src1_start = (src1_start % 4) ? src1_start + 4 - (src1_start % 4): src1_start;
-        src1_end   = (src1_end   % 4) ? src1_end   + 4 - (src1_end   % 4): src1_end;
+        src1_start = (src1_start % nrows) ? src1_start + nrows - (src1_start % nrows): src1_start;
+        src1_end   = (src1_end   % nrows) ? src1_end   + nrows - (src1_end   % nrows): src1_end;
 
 #ifdef BITNET_DEBUG
         clock_t make_table_start = clock();
 #endif
         if (src1_start < src1_end) {
-            ggml_gemm_i2_i8_b_make_table(src1_wdata + src1_start * ne11, src1_end - src1_start, ne11,
-                                         table + src1_start * 64 * ne11);
+            if (src0->type == GGML_TYPE_I2_B) {
+                ggml_gemm_i2_i8_b_make_table(src1_wdata + src1_start * ne11, src1_end - src1_start, ne11,
+                                             table + src1_start * 64 * ne11);
+            } else {
+                ggml_gemm_i1_58_i8_b_make_table(src1_wdata + src1_start * ne11, src1_end - src1_start, ne11,
+                                                table + src1_start / 5 * 243 * ne11);
+            }
         }
 #ifdef BITNET_DEBUG
         clock_t make_table_end = clock();
@@ -7147,15 +7163,18 @@ UseGgmlGemm2:;
 
 
         int64_t src0_start = (ith * ne01) / nth;
-        int64_t src0_end   = ((ith + 1) * ne01) / nth;
-        // 打表每4行一组
-        src0_start = (src0_start % 4) ? src0_start + 4 - (src0_start % 4): src0_start;
-        src0_end   = (src0_end   % 4) ? src0_end   + 4 - (src0_end   % 4): src0_end;
+        int64_t src0_end = ((ith + 1) * ne01) / nth;
+        src0_start = (src0_start % nrows) ? src0_start + nrows - (src0_start % nrows) : src0_start;
+        src0_end = (src0_end % nrows) ? src0_end + nrows - (src0_end % nrows) : src0_end;
 
         if (src0_start < src0_end) {
-            ggml_gemm_i2_i8_b_LUT(ne00, ((float *)(dst->data)) + src0_start, ne01,
-                                  (const char *)src0->data + src0_start * nb01, (const char *)src1_wdata, ne11,
-                                  src0_end - src0_start, table);
+            if (src0->type == GGML_TYPE_I2_B) {
+                ggml_gemm_i2_i8_b_LUT(ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + src0_start * nb01,
+                                      src1_wdata, ne11, src0_end - src0_start, table);
+            }else{
+                ggml_gemm_i1_58_i8_b_LUT(ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + src0_start * nb01,
+                                         src1_wdata, ne11, src0_end - src0_start, table);
+            }
         }
 #ifdef BITNET_DEBUG
         clock_t end = clock();
@@ -7166,30 +7185,37 @@ UseGgmlGemm2:;
         return;
     }
 #endif
+#else
+#ifdef BITNET_TRANS
+    if (ggml_n_dims(src0) == 2 && bitnet_trans) {
+        const int8_t * src1_wdata = (src1->type == vec_dot_type) ? src1->data : params->wdata;
 
-// #ifdef BITNET_TRANS
-//     if (ggml_n_dims(src0) == 2 && bitnet_trans) {
-//         const int8_t *src1_wdata = (src1->type == vec_dot_type) ? src1->data : params->wdata;
-//         int64_t src0_start = (ith * ne01) / nth;
-//         int64_t src0_end = ((ith + 1) * ne01) / nth;
-//         // 打表每4行一组
-//         src0_start = (src0_start % 4) ? src0_start + 4 - (src0_start % 4) : src0_start;
-//         src0_end = (src0_end % 4) ? src0_end + 4 - (src0_end % 4) : src0_end;
+        int nrows = src0->type == GGML_TYPE_I2_B ? 4 : 5;
 
-//         if (src0_start < src0_end) {
-//             ggml_gemm_i2_i8_b_LUT2(ne00, ((float *)(dst->data)) + src0_start, ne01,
-//                                   (const char *)src0->data + src0_start * nb01, (const char *)src1_wdata, ne11,
-//                                   src0_end - src0_start);
-//         }
-// #ifdef BITNET_DEBUG
-//         clock_t end = clock();
-//         pthread_mutex_lock(&time_mutex);
-//         total_time += (double)(end - start) / CLOCKS_PER_SEC * 1000;
-//         pthread_mutex_unlock(&time_mutex);
-// #endif
-//         return;
-//     }
-// #endif
+        int64_t src0_start = (ith * ne01) / nth;
+        int64_t src0_end = ((ith + 1) * ne01) / nth;
+        src0_start = (src0_start % nrows) ? src0_start + nrows - (src0_start % nrows) : src0_start;
+        src0_end = (src0_end % nrows) ? src0_end + nrows - (src0_end % nrows) : src0_end;
+
+        if (src0_start < src0_end) {
+            if (src0->type == GGML_TYPE_I2_B){
+                ggml_gemm_i2_i8_b_LUT2(ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + src0_start * nb01,
+                                       src1_wdata, ne11, src0_end - src0_start);
+            } else{
+                ggml_gemm_i1_58_i8_b_LUT2(ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + src0_start * nb01,
+                                          src1_wdata, ne11, src0_end - src0_start);
+            }
+        }
+#ifdef BITNET_DEBUG
+        clock_t end = clock();
+        pthread_mutex_lock(&time_mutex);
+        total_time += (double)(end - start) / CLOCKS_PER_SEC * 1000;
+        pthread_mutex_unlock(&time_mutex);
+#endif
+        return;
+    }
+#endif
+#endif
 
     // This is the size of the first dimension of the result, so we can iterate that way. (see the ASSERT above, these
     // are the same numbers)
@@ -12280,32 +12306,22 @@ static void ggml_compute_forward(struct ggml_compute_params *params, struct ggml
         }
     }
 
-    // if (tensor->op == GGML_OP_MUL_MAT && tensor->src[0]->type != GGML_TYPE_I2_B) {
+    // if (tensor->op == GGML_OP_MUL_MAT && (tensor->src[0]->type == GGML_TYPE_I2_B || tensor->src[0]->type == GGML_TYPE_I1_58_B)) {
     //     ggml_barrier(params->threadpool);
     //     if (params->ith == 0) {
     //         printf("write tensors\n");
     //         FILE *outfile = fopen("/home/cipherxzc/Projects/llama.cpp/mytest/tensors", "a");
-    //         print_tensor(outfile, "weight", tensor->src[0]);
-    //         print_tensor(outfile, "activation", tensor->src[1]);
+    //         // print_tensor(outfile, "weight", tensor->src[0]);
+    //         // print_tensor(outfile, "activation", tensor->src[1]);
     //         print_tensor(outfile, "result", tensor);
     //         fclose(outfile);
     //         static int cnt = 0;
     //         cnt++;
-    //         if (cnt == 10 || true) {
+    //         if (cnt == 3) {
     //             exit(0);
     //         }
     //     }
     // }
-
-// #ifdef BITNET_DEBUG
-//     if (tensor->op == GGML_OP_MUL_MAT && tensor->src[0]->type == GGML_TYPE_I2_B){
-//         ggml_barrier(params->threadpool);
-//         if (params->ith == 0){
-//             printf("%d ", cnt);
-//             cnt = 0;
-//         }
-//     }
-// #endif
 }
 
 // Android's libc implementation "bionic" does not support setting affinity

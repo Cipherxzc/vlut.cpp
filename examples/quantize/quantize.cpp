@@ -55,6 +55,7 @@ static const std::vector<struct quant_option> QUANT_OPTIONS = {
     { "COPY",     LLAMA_FTYPE_ALL_F32,         "only copy tensors, no quantizing",  },
     // BitNet
     { "I2_B",     LLAMA_FTYPE_MOSTLY_I2_B,     "BitNet 2 bit",                      },
+    { "I1_58_B",  LLAMA_FTYPE_MOSTLY_I1_58_B,  "BitNet 1.58 bit",                   },
 };
 
 static const char * const LLM_KV_QUANTIZE_IMATRIX_FILE       = "quantize.imatrix.file";

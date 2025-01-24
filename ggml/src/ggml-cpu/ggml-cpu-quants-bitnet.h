@@ -9,9 +9,13 @@
 void quantize_row_i8_b(const float* GGML_RESTRICT x, void* GGML_RESTRICT y, int64_t n);
 void quantize_row_i8_b_trans(const float* GGML_RESTRICT x, void* GGML_RESTRICT y, int64_t n, int64_t row_size, float* scale);
 void ggml_vec_dot_i2_i8_b(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, size_t bx, const void* GGML_RESTRICT vy, size_t by, int nrc);
+void ggml_vec_dot_i1_58_i8_b(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, size_t bx, const void* GGML_RESTRICT vy, size_t by, int nrc);
 void ggml_gemm_i2_i8_b_make_table(const int8_t *GGML_RESTRICT y, int nrows, int n, int16_t *GGML_RESTRICT table);
+void ggml_gemm_i1_58_i8_b_make_table(const int8_t* GGML_RESTRICT y, int nrows, int n, int16_t* GGML_RESTRICT table);
 void ggml_gemm_i2_i8_b_LUT(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc, int16_t* GGML_RESTRICT table);
+void ggml_gemm_i1_58_i8_b_LUT(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc, int16_t* GGML_RESTRICT table);
 void ggml_gemm_i2_i8_b_LUT2(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
+void ggml_gemm_i1_58_i8_b_LUT2(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
 
 #define GGML_TABLE_BEGIN(type, name, size) static const type name[size] = {
 #define GGML_TABLE_END() };
