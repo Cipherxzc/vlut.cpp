@@ -1,3 +1,4 @@
+#include <bits/time.h>
 #include <bits/types/clock_t.h>
 #define _CRT_SECURE_NO_DEPRECATE  // Disables "unsafe" warnings on Windows
 #define _USE_MATH_DEFINES         // For M_PI on MSVC
@@ -6987,13 +6988,23 @@ int16_t *table;
 #endif
 
 #ifdef BITNET_DEBUG
-double total_time, quant_time, make_table_time, convert_time, scale_time;
+long long total_time, quant_time, make_table_time, convert_time, scale_time;
 pthread_mutex_t time_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static struct timespec get_thread_cpu_time(){
+    struct timespec ts;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
+    return ts;
+}
+
+static long long get_time_diff(const struct timespec start, const struct timespec end){
+    return (end.tv_sec - start.tv_sec) * 1000000000LL + (end.tv_nsec - start.tv_nsec);
+}
 #endif
 
 static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *params, struct ggml_tensor *dst) {
 #ifdef BITNET_DEBUG
-    clock_t start = clock();
+    struct timespec start = get_thread_cpu_time();
 #endif
 
     const struct ggml_tensor *src0 = dst->src[0];
@@ -7065,7 +7076,7 @@ UseGgmlGemm1:;
         GGML_ASSERT(src1->type == GGML_TYPE_F32);
 
 #ifdef BITNET_DEBUG
-        clock_t quant_start = clock();
+        struct timespec quant_start = get_thread_cpu_time();
 #endif
         for (int64_t i13 = 0; i13 < ne13; ++i13) {
             for (int64_t i12 = 0; i12 < ne12; ++i12) {
@@ -7090,10 +7101,10 @@ UseGgmlGemm1:;
             }
         }
 #ifdef BITNET_DEBUG
-        clock_t quant_end = clock();
+        struct timespec quant_end = get_thread_cpu_time();
         if (bitnet_trans){
             pthread_mutex_lock(&time_mutex);
-            quant_time += (double)(quant_end - quant_start) / CLOCKS_PER_SEC * 1000;
+            quant_time += get_time_diff(quant_start, quant_end);
             pthread_mutex_unlock(&time_mutex);
         }
 #endif
@@ -7126,7 +7137,7 @@ UseGgmlGemm1:;
 UseGgmlGemm2:;
 #endif
 
-// #define BITNET_LUT2
+#define BITNET_LUT2
 
 #ifndef BITNET_LUT2
 #ifdef BITNET_TRANS
@@ -7141,7 +7152,7 @@ UseGgmlGemm2:;
         src1_end   = (src1_end   % nrows) ? src1_end   + nrows - (src1_end   % nrows): src1_end;
 
 #ifdef BITNET_DEBUG
-        clock_t make_table_start = clock();
+        struct timespec make_table_start = get_thread_cpu_time();
 #endif
         if (src1_start < src1_end) {
             if (src0->type == GGML_TYPE_I2_B) {
@@ -7153,9 +7164,9 @@ UseGgmlGemm2:;
             }
         }
 #ifdef BITNET_DEBUG
-        clock_t make_table_end = clock();
+        struct timespec make_table_end = get_thread_cpu_time();
         pthread_mutex_lock(&time_mutex);
-        make_table_time += (double)(make_table_end - make_table_start) / CLOCKS_PER_SEC * 1000;
+        make_table_time += get_time_diff(make_table_start, make_table_end);
         pthread_mutex_unlock(&time_mutex);
 #endif
 
@@ -7177,9 +7188,9 @@ UseGgmlGemm2:;
             }
         }
 #ifdef BITNET_DEBUG
-        clock_t end = clock();
+        struct timespec end = get_thread_cpu_time();
         pthread_mutex_lock(&time_mutex);
-        total_time += (double)(end - start) / CLOCKS_PER_SEC * 1000;
+        total_time += get_time_diff(start, end);
         pthread_mutex_unlock(&time_mutex);
 #endif
         return;
@@ -7207,9 +7218,9 @@ UseGgmlGemm2:;
             }
         }
 #ifdef BITNET_DEBUG
-        clock_t end = clock();
+        struct timespec end = get_thread_cpu_time();
         pthread_mutex_lock(&time_mutex);
-        total_time += (double)(end - start) / CLOCKS_PER_SEC * 1000;
+        total_time += get_time_diff(start, end);
         pthread_mutex_unlock(&time_mutex);
 #endif
         return;

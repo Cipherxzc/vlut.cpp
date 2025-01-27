@@ -186,8 +186,18 @@ inline static void gemm_look_up_I1_58(const uint8_t *restrict x, const int16_t *
 
 
 #ifdef BITNET_DEBUG
-extern double make_table_time, convert_time, scale_time;
+extern long long make_table_time, convert_time, scale_time;
 extern pthread_mutex_t time_mutex;
+
+static struct timespec get_thread_cpu_time() {
+    struct timespec ts;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
+    return ts;
+}
+
+static long long get_time_diff(const struct timespec start, const struct timespec end) {
+    return (end.tv_sec - start.tv_sec) * 1000000000LL + (end.tv_nsec - start.tv_nsec);
+}
 #endif
 
 
@@ -234,21 +244,21 @@ void ggml_gemm_i2_i8_b_LUT(int n, float *restrict s, size_t bs, const void *rest
         }
 
 #ifdef BITNET_DEBUG
-        clock_t start_convert = clock();
+        struct timespec start_convert = get_thread_cpu_time();
 #endif
         for (int i = 0; i < nc * nr; i++) {
             ss2[i] += ss[i];
         }
 #ifdef BITNET_DEBUG
-        clock_t end_convert = clock();
-        convert_duration += (double)(end_convert - start_convert) / CLOCKS_PER_SEC * 1000;
+        struct timespec end_convert = get_thread_cpu_time();
+        convert_duration += get_time_diff(start_convert, end_convert);
 #endif
 
         memset(ss, 0, sizeof(int16_t) * nr * nc);
     }
 
 #ifdef BITNET_DEBUG
-    clock_t start_scale = clock();
+    struct timespec start_scale = get_thread_cpu_time();
 #endif
     const float *sc = (const float *)(y + nr * n);
     for (int c = 0; c < nc; c++) {
@@ -257,8 +267,8 @@ void ggml_gemm_i2_i8_b_LUT(int n, float *restrict s, size_t bs, const void *rest
         }
     }
 #ifdef BITNET_DEBUG
-    clock_t end_scale = clock();
-    scale_duration += (double)(end_scale - start_scale) / CLOCKS_PER_SEC * 1000;
+    struct timespec end_scale = get_thread_cpu_time();
+    scale_duration += get_time_diff(start_scale, end_scale);
 
     pthread_mutex_lock(&time_mutex);
     convert_time += convert_duration;
@@ -300,20 +310,20 @@ void ggml_gemm_i1_58_i8_b_LUT(int n, float *restrict s, size_t bs, const void *r
         }
 
 #ifdef BITNET_DEBUG
-        clock_t start_convert = clock();
+        struct timespec start_convert = get_thread_cpu_time();
 #endif
         for (int i = 0; i < nc * nr; i++) {
             ss2[i] += ss[i];
         }
         memset(ss, 0, sizeof(int16_t) * nr * nc);
 #ifdef BITNET_DEBUG
-        clock_t end_convert = clock();
-        convert_duration += (double)(end_convert - start_convert) / CLOCKS_PER_SEC * 1000;
+        struct timespec end_convert = get_thread_cpu_time();
+        convert_duration += get_time_diff(start_convert, end_convert);
 #endif
     }
 
 #ifdef BITNET_DEBUG
-    clock_t start_scale = clock();
+    struct timespec start_scale = get_thread_cpu_time();
 #endif
     const float *sc = (const float *)(y + nr * n);
     for (int c = 0; c < nc; c++) {
@@ -322,8 +332,8 @@ void ggml_gemm_i1_58_i8_b_LUT(int n, float *restrict s, size_t bs, const void *r
         }
     }
 #ifdef BITNET_DEBUG
-    clock_t end_scale = clock();
-    scale_duration += (double)(end_scale - start_scale) / CLOCKS_PER_SEC * 1000;
+    struct timespec end_scale = get_thread_cpu_time();
+    scale_duration += get_time_diff(start_scale, end_scale);
 
     pthread_mutex_lock(&time_mutex);
     convert_time += convert_duration;
@@ -364,12 +374,12 @@ void ggml_gemm_i2_i8_b_LUT2(int n, float *restrict s, size_t bs, const void *res
         int lim = j + group_size < n ? j + group_size : n;
         for (int i = j; i < lim; i += 4) {
 #ifdef BITNET_DEBUG
-            clock_t start_make_table = clock();
+            struct timespec start_make_table = get_thread_cpu_time();
 #endif
             gemm_make_table_I2(table, y + i * nr, nr);
 #ifdef BITNET_DEBUG
-            clock_t end_make_table = clock();
-            make_table_duration += (double)(end_make_table - start_make_table) / CLOCKS_PER_SEC * 1000;
+            struct timespec end_make_table = get_thread_cpu_time();
+            make_table_duration += get_time_diff(start_make_table, end_make_table);
 #endif
 
             const uint8_t *restrict nx = x + (i >> 2);
@@ -378,20 +388,20 @@ void ggml_gemm_i2_i8_b_LUT2(int n, float *restrict s, size_t bs, const void *res
         }
 
 #ifdef BITNET_DEBUG
-        clock_t start_convert = clock();
+        struct timespec start_convert = get_thread_cpu_time();
 #endif
         for (int i = 0; i < nc * nr; i++) {
             ss2[i] += ss[i];
         }
         memset(ss, 0, sizeof(int16_t) * nr * nc);
 #ifdef BITNET_DEBUG
-        clock_t end_convert = clock();
-        convert_duration += (double)(end_convert - start_convert) / CLOCKS_PER_SEC * 1000;
+        struct timespec end_convert = get_thread_cpu_time();
+        convert_duration += get_time_diff(start_convert, end_convert);
 #endif
     }
 
 #ifdef BITNET_DEBUG
-    clock_t start_scale = clock();
+    struct timespec start_scale = get_thread_cpu_time();
 #endif
     const float *sc = (const float *)(y + nr * n);
     for (int c = 0; c < nc; c++) {
@@ -400,8 +410,8 @@ void ggml_gemm_i2_i8_b_LUT2(int n, float *restrict s, size_t bs, const void *res
         }
     }
 #ifdef BITNET_DEBUG
-    clock_t end_scale = clock();
-    scale_duration += (double)(end_scale - start_scale) / CLOCKS_PER_SEC * 1000;
+    struct timespec end_scale = get_thread_cpu_time();
+    scale_duration += get_time_diff(start_scale, end_scale);
 
     pthread_mutex_lock(&time_mutex);
     make_table_time += make_table_duration;
@@ -443,12 +453,12 @@ void ggml_gemm_i1_58_i8_b_LUT2(int n, float *restrict s, size_t bs, const void *
         int lim = j + group_size < n ? j + group_size : n;
         for (int i = j; i < lim; i += 5) {
 #ifdef BITNET_DEBUG
-            clock_t start_make_table = clock();
+            struct timespec start_make_table = get_thread_cpu_time();
 #endif
             gemm_make_table_I1_58(table, y + i * nr, nr);
 #ifdef BITNET_DEBUG
-            clock_t end_make_table = clock();
-            make_table_duration += (double)(end_make_table - start_make_table) / CLOCKS_PER_SEC * 1000;
+            struct timespec end_make_table = get_thread_cpu_time();
+            make_table_duration += get_time_diff(start_make_table, end_make_table);
 #endif
 
             const uint8_t *restrict nx = x + (i / 5);
@@ -457,20 +467,20 @@ void ggml_gemm_i1_58_i8_b_LUT2(int n, float *restrict s, size_t bs, const void *
         }
 
 #ifdef BITNET_DEBUG
-        clock_t start_convert = clock();
+        struct timespec start_convert = get_thread_cpu_time();
 #endif
         for (int i = 0; i < nc * nr; i++) {
             ss2[i] += ss[i];
         }
         memset(ss, 0, sizeof(int16_t) * nr * nc);
 #ifdef BITNET_DEBUG
-        clock_t end_convert = clock();
-        convert_duration += (double)(end_convert - start_convert) / CLOCKS_PER_SEC * 1000;
+        struct timespec end_convert = get_thread_cpu_time();
+        convert_duration += get_time_diff(start_convert, end_convert);
 #endif
     }
 
 #ifdef BITNET_DEBUG
-    clock_t start_scale = clock();
+    struct timespec start_scale = get_thread_cpu_time();
 #endif
     const float *sc = (const float *)(y + nr * n);
     for (int c = 0; c < nc; c++) {
@@ -479,8 +489,8 @@ void ggml_gemm_i1_58_i8_b_LUT2(int n, float *restrict s, size_t bs, const void *
         }
     }
 #ifdef BITNET_DEBUG
-    clock_t end_scale = clock();
-    scale_duration += (double)(end_scale - start_scale) / CLOCKS_PER_SEC * 1000;
+    struct timespec end_scale = get_thread_cpu_time();
+    scale_duration += get_time_diff(start_scale, end_scale);
 
     pthread_mutex_lock(&time_mutex);
     make_table_time += make_table_duration;
