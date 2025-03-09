@@ -15,9 +15,9 @@ void ggml_vec_dot_i1_58_i8_b(int n, float* GGML_RESTRICT s, size_t bs, const voi
 void ggml_gemm_i2_i8_b_make_table(const int8_t *GGML_RESTRICT y, int nrows, int n, int16_t *GGML_RESTRICT table);
 void ggml_gemm_i1_58_i8_b_make_table(const int8_t* GGML_RESTRICT y, int nrows, int n, int16_t* GGML_RESTRICT table);
 
-// LUT1：集中打表，按列遍历weight
-// LUT2：边计算边打表，按列遍历weight
-// LUT3：集中打表，按行遍历weight
+// LUT1：集中打表，按列遍历 weight
+// LUT2：边计算边打表，按列遍历 weight
+// LUT3：边计算边打表，多线程 weight按列划分
 
 void ggml_gemm_i2_i8_b_LUT(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc, const int16_t* GGML_RESTRICT table);
 void ggml_gemm_i1_58_i8_b_LUT(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc, const int16_t* GGML_RESTRICT table);
@@ -25,8 +25,9 @@ void ggml_gemm_i2_i8_t_LUT(int n, float* GGML_RESTRICT s, size_t bs, const void*
 
 void ggml_gemm_i2_i8_b_LUT2(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
 void ggml_gemm_i1_58_i8_b_LUT2(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
+void ggml_gemm_i2_i8_t_LUT2(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
 
-void ggml_gemm_i2_i8_b_LUT3(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc, const int16_t* GGML_RESTRICT table);
+void ggml_gemm_i2_i8_t_LUT3(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc, const int16_t* GGML_RESTRICT table);
 
 #define GGML_TABLE_BEGIN(type, name, size) static const type name[size] = {
 #define GGML_TABLE_END() };

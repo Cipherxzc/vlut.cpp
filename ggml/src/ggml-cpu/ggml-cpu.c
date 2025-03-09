@@ -6986,7 +6986,7 @@ void print_tensor(FILE *outfile, const char *name, const struct ggml_tensor *ten
     fprintf(outfile, "\n");
 }
 
-#define BITNET_LUT
+#define BITNET_LUT2
 #define BITNET_DEBUG
 
 #if defined(BITNET_LUT) || defined(BITNET_LUT2)
@@ -7019,7 +7019,7 @@ static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] 
     [GGML_TYPE_I2_T]= {
         .table_entries_num = 256,
         .gemm = ggml_gemm_i2_i8_t_LUT,
-        // .gemm2 = ggml_gemm_i2_i8_t_LUT2,
+        .gemm2 = ggml_gemm_i2_i8_t_LUT2,
         .make_table = ggml_gemm_i2_i8_b_make_table,
     },
 };
@@ -7105,8 +7105,8 @@ UseGgmlGemm1:;
     bool bitnet_trans = (type == GGML_TYPE_I2_B || type == GGML_TYPE_I1_58_B || type == GGML_TYPE_I2_T) && (ne11 > gemm_lim);
 
     const int64_t blck_size = ggml_blck_size(type);
+    #ifdef BITNET_LUT
     int64_t table_entries_num = type_traits_bitnet[type].table_entries_num;
-#ifdef BITNET_LUT
     bitnet_gemm gemm = type_traits_bitnet[type].gemm;
     bitnet_make_table make_table = type_traits_bitnet[type].make_table;
 #elif defined(BITNET_LUT2)
@@ -7192,7 +7192,7 @@ UseGgmlGemm2:;
     if (ggml_n_dims(src0) == 2 && bitnet_trans){
         const int8_t * src1_wdata = (src1->type == vec_dot_type) ? src1->data : params->wdata;
 
-        int nrows = blck_size;
+        int64_t nrows = blck_size;
 
         int64_t src1_start = (ith * ne00) / nth;
         int64_t src1_end   = ((ith + 1) * ne00) / nth;
@@ -7204,13 +7204,6 @@ UseGgmlGemm2:;
 #endif
         if (src1_start < src1_end) {
             make_table(src1_wdata + src1_start * ne11, src1_end - src1_start, ne11, table + src1_start * table_entries_num / blck_size * ne11);
-            // if (type == GGML_TYPE_I2_B) {
-            //     ggml_gemm_i2_i8_b_make_table(src1_wdata + src1_start * ne11, src1_end - src1_start, ne11,
-            //                                  table + src1_start * 64 * ne11);
-            // } else {
-            //     ggml_gemm_i1_58_i8_b_make_table(src1_wdata + src1_start * ne11, src1_end - src1_start, ne11,
-            //                                     table + src1_start / 5 * 243 * ne11);
-            // }
         }
 #ifdef BITNET_DEBUG
         struct timespec make_table_end = get_thread_cpu_time();
@@ -7228,15 +7221,9 @@ UseGgmlGemm2:;
         src0_end = (src0_end % nrows) ? src0_end + nrows - (src0_end % nrows) : src0_end;
 
         if (src0_start < src0_end) {
-            gemm(ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + src0_start * nb01,
-                 src1_wdata, ne11, src0_end - src0_start, table);
-            // if (type == GGML_TYPE_I2_B) {
-            //     ggml_gemm_i2_i8_b_LUT(ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + src0_start * nb01,
-            //                           src1_wdata, ne11, src0_end - src0_start, table);
-            // }else{
-            //     ggml_gemm_i1_58_i8_b_LUT(ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + src0_start * nb01,
-            //                              src1_wdata, ne11, src0_end - src0_start, table);
-            // }
+            size_t tmp = type == GGML_TYPE_I2_T ? src0_start : src0_start * nb01;
+            gemm(ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + tmp, src1_wdata, ne11,
+                 src0_end - src0_start, table);
         }
 #ifdef BITNET_DEBUG
         struct timespec end = get_thread_cpu_time();
@@ -7258,15 +7245,9 @@ UseGgmlGemm2:;
         src0_end = (src0_end % nrows) ? src0_end + nrows - (src0_end % nrows) : src0_end;
 
         if (src0_start < src0_end) {
-            gemm2(ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + src0_start * nb01,
-                  src1_wdata, ne11, src0_end - src0_start);
-            // if (type == GGML_TYPE_I2_B){
-            //     ggml_gemm_i2_i8_b_LUT2(ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + src0_start * nb01,
-            //                            src1_wdata, ne11, src0_end - src0_start);
-            // } else{
-            //     ggml_gemm_i1_58_i8_b_LUT2(ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + src0_start * nb01,
-            //                               src1_wdata, ne11, src0_end - src0_start);
-            // }
+            size_t tmp = type == GGML_TYPE_I2_T ? src0_start : src0_start * nb01;
+            gemm2(ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + tmp, src1_wdata, ne11,
+                  src0_end - src0_start);
         }
 #ifdef BITNET_DEBUG
         struct timespec end = get_thread_cpu_time();
@@ -12367,7 +12348,7 @@ static void ggml_compute_forward(struct ggml_compute_params *params, struct ggml
         }
     }
 
-    // if (tensor->op == GGML_OP_MUL_MAT && (tensor->src[0]->type == GGML_TYPE_I2_B || tensor->src[0]->type == GGML_TYPE_I1_58_B)) {
+    // if (tensor->op == GGML_OP_MUL_MAT && (tensor->src[0]->type == GGML_TYPE_I2_B || tensor->src[0]->type == GGML_TYPE_I1_58_B || tensor->src[0]->type == GGML_TYPE_I2_T)) {
     //     ggml_barrier(params->threadpool);
     //     if (params->ith == 0) {
     //         printf("write tensors\n");

@@ -1924,6 +1924,15 @@ class BitnetModel(Model):
         scale = weight.abs().max().unsqueeze(0)
         weight = torch.where(weight.abs().less(1e-6), 0, weight).type(dtype)
         weight = torch.sign(weight).type(dtype)
+
+        n, m = weight.shape
+        assert m % 4 == 0, "Weight tensor columns must be divisible by 4"
+        # 将权重reshape为(n, m//4, 4)，转置后调整为(m//4, n, 4)，最后合并为(m//4, 4n)
+        weight = weight.view(n, m // 4, 4).transpose(0, 1).reshape(m // 4, -1)
+        
+        # 适应llama.cpp的模型结构
+        weight = weight.reshape(n, m)
+    
         return weight.type(dtype), scale.type(torch.float32)
 
     def modify_tensors(self, data_torch: Tensor, name: str, bid: int | None) -> Iterable[tuple[str, Tensor]]:
