@@ -27,7 +27,7 @@ void ggml_gemm_i2_i8_b_LUT2(int n, float* GGML_RESTRICT s, size_t bs, const void
 void ggml_gemm_i1_58_i8_b_LUT2(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
 void ggml_gemm_i2_i8_t_LUT2(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
 
-void ggml_gemm_i2_i8_t_LUT3(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc, const int16_t* GGML_RESTRICT table);
+void ggml_gemm_i2_i8_t_LUT3(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
 
 #define GGML_TABLE_BEGIN(type, name, size) static const type name[size] = {
 #define GGML_TABLE_END() };

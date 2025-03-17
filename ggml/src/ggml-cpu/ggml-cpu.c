@@ -6986,7 +6986,7 @@ void print_tensor(FILE *outfile, const char *name, const struct ggml_tensor *ten
     fprintf(outfile, "\n");
 }
 
-#define BITNET_LUT2
+#define BITNET_LUT
 #define BITNET_DEBUG
 
 #if defined(BITNET_LUT) || defined(BITNET_LUT2)
@@ -7217,8 +7217,6 @@ UseGgmlGemm2:;
 
         int64_t src0_start = (ith * ne01) / nth;
         int64_t src0_end = ((ith + 1) * ne01) / nth;
-        src0_start = (src0_start % nrows) ? src0_start + nrows - (src0_start % nrows) : src0_start;
-        src0_end = (src0_end % nrows) ? src0_end + nrows - (src0_end % nrows) : src0_end;
 
         if (src0_start < src0_end) {
             size_t tmp = type == GGML_TYPE_I2_T ? src0_start : src0_start * nb01;
@@ -7237,18 +7235,31 @@ UseGgmlGemm2:;
     if (ggml_n_dims(src0) == 2 && bitnet_trans) {
         const int8_t * src1_wdata = (src1->type == vec_dot_type) ? src1->data : params->wdata;
 
-        int nrows = blck_size;
-
         int64_t src0_start = (ith * ne01) / nth;
         int64_t src0_end = ((ith + 1) * ne01) / nth;
-        src0_start = (src0_start % nrows) ? src0_start + nrows - (src0_start % nrows) : src0_start;
-        src0_end = (src0_end % nrows) ? src0_end + nrows - (src0_end % nrows) : src0_end;
 
         if (src0_start < src0_end) {
             size_t tmp = type == GGML_TYPE_I2_T ? src0_start : src0_start * nb01;
             gemm2(ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + tmp, src1_wdata, ne11,
                   src0_end - src0_start);
         }
+
+        // assert(type == GGML_TYPE_I2_T);
+
+        // if (params->ith == 0){
+        //     memset(dst->data, 0, sizeof(float) * ne01 * ne11);
+        // }
+        // ggml_barrier(params->threadpool);
+
+        // int64_t src0_start = (ith * ne00 / 4) / nth;
+        // int64_t src0_end = ((ith + 1) * ne00 / 4) / nth;
+
+        // if (src0_start < src0_end) {
+        //     ggml_gemm_i2_i8_t_LUT3(ne00 - src0_start * 4, (float *)(dst->data), ne01,
+        //                            (const char *)src0->data + src0_start * ne01, src1_wdata + src0_start * 4 * ne11,
+        //                            ne11, (src0_end - src0_start) * 4);
+        // }
+
 #ifdef BITNET_DEBUG
         struct timespec end = get_thread_cpu_time();
         pthread_mutex_lock(&time_mutex);

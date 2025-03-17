@@ -697,81 +697,96 @@ void ggml_gemm_i2_i8_t_LUT2(int n, float *restrict s, size_t bs, const void *res
     free(ss2);
 }
 
+pthread_mutex_t LUT3_time_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 void ggml_gemm_i2_i8_t_LUT3(int n, float *restrict s, size_t bs, const void *restrict vx, const void *restrict vy,
-                            int nr, int nc, const int16_t *restrict table) {
+                            int nr, int nc) {
     // nr: src1->ne[1], nc: src0->ne[1]
     assert(n % 4 == 0);
 
     const uint8_t *restrict x = vx;
     const int8_t *restrict y = vy;
 
-    int16_t *restrict ss = (int16_t *)malloc(sizeof(int16_t) * nr);
-    int *restrict ss2 = (int *)malloc(sizeof(int) * nr * nc);
+    int16_t *restrict ss = (int16_t *)malloc(sizeof(int16_t) * nr * bs);
+    int *restrict ss2 = (int *)malloc(sizeof(int) * nr * bs);
+    int16_t *restrict table = (int16_t *)malloc((sizeof(int16_t) * nr) << 8);
 
-    memset(ss, 0, sizeof(int16_t) * nr);
-    memset(ss2, 0, sizeof(int) * nr * nc);
+    memset(ss, 0, sizeof(int16_t) * nr * bs);
+    memset(ss2, 0, sizeof(int) * nr * bs);
+    memset(table, 0, sizeof(int16_t) * nr);
 
     static const int group_size = 512;
 
 #ifdef BITNET_DEBUG
+    double make_table_duration = 0.0;
     double convert_duration = 0.0;
     double scale_duration = 0.0;
     double LUT_duration = 0.0;
 #endif
 
-    for (int c = 0; c < nc; c++){
-        const uint8_t *restrict nx = x + c * nr;
-        int *restrict ns = ss2 + c * nr;
-        for (int j = 0; j < n; j += group_size){
-            int lim = j + group_size < n ? j + group_size : n;
+    for (int j = 0; j < nc; j += group_size) {
+        int lim = j + group_size < nc ? j + group_size : nc;
+        for (int i = (j >> 2); i < (lim >> 2); i++) {
 #ifdef BITNET_DEBUG
+            struct timespec start_make_table = get_thread_cpu_time();
+#endif
+            gemm_make_table_I2(table, y + i * 4 * nr, nr);
+#ifdef BITNET_DEBUG
+            struct timespec end_make_table = get_thread_cpu_time();
+            make_table_duration += get_time_diff(start_make_table, end_make_table);
+
             struct timespec start_LUT = get_thread_cpu_time();
 #endif
-            for (int i = (j >> 2); i < (lim >> 2); i++){
-                int v = nx[i];
-                const int16_t *restrict nt = table + i * 256 + v * nr;
-                for (int r = 0; r < nr; r++){
-                    ss[r] += nt[r];
+            for (int c = 0; c < bs; c++) {
+                int v = x[i * bs + c];
+                int16_t *restrict rs = ss + c * nr;
+                const int16_t *restrict rt = table + v * nr;
+                for (int r = 0; r < nr; r++) {
+                    rs[r] += rt[r];
                 }
             }
-
 #ifdef BITNET_DEBUG
             struct timespec end_LUT = get_thread_cpu_time();
             LUT_duration += get_time_diff(start_LUT, end_LUT);
-
-            struct timespec start_convert = get_thread_cpu_time();
-#endif
-            for (int r = 0; r < nr; r++){
-                ns[r] += ss[r];
-            }
-            memset(ss, 0, sizeof(int16_t) * nr);
-#ifdef BITNET_DEBUG
-            struct timespec end_convert = get_thread_cpu_time();
-            convert_duration += get_time_diff(start_convert, end_convert);
 #endif
         }
+#ifdef BITNET_DEBUG
+        struct timespec start_convert = get_thread_cpu_time();
+#endif
+        for (int i = 0; i < bs * nr; i++) {
+            ss2[i] += ss[i];
+        }
+        memset(ss, 0, sizeof(int16_t) * bs * nr);
+#ifdef BITNET_DEBUG
+        struct timespec end_convert = get_thread_cpu_time();
+        convert_duration += get_time_diff(start_convert, end_convert);
+#endif
     }
 
 #ifdef BITNET_DEBUG
     struct timespec start_scale = get_thread_cpu_time();
 #endif
+    pthread_mutex_lock(&LUT3_time_mutex);
     const float *sc = (const float *)(y + nr * n);
-    for (int c = 0; c < nc; c++) {
+    for (int c = 0; c < bs; c++) {
         for (int r = 0; r < nr; r++) {
-            s[r * bs + c] = ss2[c * nr + r] * sc[r];  // 将输出转置回来
+            s[r * bs + c] += ss2[c * nr + r] * sc[r];  // 将输出转置回来
         }
     }
+    pthread_mutex_unlock(&LUT3_time_mutex);
 #ifdef BITNET_DEBUG
     struct timespec end_scale = get_thread_cpu_time();
     scale_duration += get_time_diff(start_scale, end_scale);
 
     pthread_mutex_lock(&time_mutex);
+    make_table_time += make_table_duration;
     convert_time += convert_duration;
     scale_time += scale_duration;
     LUT_time += LUT_duration;
     pthread_mutex_unlock(&time_mutex);
 #endif
 
+    free(table);
     free(ss);
     free(ss2);
 }
