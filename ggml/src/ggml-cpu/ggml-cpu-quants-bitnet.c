@@ -102,6 +102,33 @@ void quantize_row_i8_b_trans(const float *x, void *y, int64_t n, int64_t row_siz
     *scale = (float)s;
 }
 
+#define TABLE_ENTRY_SIZE 64
+
+void quantize_row_i8_b_tile(const float *x, void *y, int64_t n, float *scale) {
+    int8_t *dst = (int8_t *)y;
+
+    const double eps = 1e-5;
+    double max = eps;
+    for (int i = 0; i < n; i++) {
+        max = MAX(max, (double)x[i]);
+    }
+    const double s = max / 127;
+    const double is = 1e0 / MAX(s, eps);
+
+    for (int i = 0, j = 0; i < n; i++, j += TABLE_ENTRY_SIZE) {
+        float v = round((double)x[i] * is);
+        if (v > 127) v = 127;
+#ifdef BITNET_AVX2
+        if (v < -127) v = -127;
+#else
+        if (v < -128) v = -128;
+#endif
+        dst[j] = (int8_t)v;
+    }
+
+    *scale = (float)s;
+}
+
 void ggml_vec_dot_i2_i8_b(int n, float *restrict s, size_t bs, const void *restrict vx, size_t bx,
                            const void *restrict vy, size_t by, int nrc) {
     UNUSED(bs);
@@ -697,8 +724,6 @@ void ggml_gemm_i2_i8_t_LUT2(int n, float *restrict s, size_t bs, const void *res
     free(ss2);
 }
 
-pthread_mutex_t LUT3_time_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 void ggml_gemm_i2_i8_t_LUT3(int n, float *restrict s, size_t bs, const void *restrict vx, const void *restrict vy,
                             int nr, int nc) {
     // nr: src1->ne[1], nc: src0->ne[1]
@@ -707,13 +732,13 @@ void ggml_gemm_i2_i8_t_LUT3(int n, float *restrict s, size_t bs, const void *res
     const uint8_t *restrict x = vx;
     const int8_t *restrict y = vy;
 
-    int16_t *restrict ss = (int16_t *)malloc(sizeof(int16_t) * nr * bs);
-    int *restrict ss2 = (int *)malloc(sizeof(int) * nr * bs);
-    int16_t *restrict table = (int16_t *)malloc((sizeof(int16_t) * nr) << 8);
+    int16_t *restrict ss = (int16_t *)malloc(sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+    int *restrict ss2 = (int *)malloc(sizeof(int) * nr * nc);
+    int16_t *restrict table = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) << 8);
 
-    memset(ss, 0, sizeof(int16_t) * nr * bs);
-    memset(ss2, 0, sizeof(int) * nr * bs);
-    memset(table, 0, sizeof(int16_t) * nr);
+    memset(ss, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+    memset(ss2, 0, sizeof(int) * nr * nc);
+    memset(table, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
 
     static const int group_size = 512;
 
@@ -724,56 +749,61 @@ void ggml_gemm_i2_i8_t_LUT3(int n, float *restrict s, size_t bs, const void *res
     double LUT_duration = 0.0;
 #endif
 
-    for (int j = 0; j < nc; j += group_size) {
-        int lim = j + group_size < nc ? j + group_size : nc;
-        for (int i = (j >> 2); i < (lim >> 2); i++) {
+    for (int t = 0; t < nr; t += TABLE_ENTRY_SIZE){
+        const int8_t *restrict y0 = y + t * n;
+        const int entry_len = MIN(nr - t, TABLE_ENTRY_SIZE);
+        for (int g = 0; g < n; g += group_size) {
+            int lim = g + group_size < n ? g + group_size : n;
+            for (int i = (g >> 2); i < (lim >> 2); i++) {
 #ifdef BITNET_DEBUG
-            struct timespec start_make_table = get_thread_cpu_time();
+                struct timespec start_make_table = get_thread_cpu_time();
 #endif
-            gemm_make_table_I2(table, y + i * 4 * nr, nr);
+                gemm_make_table_I2(table, y0 + i * 4 * TABLE_ENTRY_SIZE, TABLE_ENTRY_SIZE);
 #ifdef BITNET_DEBUG
-            struct timespec end_make_table = get_thread_cpu_time();
-            make_table_duration += get_time_diff(start_make_table, end_make_table);
+                struct timespec end_make_table = get_thread_cpu_time();
+                make_table_duration += get_time_diff(start_make_table, end_make_table);
 
-            struct timespec start_LUT = get_thread_cpu_time();
+                struct timespec start_LUT = get_thread_cpu_time();
 #endif
-            for (int c = 0; c < bs; c++) {
-                int v = x[i * bs + c];
-                int16_t *restrict rs = ss + c * nr;
-                const int16_t *restrict rt = table + v * nr;
-                for (int r = 0; r < nr; r++) {
-                    rs[r] += rt[r];
+                for (int c = 0; c < nc; c++) {
+                    int v = x[i * bs + c];
+                    int16_t *restrict rs = ss + c * TABLE_ENTRY_SIZE;
+                    const int16_t *restrict rt = table + v * TABLE_ENTRY_SIZE;
+                    for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
+                        rs[r] += rt[r];
+                    }
                 }
+#ifdef BITNET_DEBUG
+                struct timespec end_LUT = get_thread_cpu_time();
+                LUT_duration += get_time_diff(start_LUT, end_LUT);
+#endif
             }
 #ifdef BITNET_DEBUG
-            struct timespec end_LUT = get_thread_cpu_time();
-            LUT_duration += get_time_diff(start_LUT, end_LUT);
+            struct timespec start_convert = get_thread_cpu_time();
+#endif
+            for (int i = 0; i < nc; i++){
+                for (int j = 0; j < entry_len; j++) {
+                    ss2[(t + j) * nc + i] += ss[i * TABLE_ENTRY_SIZE + j];
+                }
+            }
+            memset(ss, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+#ifdef BITNET_DEBUG
+            struct timespec end_convert = get_thread_cpu_time();
+            convert_duration += get_time_diff(start_convert, end_convert);
 #endif
         }
-#ifdef BITNET_DEBUG
-        struct timespec start_convert = get_thread_cpu_time();
-#endif
-        for (int i = 0; i < bs * nr; i++) {
-            ss2[i] += ss[i];
-        }
-        memset(ss, 0, sizeof(int16_t) * bs * nr);
-#ifdef BITNET_DEBUG
-        struct timespec end_convert = get_thread_cpu_time();
-        convert_duration += get_time_diff(start_convert, end_convert);
-#endif
     }
 
 #ifdef BITNET_DEBUG
     struct timespec start_scale = get_thread_cpu_time();
 #endif
-    pthread_mutex_lock(&LUT3_time_mutex);
-    const float *sc = (const float *)(y + nr * n);
-    for (int c = 0; c < bs; c++) {
-        for (int r = 0; r < nr; r++) {
-            s[r * bs + c] += ss2[c * nr + r] * sc[r];  // 将输出转置回来
+    const size_t y_size = ((nr % TABLE_ENTRY_SIZE) ? nr + TABLE_ENTRY_SIZE - (nr % TABLE_ENTRY_SIZE): nr) * n;
+    const float *sc = (const float *)(y + y_size);
+    for (int r = 0; r < nr; r++) {
+        for (int c = 0; c < nc; c++) {
+            s[r * bs + c] = ss2[r * nc + c] * sc[r];  // 将输出转置回来
         }
     }
-    pthread_mutex_unlock(&LUT3_time_mutex);
 #ifdef BITNET_DEBUG
     struct timespec end_scale = get_thread_cpu_time();
     scale_duration += get_time_diff(start_scale, end_scale);

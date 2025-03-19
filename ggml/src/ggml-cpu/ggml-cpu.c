@@ -6986,8 +6986,11 @@ void print_tensor(FILE *outfile, const char *name, const struct ggml_tensor *ten
     fprintf(outfile, "\n");
 }
 
-#define BITNET_LUT
+#define BITNET_LUT2
 #define BITNET_DEBUG
+#define BITNET_TILING
+
+#define TABLE_ENTRY_SIZE 64
 
 #if defined(BITNET_LUT) || defined(BITNET_LUT2)
 int16_t *table;
@@ -7019,7 +7022,7 @@ static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] 
     [GGML_TYPE_I2_T]= {
         .table_entries_num = 256,
         .gemm = ggml_gemm_i2_i8_t_LUT,
-        .gemm2 = ggml_gemm_i2_i8_t_LUT2,
+        .gemm2 = ggml_gemm_i2_i8_t_LUT3,
         .make_table = ggml_gemm_i2_i8_b_make_table,
     },
 };
@@ -7104,8 +7107,8 @@ UseGgmlGemm1:;
     const int gemm_lim = 0;
     bool bitnet_trans = (type == GGML_TYPE_I2_B || type == GGML_TYPE_I1_58_B || type == GGML_TYPE_I2_T) && (ne11 > gemm_lim);
 
-    const int64_t blck_size = ggml_blck_size(type);
     #ifdef BITNET_LUT
+    const int64_t blck_size = ggml_blck_size(type);
     int64_t table_entries_num = type_traits_bitnet[type].table_entries_num;
     bitnet_gemm gemm = type_traits_bitnet[type].gemm;
     bitnet_make_table make_table = type_traits_bitnet[type].make_table;
@@ -7130,17 +7133,26 @@ UseGgmlGemm1:;
 #endif
         for (int64_t i13 = 0; i13 < ne13; ++i13) {
             for (int64_t i12 = 0; i12 < ne12; ++i12) {
-#if defined(BITNET_LUT) || defined(BITNET_LUT2)
+                #if defined(BITNET_LUT) || defined(BITNET_LUT2)
                 if (bitnet_trans) {
-                    const size_t nbw2 = ne10*ne11;
-                    float *scale = (float *)(wdata + i13 * nbw3 + i12 * nbw2 + nbw2);
-
+#ifdef BITNET_TILING
+                    const size_t wdata_size = ((ne11 % TABLE_ENTRY_SIZE) ? ne11 + TABLE_ENTRY_SIZE - (ne11 % TABLE_ENTRY_SIZE): ne11) * ne10;
+                    float *scale = (float *)(wdata + wdata_size);
                     for (int64_t i11 = ith; i11 < ne11; i11 += nth) {
-                        quantize_row_i8_b_trans(
+                        int64_t i = i11 / TABLE_ENTRY_SIZE;
+                        int64_t j = i11 % TABLE_ENTRY_SIZE;
+                        quantize_row_i8_b_tile(
                             (float *)((char *) src1->data + i13*nb13 + i12*nb12 + i11*nb11),
-                            (void *) (wdata + i13*nbw3 + i12*nbw2 + i11), ne10, ne11, scale + i11);
+                            (void *) (wdata + i * TABLE_ENTRY_SIZE + j), ne10, scale + i11);
+                        }
+#else
+                    const size_t wdata_size = ne10 * ne11;
+                    float *scale = (float *)(wdata + wdata_size);
+                    for (int64_t i11 = ith; i11 < ne11; i11 += nth) {
+                        quantize_row_i8_b_trans((float *)((char *)src1->data + i13 * nb13 + i12 * nb12 + i11 * nb11),
+                        (void *)(wdata + i11), ne10, ne11, scale + i11);
                     }
-
+#endif
                     continue;
                 }
 #endif
@@ -7243,22 +7255,6 @@ UseGgmlGemm2:;
             gemm2(ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + tmp, src1_wdata, ne11,
                   src0_end - src0_start);
         }
-
-        // assert(type == GGML_TYPE_I2_T);
-
-        // if (params->ith == 0){
-        //     memset(dst->data, 0, sizeof(float) * ne01 * ne11);
-        // }
-        // ggml_barrier(params->threadpool);
-
-        // int64_t src0_start = (ith * ne00 / 4) / nth;
-        // int64_t src0_end = ((ith + 1) * ne00 / 4) / nth;
-
-        // if (src0_start < src0_end) {
-        //     ggml_gemm_i2_i8_t_LUT3(ne00 - src0_start * 4, (float *)(dst->data), ne01,
-        //                            (const char *)src0->data + src0_start * ne01, src1_wdata + src0_start * 4 * ne11,
-        //                            ne11, (src0_end - src0_start) * 4);
-        // }
 
 #ifdef BITNET_DEBUG
         struct timespec end = get_thread_cpu_time();
@@ -13107,6 +13103,11 @@ struct ggml_cplan ggml_graph_plan(const struct ggml_cgraph *cgraph, int n_thread
     // BitNet I8_B
 #if defined(BITNET_LUT) || defined(BITNET_LUT2)
     table = (int16_t *)malloc(work_size * 256);
+#endif
+
+#ifdef BITNET_TILING
+#define TABLE_ENTRY_SIZE 64
+    work_size += TABLE_ENTRY_SIZE * 10000 * sizeof(int8_t);
 #endif
 
     const int MAX_INPUT_LENGTH = 2560;
