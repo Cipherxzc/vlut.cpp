@@ -1,5 +1,4 @@
-#include <bits/time.h>
-#include <bits/types/clock_t.h>
+#include <time.h>
 #define _CRT_SECURE_NO_DEPRECATE  // Disables "unsafe" warnings on Windows
 #define _USE_MATH_DEFINES         // For M_PI on MSVC
 
@@ -7046,7 +7045,7 @@ static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] 
             .table_entries_num = 256,
             .gemm = ggml_gemm_i2_i8_t_LUT,  // TODO
             .gemm2 = ggml_gemm_i2_i8_t_LUT2,  // TODO
-            .gemm3 = ggml_gemm_i2_i8_t_LUT3,  // TODO
+            .gemm3 = ggml_gemm_i2_i8_s_LUT3,
             .make_table = ggml_gemm_i2_i8_b_make_table,  // TODO
         },
 };
@@ -7140,9 +7139,9 @@ UseGgmlGemm1:;
     assert(gemm);
 #elif defined(BITNET_LUT2)
 #ifdef BITNET_TILING
-    bitnet_gemm2 gemm2 = type_traits_bitnet[type].gemm3;
+    bitnet_gemm2 gemm = type_traits_bitnet[type].gemm3;
 #else
-    bitnet_gemm2 gemm2 = type_traits_bitnet[type].gemm2;
+    bitnet_gemm2 gemm = type_traits_bitnet[type].gemm2;
 #endif
     assert(gemm2);
 #endif
@@ -7282,8 +7281,8 @@ UseGgmlGemm2:;
         int64_t src0_end = ((ith + 1) * ne01) / nth;
 
         if (src0_start < src0_end) {
-            size_t tmp = type == GGML_TYPE_I2_T ? src0_start : src0_start * nb01;
-            gemm2(ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + tmp, src1_wdata, ne11,
+            size_t tmp = (type == GGML_TYPE_I2_T || type == GGML_TYPE_I2_S) ? src0_start : src0_start * nb01;
+            gemm(ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + tmp, src1_wdata, ne11,
                   src0_end - src0_start);
         }
 
@@ -12391,7 +12390,7 @@ static void ggml_compute_forward(struct ggml_compute_params *params, struct ggml
         }
     }
 
-    // if (tensor->op == GGML_OP_MUL_MAT && (tensor->src[0]->type == GGML_TYPE_I2_B || tensor->src[0]->type == GGML_TYPE_I1_58_B || tensor->src[0]->type == GGML_TYPE_I2_T)) {
+    // if (tensor->op == GGML_OP_MUL_MAT && type_traits_bitnet[tensor->src[0]->type].is_bitnet_type) {
     //     ggml_barrier(params->threadpool);
     //     if (params->ith == 0) {
     //         printf("write tensors\n");

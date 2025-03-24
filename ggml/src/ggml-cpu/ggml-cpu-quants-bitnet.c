@@ -206,7 +206,7 @@ void ggml_vec_dot_i1_58_i8_b(int n, float *restrict s, size_t bs, const void *re
 }
 
 inline static void gemm_make_table_I2(int16_t *restrict table, const int8_t *restrict y, int nr);
-// inline static void gemm_make_table_I2S(int16_t *restrict table, const int8_t *restrict y, int nr);
+inline static void gemm_make_table_I2S(int16_t *restrict table, const int8_t *restrict y, int nr);
 inline static void gemm_make_table_I1_58(int16_t *restrict table, const int8_t *restrict y, int nr);
 inline static void gemm_make_table_I2_tile(int16_t *restrict table, const int8_t *restrict y);
 // inline static void gemm_make_table_I2S_tile(int16_t *restrict table, const int8_t *restrict y);
@@ -824,103 +824,102 @@ void ggml_gemm_i2_i8_t_LUT3(int n, float *restrict s, size_t bs, const void *res
     free(ss2);
 }
 
-// void ggml_gemm_i2_i8_s_LUT3(int n, float *restrict s, size_t bs, const void *restrict vx, const void *restrict vy,
-//                             int nr, int nc) {
-//     // nr: src1->ne[1], nc: src0->ne[1]
-//     assert(n % 4 == 0);
+void ggml_gemm_i2_i8_s_LUT3(int n, float *restrict s, size_t bs, const void *restrict vx, const void *restrict vy,
+                            int nr, int nc) {
+    // nr: src1->ne[1], nc: src0->ne[1]
+    assert(n % 4 == 0);
 
-//     const uint8_t *restrict x = vx;
-//     const int8_t *restrict y = vy;
+    const uint8_t *restrict x = vx;
+    const int8_t *restrict y = vy;
 
-//     int16_t *restrict ss = (int16_t *)malloc(sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
-//     int *restrict ss2 = (int *)malloc(sizeof(int) * nr * nc);
-//     int16_t *restrict table = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
+    int16_t *restrict ss = (int16_t *)malloc(sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+    int *restrict ss2 = (int *)malloc(sizeof(int) * nr * nc);
+    int16_t *restrict table = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
 
-//     memset(ss, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
-//     memset(ss2, 0, sizeof(int) * nr * nc);
-//     memset(table, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
+    memset(ss, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+    memset(ss2, 0, sizeof(int) * nr * nc);
+    memset(table + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
 
-//     static const int group_size = 512;
+    static const int group_size = 512;
 
-// #ifdef BITNET_DEBUG
-//     double make_table_duration = 0.0;
-//     double convert_duration = 0.0;
-//     double scale_duration = 0.0;
-//     double LUT_duration = 0.0;
-// #endif
+#ifdef BITNET_DEBUG
+    double make_table_duration = 0.0;
+    double convert_duration = 0.0;
+    double scale_duration = 0.0;
+    double LUT_duration = 0.0;
+#endif
 
-//     for (int t = 0; t < nr; t += TABLE_ENTRY_SIZE) {
-//         const int8_t *restrict y0 = y + t * n;
-//         const int entry_len = MIN(nr - t, TABLE_ENTRY_SIZE);
-//         for (int g = 0; g < n; g += group_size) {
-//             int lim = g + group_size < n ? g + group_size : n;
-//             for (int i = (g >> 2); i < (lim >> 2); i++) {
-// #ifdef BITNET_DEBUG
-//                 struct timespec start_make_table = get_thread_cpu_time();
-// #endif
-//                 gemm_make_table_I2S_tile(table, y0 + i * 4 * TABLE_ENTRY_SIZE);
-//                 // gemm_make_table_I2(table, y0 + i * 4 * TABLE_ENTRY_SIZE, TABLE_ENTRY_SIZE);
-// #ifdef BITNET_DEBUG
-//                 struct timespec end_make_table = get_thread_cpu_time();
-//                 make_table_duration += get_time_diff(start_make_table, end_make_table);
+    for (int t = 0; t < nr; t += TABLE_ENTRY_SIZE) {
+        const int8_t *restrict y0 = y + t * n;
+        const int entry_len = MIN(nr - t, TABLE_ENTRY_SIZE);
+        for (int g = 0; g < n; g += group_size) {
+            int lim = g + group_size < n ? g + group_size : n;
+            for (int i = (g >> 2); i < (lim >> 2); i++) {
+#ifdef BITNET_DEBUG
+                struct timespec start_make_table = get_thread_cpu_time();
+#endif
+                gemm_make_table_I2S(table, y0 + i * 4 * TABLE_ENTRY_SIZE, TABLE_ENTRY_SIZE);
+#ifdef BITNET_DEBUG
+                struct timespec end_make_table = get_thread_cpu_time();
+                make_table_duration += get_time_diff(start_make_table, end_make_table);
 
-//                 struct timespec start_LUT = get_thread_cpu_time();
-// #endif
-//                 for (int c = 0; c < nc; c++) {
-//                     int v = x[i * bs + c];
-//                     int16_t *restrict rs = ss + c * TABLE_ENTRY_SIZE;
-//                     const int16_t *restrict rt = table + v * TABLE_ENTRY_SIZE;
-//                     for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
-//                         rs[r] += rt[r];
-//                     }
-//                 }
-// #ifdef BITNET_DEBUG
-//                 struct timespec end_LUT = get_thread_cpu_time();
-//                 LUT_duration += get_time_diff(start_LUT, end_LUT);
-// #endif
-//             }
-// #ifdef BITNET_DEBUG
-//             struct timespec start_convert = get_thread_cpu_time();
-// #endif
-//             for (int i = 0; i < nc; i++) {
-//                 for (int j = 0; j < entry_len; j++) {
-//                     ss2[(t + j) * nc + i] += ss[i * TABLE_ENTRY_SIZE + j];
-//                 }
-//             }
-//             memset(ss, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
-// #ifdef BITNET_DEBUG
-//             struct timespec end_convert = get_thread_cpu_time();
-//             convert_duration += get_time_diff(start_convert, end_convert);
-// #endif
-//         }
-//     }
+                struct timespec start_LUT = get_thread_cpu_time();
+#endif
+                for (int c = 0; c < nc; c++) {
+                    int v = x[i * bs + c];
+                    int16_t *restrict rs = ss + c * TABLE_ENTRY_SIZE;
+                    const int16_t *restrict rt = table + v * TABLE_ENTRY_SIZE;
+                    for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
+                        rs[r] += rt[r];
+                    }
+                }
+#ifdef BITNET_DEBUG
+                struct timespec end_LUT = get_thread_cpu_time();
+                LUT_duration += get_time_diff(start_LUT, end_LUT);
+#endif
+            }
+#ifdef BITNET_DEBUG
+            struct timespec start_convert = get_thread_cpu_time();
+#endif
+            for (int i = 0; i < nc; i++) {
+                for (int j = 0; j < entry_len; j++) {
+                    ss2[(t + j) * nc + i] += ss[i * TABLE_ENTRY_SIZE + j];
+                }
+            }
+            memset(ss, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+#ifdef BITNET_DEBUG
+            struct timespec end_convert = get_thread_cpu_time();
+            convert_duration += get_time_diff(start_convert, end_convert);
+#endif
+        }
+    }
 
-// #ifdef BITNET_DEBUG
-//     struct timespec start_scale = get_thread_cpu_time();
-// #endif
-//     const size_t y_size = ((nr % TABLE_ENTRY_SIZE) ? nr + TABLE_ENTRY_SIZE - (nr % TABLE_ENTRY_SIZE) : nr) * n;
-//     const float *sc = (const float *)(y + y_size);
-//     for (int r = 0; r < nr; r++) {
-//         for (int c = 0; c < nc; c++) {
-//             s[r * bs + c] = ss2[r * nc + c] * sc[r];  // 将输出转置回来
-//         }
-//     }
-// #ifdef BITNET_DEBUG
-//     struct timespec end_scale = get_thread_cpu_time();
-//     scale_duration += get_time_diff(start_scale, end_scale);
+#ifdef BITNET_DEBUG
+    struct timespec start_scale = get_thread_cpu_time();
+#endif
+    const size_t y_size = ((nr % TABLE_ENTRY_SIZE) ? nr + TABLE_ENTRY_SIZE - (nr % TABLE_ENTRY_SIZE) : nr) * n;
+    const float *sc = (const float *)(y + y_size);
+    for (int r = 0; r < nr; r++) {
+        for (int c = 0; c < nc; c++) {
+            s[r * bs + c] = ss2[r * nc + c] * sc[r];  // 将输出转置回来
+        }
+    }
+#ifdef BITNET_DEBUG
+    struct timespec end_scale = get_thread_cpu_time();
+    scale_duration += get_time_diff(start_scale, end_scale);
 
-//     pthread_mutex_lock(&time_mutex);
-//     make_table_time += make_table_duration;
-//     convert_time += convert_duration;
-//     scale_time += scale_duration;
-//     LUT_time += LUT_duration;
-//     pthread_mutex_unlock(&time_mutex);
-// #endif
+    pthread_mutex_lock(&time_mutex);
+    make_table_time += make_table_duration;
+    convert_time += convert_duration;
+    scale_time += scale_duration;
+    LUT_time += LUT_duration;
+    pthread_mutex_unlock(&time_mutex);
+#endif
 
-//     free(table);
-//     free(ss);
-//     free(ss2);
-// }
+    free(table);
+    free(ss);
+    free(ss2);
+}
 
 inline static void gemm_look_up_I2(const uint8_t *restrict x, const int16_t *restrict table, int16_t *restrict s, int n,
                                    int nc, int nr) {
@@ -1059,85 +1058,173 @@ void gemm_make_table_I2(int16_t *restrict table, const int8_t *restrict y, int n
     const int8_t *restrict y3 = y2 + nr;
 
     add(table + 1 * nr, table + 0 * nr, y0, nr);
-    sub(table + 3 * nr, table + 0 * nr, y0, nr);
     add(table + 4 * nr, table + 0 * nr, y1, nr);
+    add(table + 16 * nr, table + 0 * nr, y2, nr);
+    add(table + 64 * nr, table + 0 * nr, y3, nr);
+    rev(table + 3 * nr, table + 1 * nr, nr);
     add(table + 5 * nr, table + 4 * nr, y0, nr);
     sub(table + 7 * nr, table + 4 * nr, y0, nr);
-    sub(table + 12 * nr, table + 0 * nr, y1, nr);
-    add(table + 13 * nr, table + 12 * nr, y0, nr);
-    sub(table + 15 * nr, table + 12 * nr, y0, nr);
-    add(table + 16 * nr, table + 0 * nr, y2, nr);
+    rev(table + 12 * nr, table + 4 * nr, nr);
     add(table + 17 * nr, table + 16 * nr, y0, nr);
     sub(table + 19 * nr, table + 16 * nr, y0, nr);
     add(table + 20 * nr, table + 16 * nr, y1, nr);
-    add(table + 21 * nr, table + 20 * nr, y0, nr);
-    sub(table + 23 * nr, table + 20 * nr, y0, nr);
     sub(table + 28 * nr, table + 16 * nr, y1, nr);
-    add(table + 29 * nr, table + 28 * nr, y0, nr);
-    sub(table + 31 * nr, table + 28 * nr, y0, nr);
-    sub(table + 48 * nr, table + 0 * nr, y2, nr);
-    add(table + 49 * nr, table + 48 * nr, y0, nr);
-    sub(table + 51 * nr, table + 48 * nr, y0, nr);
-    add(table + 52 * nr, table + 48 * nr, y1, nr);
-    add(table + 53 * nr, table + 52 * nr, y0, nr);
-    sub(table + 55 * nr, table + 52 * nr, y0, nr);
-    sub(table + 60 * nr, table + 48 * nr, y1, nr);
-    add(table + 61 * nr, table + 60 * nr, y0, nr);
-    sub(table + 63 * nr, table + 60 * nr, y0, nr);
-    add(table + 64 * nr, table + 0 * nr, y3, nr);
+    rev(table + 48 * nr, table + 16 * nr, nr);
     add(table + 65 * nr, table + 64 * nr, y0, nr);
     sub(table + 67 * nr, table + 64 * nr, y0, nr);
     add(table + 68 * nr, table + 64 * nr, y1, nr);
+    sub(table + 76 * nr, table + 64 * nr, y1, nr);
+    add(table + 80 * nr, table + 64 * nr, y2, nr);
+    sub(table + 112 * nr, table + 64 * nr, y2, nr);
+    rev(table + 192 * nr, table + 64 * nr, nr);
+    rev(table + 15 * nr, table + 5 * nr, nr);
+    rev(table + 13 * nr, table + 7 * nr, nr);
+    rev(table + 51 * nr, table + 17 * nr, nr);
+    rev(table + 49 * nr, table + 19 * nr, nr);
+    add(table + 21 * nr, table + 20 * nr, y0, nr);
+    sub(table + 23 * nr, table + 20 * nr, y0, nr);
+    rev(table + 60 * nr, table + 20 * nr, nr);
+    add(table + 29 * nr, table + 28 * nr, y0, nr);
+    sub(table + 31 * nr, table + 28 * nr, y0, nr);
+    rev(table + 52 * nr, table + 28 * nr, nr);
+    rev(table + 195 * nr, table + 65 * nr, nr);
+    rev(table + 193 * nr, table + 67 * nr, nr);
     add(table + 69 * nr, table + 68 * nr, y0, nr);
     sub(table + 71 * nr, table + 68 * nr, y0, nr);
-    sub(table + 76 * nr, table + 64 * nr, y1, nr);
+    rev(table + 204 * nr, table + 68 * nr, nr);
     add(table + 77 * nr, table + 76 * nr, y0, nr);
     sub(table + 79 * nr, table + 76 * nr, y0, nr);
-    add(table + 80 * nr, table + 64 * nr, y2, nr);
+    rev(table + 196 * nr, table + 76 * nr, nr);
     add(table + 81 * nr, table + 80 * nr, y0, nr);
     sub(table + 83 * nr, table + 80 * nr, y0, nr);
     add(table + 84 * nr, table + 80 * nr, y1, nr);
-    add(table + 85 * nr, table + 84 * nr, y0, nr);
-    sub(table + 87 * nr, table + 84 * nr, y0, nr);
     sub(table + 92 * nr, table + 80 * nr, y1, nr);
-    add(table + 93 * nr, table + 92 * nr, y0, nr);
-    sub(table + 95 * nr, table + 92 * nr, y0, nr);
-    sub(table + 112 * nr, table + 64 * nr, y2, nr);
+    rev(table + 240 * nr, table + 80 * nr, nr);
     add(table + 113 * nr, table + 112 * nr, y0, nr);
     sub(table + 115 * nr, table + 112 * nr, y0, nr);
     add(table + 116 * nr, table + 112 * nr, y1, nr);
+    sub(table + 124 * nr, table + 112 * nr, y1, nr);
+    rev(table + 208 * nr, table + 112 * nr, nr);
+    rev(table + 63 * nr, table + 21 * nr, nr);
+    rev(table + 61 * nr, table + 23 * nr, nr);
+    rev(table + 55 * nr, table + 29 * nr, nr);
+    rev(table + 53 * nr, table + 31 * nr, nr);
+    rev(table + 207 * nr, table + 69 * nr, nr);
+    rev(table + 205 * nr, table + 71 * nr, nr);
+    rev(table + 199 * nr, table + 77 * nr, nr);
+    rev(table + 197 * nr, table + 79 * nr, nr);
+    rev(table + 243 * nr, table + 81 * nr, nr);
+    rev(table + 241 * nr, table + 83 * nr, nr);
+    add(table + 85 * nr, table + 84 * nr, y0, nr);
+    sub(table + 87 * nr, table + 84 * nr, y0, nr);
+    rev(table + 252 * nr, table + 84 * nr, nr);
+    add(table + 93 * nr, table + 92 * nr, y0, nr);
+    sub(table + 95 * nr, table + 92 * nr, y0, nr);
+    rev(table + 244 * nr, table + 92 * nr, nr);
+    rev(table + 211 * nr, table + 113 * nr, nr);
+    rev(table + 209 * nr, table + 115 * nr, nr);
     add(table + 117 * nr, table + 116 * nr, y0, nr);
     sub(table + 119 * nr, table + 116 * nr, y0, nr);
-    sub(table + 124 * nr, table + 112 * nr, y1, nr);
+    rev(table + 220 * nr, table + 116 * nr, nr);
     add(table + 125 * nr, table + 124 * nr, y0, nr);
     sub(table + 127 * nr, table + 124 * nr, y0, nr);
-    sub(table + 192 * nr, table + 0 * nr, y3, nr);
-    add(table + 193 * nr, table + 192 * nr, y0, nr);
-    sub(table + 195 * nr, table + 192 * nr, y0, nr);
-    add(table + 196 * nr, table + 192 * nr, y1, nr);
-    add(table + 197 * nr, table + 196 * nr, y0, nr);
-    sub(table + 199 * nr, table + 196 * nr, y0, nr);
-    sub(table + 204 * nr, table + 192 * nr, y1, nr);
-    add(table + 205 * nr, table + 204 * nr, y0, nr);
-    sub(table + 207 * nr, table + 204 * nr, y0, nr);
-    add(table + 208 * nr, table + 192 * nr, y2, nr);
-    add(table + 209 * nr, table + 208 * nr, y0, nr);
-    sub(table + 211 * nr, table + 208 * nr, y0, nr);
-    add(table + 212 * nr, table + 208 * nr, y1, nr);
-    add(table + 213 * nr, table + 212 * nr, y0, nr);
-    sub(table + 215 * nr, table + 212 * nr, y0, nr);
-    sub(table + 220 * nr, table + 208 * nr, y1, nr);
-    add(table + 221 * nr, table + 220 * nr, y0, nr);
-    sub(table + 223 * nr, table + 220 * nr, y0, nr);
-    sub(table + 240 * nr, table + 192 * nr, y2, nr);
-    add(table + 241 * nr, table + 240 * nr, y0, nr);
-    sub(table + 243 * nr, table + 240 * nr, y0, nr);
-    add(table + 244 * nr, table + 240 * nr, y1, nr);
-    add(table + 245 * nr, table + 244 * nr, y0, nr);
-    sub(table + 247 * nr, table + 244 * nr, y0, nr);
-    sub(table + 252 * nr, table + 240 * nr, y1, nr);
-    add(table + 253 * nr, table + 252 * nr, y0, nr);
-    sub(table + 255 * nr, table + 252 * nr, y0, nr);
+    rev(table + 212 * nr, table + 124 * nr, nr);
+    rev(table + 255 * nr, table + 85 * nr, nr);
+    rev(table + 253 * nr, table + 87 * nr, nr);
+    rev(table + 247 * nr, table + 93 * nr, nr);
+    rev(table + 245 * nr, table + 95 * nr, nr);
+    rev(table + 223 * nr, table + 117 * nr, nr);
+    rev(table + 221 * nr, table + 119 * nr, nr);
+    rev(table + 215 * nr, table + 125 * nr, nr);
+    rev(table + 213 * nr, table + 127 * nr, nr);
+}
+
+void gemm_make_table_I2S(int16_t *restrict table, const int8_t *restrict y, int nr) {
+    const int8_t *restrict y0 = y;
+    const int8_t *restrict y1 = y0 + nr;
+    const int8_t *restrict y2 = y1 + nr;
+    const int8_t *restrict y3 = y2 + nr;
+
+    add(table + 41 * nr, table + 40 * nr, y0, nr);
+    add(table + 43 * nr, table + 40 * nr, y1, nr);
+    add(table + 49 * nr, table + 40 * nr, y2, nr);
+    add(table + 67 * nr, table + 40 * nr, y3, nr);
+    rev(table + 39 * nr, table + 41 * nr, nr);
+    rev(table + 37 * nr, table + 43 * nr, nr);
+    sub(table + 42 * nr, table + 43 * nr, y0, nr);
+    add(table + 44 * nr, table + 43 * nr, y0, nr);
+    rev(table + 31 * nr, table + 49 * nr, nr);
+    sub(table + 46 * nr, table + 49 * nr, y1, nr);
+    sub(table + 48 * nr, table + 49 * nr, y0, nr);
+    add(table + 50 * nr, table + 49 * nr, y0, nr);
+    add(table + 52 * nr, table + 49 * nr, y1, nr);
+    rev(table + 13 * nr, table + 67 * nr, nr);
+    sub(table + 58 * nr, table + 67 * nr, y2, nr);
+    sub(table + 64 * nr, table + 67 * nr, y1, nr);
+    sub(table + 66 * nr, table + 67 * nr, y0, nr);
+    add(table + 68 * nr, table + 67 * nr, y0, nr);
+    add(table + 70 * nr, table + 67 * nr, y1, nr);
+    add(table + 76 * nr, table + 67 * nr, y2, nr);
+    rev(table + 38 * nr, table + 42 * nr, nr);
+    rev(table + 36 * nr, table + 44 * nr, nr);
+    rev(table + 34 * nr, table + 46 * nr, nr);
+    sub(table + 45 * nr, table + 46 * nr, y0, nr);
+    add(table + 47 * nr, table + 46 * nr, y0, nr);
+    rev(table + 32 * nr, table + 48 * nr, nr);
+    rev(table + 30 * nr, table + 50 * nr, nr);
+    rev(table + 28 * nr, table + 52 * nr, nr);
+    sub(table + 51 * nr, table + 52 * nr, y0, nr);
+    add(table + 53 * nr, table + 52 * nr, y0, nr);
+    rev(table + 22 * nr, table + 58 * nr, nr);
+    sub(table + 55 * nr, table + 58 * nr, y1, nr);
+    sub(table + 57 * nr, table + 58 * nr, y0, nr);
+    add(table + 59 * nr, table + 58 * nr, y0, nr);
+    add(table + 61 * nr, table + 58 * nr, y1, nr);
+    rev(table + 16 * nr, table + 64 * nr, nr);
+    sub(table + 63 * nr, table + 64 * nr, y0, nr);
+    add(table + 65 * nr, table + 64 * nr, y0, nr);
+    rev(table + 14 * nr, table + 66 * nr, nr);
+    rev(table + 12 * nr, table + 68 * nr, nr);
+    rev(table + 10 * nr, table + 70 * nr, nr);
+    sub(table + 69 * nr, table + 70 * nr, y0, nr);
+    add(table + 71 * nr, table + 70 * nr, y0, nr);
+    rev(table + 4 * nr, table + 76 * nr, nr);
+    sub(table + 73 * nr, table + 76 * nr, y1, nr);
+    sub(table + 75 * nr, table + 76 * nr, y0, nr);
+    add(table + 77 * nr, table + 76 * nr, y0, nr);
+    add(table + 79 * nr, table + 76 * nr, y1, nr);
+    rev(table + 35 * nr, table + 45 * nr, nr);
+    rev(table + 33 * nr, table + 47 * nr, nr);
+    rev(table + 29 * nr, table + 51 * nr, nr);
+    rev(table + 27 * nr, table + 53 * nr, nr);
+    rev(table + 25 * nr, table + 55 * nr, nr);
+    sub(table + 54 * nr, table + 55 * nr, y0, nr);
+    add(table + 56 * nr, table + 55 * nr, y0, nr);
+    rev(table + 23 * nr, table + 57 * nr, nr);
+    rev(table + 21 * nr, table + 59 * nr, nr);
+    rev(table + 19 * nr, table + 61 * nr, nr);
+    sub(table + 60 * nr, table + 61 * nr, y0, nr);
+    add(table + 62 * nr, table + 61 * nr, y0, nr);
+    rev(table + 17 * nr, table + 63 * nr, nr);
+    rev(table + 15 * nr, table + 65 * nr, nr);
+    rev(table + 11 * nr, table + 69 * nr, nr);
+    rev(table + 9 * nr, table + 71 * nr, nr);
+    rev(table + 7 * nr, table + 73 * nr, nr);
+    sub(table + 72 * nr, table + 73 * nr, y0, nr);
+    add(table + 74 * nr, table + 73 * nr, y0, nr);
+    rev(table + 5 * nr, table + 75 * nr, nr);
+    rev(table + 3 * nr, table + 77 * nr, nr);
+    rev(table + 1 * nr, table + 79 * nr, nr);
+    sub(table + 78 * nr, table + 79 * nr, y0, nr);
+    add(table + 80 * nr, table + 79 * nr, y0, nr);
+    rev(table + 26 * nr, table + 54 * nr, nr);
+    rev(table + 24 * nr, table + 56 * nr, nr);
+    rev(table + 20 * nr, table + 60 * nr, nr);
+    rev(table + 18 * nr, table + 62 * nr, nr);
+    rev(table + 8 * nr, table + 72 * nr, nr);
+    rev(table + 6 * nr, table + 74 * nr, nr);
+    rev(table + 2 * nr, table + 78 * nr, nr);
+    rev(table + 0 * nr, table + 80 * nr, nr);
 }
 
 void gemm_make_table_I1_58(int16_t *restrict table, const int8_t *restrict y, int nr) {
