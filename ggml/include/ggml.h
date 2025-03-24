@@ -392,7 +392,8 @@ extern "C" {
         GGML_TYPE_I1_58_B = 40,
         GGML_TYPE_I8_B = 41,
         GGML_TYPE_I2_T = 42,
-        GGML_TYPE_COUNT = 43,
+        GGML_TYPE_I2_S = 43,
+        GGML_TYPE_COUNT = 44,
     };
 
     // precision

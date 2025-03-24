@@ -920,7 +920,13 @@ static const struct ggml_type_traits type_traits[GGML_TYPE_COUNT] =
                 .blck_size = 4,
                 .type_size = sizeof(uint8_t),
                 .is_quantized = true,
-
+            },
+        [GGML_TYPE_I2_S] =
+            {
+                .type_name = "i2_s",
+                .blck_size = 4,
+                .type_size = sizeof(uint8_t),
+                .is_quantized = true,
             },
 };
 
@@ -6537,6 +6543,9 @@ size_t ggml_quantize_chunk(
             break;
         case GGML_TYPE_I2_T:
             result = quantize_i2_b(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
+            break;
+        case GGML_TYPE_I2_S:
+            result = quantize_i2_s(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
         default:
             assert(false);

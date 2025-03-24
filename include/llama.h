@@ -182,6 +182,7 @@ extern "C" {
         LLAMA_FTYPE_MOSTLY_I2_B          = 38, // BitNet
         LLAMA_FTYPE_MOSTLY_I1_58_B       = 39, // BitNet
         LLAMA_FTYPE_MOSTLY_I2_T          = 40, // BitNet
+        LLAMA_FTYPE_MOSTLY_I2_S          = 41, // BitNet
 
         LLAMA_FTYPE_GUESSED = 1024, // not specified in the model file
     };

@@ -462,6 +462,12 @@ static const struct ggml_type_traits_cpu type_traits_cpu[GGML_TYPE_COUNT] = {
             .vec_dot_type = GGML_TYPE_I8_B,
             .nrows = 1,
         },
+    [GGML_TYPE_I2_S] =
+        {
+            .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
+            .vec_dot_type = GGML_TYPE_I8_B,
+            .nrows = 1,
+        },
 };
 
 const struct ggml_type_traits_cpu *ggml_get_type_traits_cpu(enum ggml_type type) { return &type_traits_cpu[type]; }
@@ -6990,7 +6996,7 @@ void print_tensor(FILE *outfile, const char *name, const struct ggml_tensor *ten
 #define BITNET_DEBUG
 #define BITNET_TILING
 
-#define TABLE_ENTRY_SIZE 64
+#define TABLE_ENTRY_SIZE 32
 
 #if defined(BITNET_LUT) || defined(BITNET_LUT2)
 int16_t *table;
@@ -7000,31 +7006,49 @@ typedef void (*bitnet_gemm2)(int n, float* GGML_RESTRICT s, size_t bs, const voi
 typedef void (*bitnet_make_table)(const int8_t *GGML_RESTRICT y, int nrows, int n, int16_t *GGML_RESTRICT table);
 
 struct ggml_type_traits_bitnet {
+    bool is_bitnet_type;
     int64_t table_entries_num;
     bitnet_gemm gemm;
     bitnet_gemm2 gemm2;
+    bitnet_gemm2 gemm3;
     bitnet_make_table make_table;
 };
 
 static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] = {
-    [GGML_TYPE_I2_B]= {
-        .table_entries_num = 256,
-        .gemm = ggml_gemm_i2_i8_b_LUT,
-        .gemm2 = ggml_gemm_i2_i8_b_LUT2,
-        .make_table = ggml_gemm_i2_i8_b_make_table,
-    },
-    [GGML_TYPE_I1_58_B]= {
-        .table_entries_num = 243,
-        .gemm = ggml_gemm_i1_58_i8_b_LUT,
-        .gemm2 = ggml_gemm_i1_58_i8_b_LUT2,
-        .make_table = ggml_gemm_i1_58_i8_b_make_table,
-    },
-    [GGML_TYPE_I2_T]= {
-        .table_entries_num = 256,
-        .gemm = ggml_gemm_i2_i8_t_LUT,
-        .gemm2 = ggml_gemm_i2_i8_t_LUT3,
-        .make_table = ggml_gemm_i2_i8_b_make_table,
-    },
+    [GGML_TYPE_I2_B] =
+        {
+            .is_bitnet_type = true,
+            .table_entries_num = 256,
+            .gemm = ggml_gemm_i2_i8_b_LUT,
+            .gemm2 = ggml_gemm_i2_i8_b_LUT2,
+            .make_table = ggml_gemm_i2_i8_b_make_table,
+        },
+    [GGML_TYPE_I1_58_B] =
+        {
+            .is_bitnet_type = true,
+            .table_entries_num = 243,
+            .gemm = ggml_gemm_i1_58_i8_b_LUT,
+            .gemm2 = ggml_gemm_i1_58_i8_b_LUT2,
+            .make_table = ggml_gemm_i1_58_i8_b_make_table,
+        },
+    [GGML_TYPE_I2_T] =
+        {
+            .is_bitnet_type = true,
+            .table_entries_num = 256,
+            .gemm = ggml_gemm_i2_i8_t_LUT,
+            .gemm2 = ggml_gemm_i2_i8_t_LUT2,
+            .gemm3 = ggml_gemm_i2_i8_t_LUT3,
+            .make_table = ggml_gemm_i2_i8_b_make_table,
+        },
+    [GGML_TYPE_I2_S] =
+        {
+            .is_bitnet_type = true,
+            .table_entries_num = 256,
+            .gemm = ggml_gemm_i2_i8_t_LUT,  // TODO
+            .gemm2 = ggml_gemm_i2_i8_t_LUT2,  // TODO
+            .gemm3 = ggml_gemm_i2_i8_t_LUT3,  // TODO
+            .make_table = ggml_gemm_i2_i8_b_make_table,  // TODO
+        },
 };
 #endif
 
@@ -7105,15 +7129,22 @@ UseGgmlGemm1:;
 
 #if defined(BITNET_LUT) || defined(BITNET_LUT2)
     const int gemm_lim = 0;
-    bool bitnet_trans = (type == GGML_TYPE_I2_B || type == GGML_TYPE_I1_58_B || type == GGML_TYPE_I2_T) && (ne11 > gemm_lim);
+    bool bitnet_trans = type_traits_bitnet[type].is_bitnet_type && (ne11 > gemm_lim);
 
     #ifdef BITNET_LUT
     const int64_t blck_size = ggml_blck_size(type);
     int64_t table_entries_num = type_traits_bitnet[type].table_entries_num;
-    bitnet_gemm gemm = type_traits_bitnet[type].gemm;
     bitnet_make_table make_table = type_traits_bitnet[type].make_table;
+    bitnet_gemm gemm = type_traits_bitnet[type].gemm;
+    assert(make_table);
+    assert(gemm);
 #elif defined(BITNET_LUT2)
+#ifdef BITNET_TILING
+    bitnet_gemm2 gemm2 = type_traits_bitnet[type].gemm3;
+#else
     bitnet_gemm2 gemm2 = type_traits_bitnet[type].gemm2;
+#endif
+    assert(gemm2);
 #endif
 
 #endif
@@ -8725,6 +8756,11 @@ static void ggml_compute_forward_clamp(const struct ggml_compute_params *params,
         case GGML_TYPE_I32:
         case GGML_TYPE_I64:
         case GGML_TYPE_F64:
+        case GGML_TYPE_I2_B:
+        case GGML_TYPE_I1_58_B:
+        case GGML_TYPE_I8_B:
+        case GGML_TYPE_I2_T:
+        case GGML_TYPE_I2_S:
         case GGML_TYPE_COUNT: {
             GGML_ABORT("fatal error");
         }
@@ -13106,7 +13142,7 @@ struct ggml_cplan ggml_graph_plan(const struct ggml_cgraph *cgraph, int n_thread
 #endif
 
 #ifdef BITNET_TILING
-#define TABLE_ENTRY_SIZE 64
+#define TABLE_ENTRY_SIZE 32
     work_size += TABLE_ENTRY_SIZE * 10000 * sizeof(int8_t);
 #endif
 
