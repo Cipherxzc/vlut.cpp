@@ -7002,9 +7002,10 @@ struct ggml_type_traits_bitnet {
     int64_t table_entries_num;
     bitnet_gemm gemm;
     bitnet_gemm gemm2;
-    bitnet_gemm gemm3;
-    bitnet_gemm gemm4;
+    bitnet_gemm gemm_tile;
+    bitnet_gemm gemm2_tile;
     bitnet_make_table make_table;
+    bitnet_make_table make_table_tile;
 };
 
 static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] = {
@@ -7030,17 +7031,16 @@ static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] 
             .table_entries_num = 256,
             .gemm = ggml_gemm_i2_i8_t_LUT,
             .gemm2 = ggml_gemm_i2_i8_t_LUT2,
-            .gemm3 = ggml_gemm_i2_i8_t_LUT3,
+            .gemm2_tile = ggml_gemm_i2_i8_t_LUT2_tile,
             .make_table = ggml_gemm_i2_i8_b_make_table,
         },
     [GGML_TYPE_I2_S] =
         {
             .is_bitnet_type = true,
-            .table_entries_num = 256,
-            .gemm = ggml_gemm_i2_i8_t_LUT,  // TODO
-            .gemm2 = ggml_gemm_i2_i8_t_LUT2,  // TODO
-            .gemm3 = ggml_gemm_i2_i8_s_LUT3,
-            .make_table = ggml_gemm_i2_i8_b_make_table,  // TODO
+            .table_entries_num = 81,
+            .gemm2_tile = ggml_gemm_i2_i8_s_LUT2_tile,
+            .gemm_tile = ggml_gemm_i2_i8_s_LUT_tile,
+            .make_table_tile = ggml_gemm_i2_i8_s_make_table_tile,
         },
 };
 #endif
@@ -7124,16 +7124,21 @@ UseGgmlGemm1:;
     const int gemm_lim = 0;
     bool bitnet_trans = type_traits_bitnet[type].is_bitnet_type && (ne11 > gemm_lim);
 
-    #ifdef BITNET_LUT
+#ifdef BITNET_LUT
     const int64_t blck_size = ggml_blck_size(type);
     int64_t table_entries_num = type_traits_bitnet[type].table_entries_num;
+    #ifdef BITNET_TILING
+    bitnet_make_table make_table = type_traits_bitnet[type].make_table_tile;
+    bitnet_gemm gemm = type_traits_bitnet[type].gemm_tile;
+    #else
     bitnet_make_table make_table = type_traits_bitnet[type].make_table;
     bitnet_gemm gemm = type_traits_bitnet[type].gemm;
+#endif
     assert(make_table);
     assert(gemm);
 #elif defined(BITNET_LUT2)
 #ifdef BITNET_TILING
-    bitnet_gemm gemm = type_traits_bitnet[type].gemm3;
+    bitnet_gemm gemm = type_traits_bitnet[type].gemm2_tile;
 #else
     bitnet_gemm gemm = type_traits_bitnet[type].gemm2;
 #endif
@@ -7226,21 +7231,33 @@ UseGgmlGemm2:;
 
 #ifdef BITNET_LUT
     if (ggml_n_dims(src0) == 2 && bitnet_trans){
-        const int8_t * src1_wdata = (src1->type == vec_dot_type) ? src1->data : params->wdata;
-
-        int64_t nrows = blck_size;
-
-        int64_t src1_start = (ith * ne00) / nth;
-        int64_t src1_end   = ((ith + 1) * ne00) / nth;
-        src1_start = (src1_start % nrows) ? src1_start + nrows - (src1_start % nrows): src1_start;
-        src1_end   = (src1_end   % nrows) ? src1_end   + nrows - (src1_end   % nrows): src1_end;
-
 #ifdef BITNET_DEBUG
         struct timespec make_table_start = get_thread_cpu_time();
 #endif
+        const int8_t * src1_wdata = (src1->type == vec_dot_type) ? src1->data : params->wdata;
+        
+        // make table
+#ifdef BITNET_TILING
+        int64_t num_per_row = ne11 / TABLE_ENTRY_SIZE + (ne11 % TABLE_ENTRY_SIZE ? 1 : 0);
+        int64_t src1_start = (ith * ne10 / blck_size * num_per_row) / nth;
+        int64_t src1_end = ((ith + 1) * ne10 / blck_size * num_per_row) / nth;
+
         if (src1_start < src1_end) {
-            make_table(src1_wdata + src1_start * ne11, src1_end - src1_start, ne11, table + src1_start * table_entries_num / blck_size * ne11);
+            make_table(src1_wdata + src1_start * blck_size * TABLE_ENTRY_SIZE, src1_end - src1_start, TABLE_ENTRY_SIZE,
+                       table + src1_start * table_entries_num * TABLE_ENTRY_SIZE);
         }
+#else
+        int64_t src1_start = (ith * ne10 / blck_size) / nth;
+        int64_t src1_end = ((ith + 1) * ne10 / blck_size) / nth;
+
+        if (src1_start < src1_end) {
+            make_table(src1_wdata + src1_start * blck_size * ne11, src1_end - src1_start, ne11,
+                       table + src1_start * table_entries_num * ne11);
+        }
+#endif
+        
+        ggml_barrier(params->threadpool);
+
 #ifdef BITNET_DEBUG
         struct timespec make_table_end = get_thread_cpu_time();
         pthread_mutex_lock(&time_mutex);
@@ -7248,14 +7265,12 @@ UseGgmlGemm2:;
         pthread_mutex_unlock(&time_mutex);
 #endif
 
-        ggml_barrier(params->threadpool);
-
-
+        // gemm
         int64_t src0_start = (ith * ne01) / nth;
         int64_t src0_end = ((ith + 1) * ne01) / nth;
 
         if (src0_start < src0_end) {
-            size_t tmp = type == GGML_TYPE_I2_T ? src0_start : src0_start * nb01;
+            size_t tmp = (type == GGML_TYPE_I2_T || type == GGML_TYPE_I2_S) ? src0_start : src0_start * nb01;
             gemm(ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + tmp, src1_wdata, ne11,
                  src0_end - src0_start);
         }
@@ -12384,22 +12399,24 @@ static void ggml_compute_forward(struct ggml_compute_params *params, struct ggml
         }
     }
 
-    // if (tensor->op == GGML_OP_MUL_MAT && type_traits_bitnet[tensor->src[0]->type].is_bitnet_type) {
-    //     ggml_barrier(params->threadpool);
-    //     if (params->ith == 0) {
-    //         printf("write tensors\n");
-    //         FILE *outfile = fopen("/home/cipherxzc/Projects/llama.cpp/mytest/tensors", "a");
-    //         // print_tensor(outfile, "weight", tensor->src[0]);
-    //         // print_tensor(outfile, "activation", tensor->src[1]);
-    //         print_tensor(outfile, "result", tensor);
-    //         fclose(outfile);
-    //         static int cnt = 0;
-    //         cnt++;
-    //         if (cnt == 3) {
-    //             exit(0);
-    //         }
-    //     }
-    // }
+#ifdef BITNET_PRINT_TENSORS
+    if (tensor->op == GGML_OP_MUL_MAT && type_traits_bitnet[tensor->src[0]->type].is_bitnet_type) {
+        ggml_barrier(params->threadpool);
+        if (params->ith == 0) {
+            printf("write tensors\n");
+            FILE *outfile = fopen("/home/cipherxzc/Projects/llama.cpp/mytest/tensors", "a");
+            // print_tensor(outfile, "weight", tensor->src[0]);
+            // print_tensor(outfile, "activation", tensor->src[1]);
+            print_tensor(outfile, "result", tensor);
+            fclose(outfile);
+            static int cnt = 0;
+            cnt++;
+            if (cnt == 3) {
+                exit(0);
+            }
+        }
+    }
+#endif
 }
 
 // Android's libc implementation "bionic" does not support setting affinity
@@ -13130,15 +13147,16 @@ struct ggml_cplan ggml_graph_plan(const struct ggml_cgraph *cgraph, int n_thread
     }
     
     // BitNet I8_B
-#if defined(BITNET_LUT) || defined(BITNET_LUT2)
-    table = (int16_t *)malloc(work_size * 256);
-#endif
-
+    
 #ifdef BITNET_TILING
     work_size += TABLE_ENTRY_SIZE * 10000 * sizeof(int8_t);
 #endif
 
-    const int MAX_INPUT_LENGTH = 2560;
+#if defined(BITNET_LUT) || defined(BITNET_LUT2)
+    table = (int16_t *)malloc(work_size * 64);
+#endif
+
+    const int MAX_INPUT_LENGTH = 2048;
     work_size += MAX_INPUT_LENGTH * sizeof(float);
 
     cplan.threadpool = threadpool;

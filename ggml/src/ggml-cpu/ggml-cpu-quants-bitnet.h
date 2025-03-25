@@ -6,9 +6,11 @@
 #include "ggml.h"
 
 #define BITNET_AVX2
-#define BITNET_DEBUG
-#define BITNET_LUT2
+#define BITNET_LUT
 #define BITNET_TILING
+
+#define BITNET_DEBUG
+// #define BITNET_PRINT_TENSORS
 
 #define TABLE_ENTRY_SIZE 32
 
@@ -22,11 +24,12 @@ void ggml_vec_dot_i1_58_i8_b(int n, float* GGML_RESTRICT s, size_t bs, const voi
 
 void ggml_gemm_i2_i8_b_make_table(const int8_t *GGML_RESTRICT y, int nrows, int n, int16_t *GGML_RESTRICT table);
 void ggml_gemm_i1_58_i8_b_make_table(const int8_t* GGML_RESTRICT y, int nrows, int n, int16_t* GGML_RESTRICT table);
+void ggml_gemm_i2_i8_s_make_table_tile(const int8_t* GGML_RESTRICT y, int nrows, int n, int16_t* GGML_RESTRICT table);
 
 // LUT1(LUT && !TILING)：集中打表，按列遍历 weight
 // LUT2(LUT2 && !TILING)：边计算边打表，按列遍历 weight
-// LUT3(LUT2 && TILING)：边计算边打表，为 activation 添加了tiling
-// LUT4(LUT && TILING): 集中打表，为 activation 添加了tiling
+// LUT_tile(LUT && TILING): 集中打表，为 activation 添加了tiling
+// LUT2_tile(LUT2 && TILING)：边计算边打表，为 activation 添加了tiling
 
 void ggml_gemm_i2_i8_b_LUT(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
 void ggml_gemm_i1_58_i8_b_LUT(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
@@ -36,10 +39,10 @@ void ggml_gemm_i2_i8_b_LUT2(int n, float* GGML_RESTRICT s, size_t bs, const void
 void ggml_gemm_i1_58_i8_b_LUT2(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
 void ggml_gemm_i2_i8_t_LUT2(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
 
-void ggml_gemm_i2_i8_t_LUT3(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
-void ggml_gemm_i2_i8_s_LUT3(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
+void ggml_gemm_i2_i8_s_LUT_tile(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
 
-// void ggml_gemm_i2_i8_s_LUT4(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
+void ggml_gemm_i2_i8_t_LUT2_tile(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
+void ggml_gemm_i2_i8_s_LUT2_tile(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
 
 #define GGML_TABLE_BEGIN(type, name, size) static const type name[size] = {
 #define GGML_TABLE_END() };
