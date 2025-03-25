@@ -6991,25 +6991,19 @@ void print_tensor(FILE *outfile, const char *name, const struct ggml_tensor *ten
     fprintf(outfile, "\n");
 }
 
-#define BITNET_LUT2
-#define BITNET_DEBUG
-#define BITNET_TILING
-
-#define TABLE_ENTRY_SIZE 32
-
 #if defined(BITNET_LUT) || defined(BITNET_LUT2)
 int16_t *table;
 
-typedef void (*bitnet_gemm) (int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc, const int16_t* GGML_RESTRICT table);
-typedef void (*bitnet_gemm2)(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
+typedef void (*bitnet_gemm)(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
 typedef void (*bitnet_make_table)(const int8_t *GGML_RESTRICT y, int nrows, int n, int16_t *GGML_RESTRICT table);
 
 struct ggml_type_traits_bitnet {
     bool is_bitnet_type;
     int64_t table_entries_num;
     bitnet_gemm gemm;
-    bitnet_gemm2 gemm2;
-    bitnet_gemm2 gemm3;
+    bitnet_gemm gemm2;
+    bitnet_gemm gemm3;
+    bitnet_gemm gemm4;
     bitnet_make_table make_table;
 };
 
@@ -7139,11 +7133,11 @@ UseGgmlGemm1:;
     assert(gemm);
 #elif defined(BITNET_LUT2)
 #ifdef BITNET_TILING
-    bitnet_gemm2 gemm = type_traits_bitnet[type].gemm3;
+    bitnet_gemm gemm = type_traits_bitnet[type].gemm3;
 #else
-    bitnet_gemm2 gemm = type_traits_bitnet[type].gemm2;
+    bitnet_gemm gemm = type_traits_bitnet[type].gemm2;
 #endif
-    assert(gemm2);
+    assert(gemm);
 #endif
 
 #endif
@@ -7263,7 +7257,7 @@ UseGgmlGemm2:;
         if (src0_start < src0_end) {
             size_t tmp = type == GGML_TYPE_I2_T ? src0_start : src0_start * nb01;
             gemm(ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + tmp, src1_wdata, ne11,
-                 src0_end - src0_start, table);
+                 src0_end - src0_start);
         }
 #ifdef BITNET_DEBUG
         struct timespec end = get_thread_cpu_time();
@@ -13141,7 +13135,6 @@ struct ggml_cplan ggml_graph_plan(const struct ggml_cgraph *cgraph, int n_thread
 #endif
 
 #ifdef BITNET_TILING
-#define TABLE_ENTRY_SIZE 32
     work_size += TABLE_ENTRY_SIZE * 10000 * sizeof(int8_t);
 #endif
 
