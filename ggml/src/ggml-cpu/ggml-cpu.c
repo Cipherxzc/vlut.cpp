@@ -13153,7 +13153,7 @@ struct ggml_cplan ggml_graph_plan(const struct ggml_cgraph *cgraph, int n_thread
 #endif
 
 #if defined(BITNET_LUT) || defined(BITNET_LUT2)
-    table = (int16_t *)malloc(work_size * 64);
+    table = (int16_t *)malloc(work_size * 64 * sizeof(int16_t));
 #endif
 
     const int MAX_INPUT_LENGTH = 2048;

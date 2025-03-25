@@ -6,7 +6,7 @@
 #include "ggml.h"
 
 #define BITNET_AVX2
-#define BITNET_LUT
+#define BITNET_LUT2
 #define BITNET_TILING
 
 #define BITNET_DEBUG
