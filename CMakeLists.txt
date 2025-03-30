@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.14) # for add_link_options and implicit target 
 project("llama.cpp" C CXX)
 include(CheckIncludeFileCXX)
 
+# Bitnet configs added by @xiangyu
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bitnet.cmake)
+
 #set(CMAKE_WARN_DEPRECATED YES)
 set(CMAKE_WARN_UNUSED_CLI YES)
 

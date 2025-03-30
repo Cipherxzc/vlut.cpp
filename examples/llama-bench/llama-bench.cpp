@@ -1461,8 +1461,6 @@ static std::unique_ptr<printer> create_printer(output_formats format) {
     GGML_ABORT("fatal error");
 }
 
-#define BITNET_DEBUG
-
 #ifdef BITNET_DEBUG
 extern long long total_time, quant_time, make_table_time, convert_time, scale_time, LUT_time, vec_add_time;
 #endif

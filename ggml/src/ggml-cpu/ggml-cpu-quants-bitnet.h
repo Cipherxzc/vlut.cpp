@@ -5,15 +5,7 @@
 #include "ggml-common.h"
 #include "ggml.h"
 
-#define BITNET_AVX2
-#define BITNET_LUT2
-#define BITNET_TILING
-
-#define BITNET_DEBUG
-// #define BITNET_PRINT_TENSORS
-
 #define TABLE_ENTRY_SIZE 32
-
 
 void quantize_row_i8_b(const float* GGML_RESTRICT x, void* GGML_RESTRICT y, int64_t n);
 void quantize_row_i8_b_trans(const float* GGML_RESTRICT x, void* GGML_RESTRICT y, int64_t n, int64_t row_size, float* scale);
