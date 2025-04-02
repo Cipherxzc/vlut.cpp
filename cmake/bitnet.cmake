@@ -7,6 +7,8 @@ option(BITNET_LUT2 "Enable LUT2 instead of LUT1" ON)
 option(BITNET_TILING "Enable tiling on prompt length" ON)
 option(BITNET_PRINT_TENSORS "Enable printing tensors" OFF)
 
+set(TABLE_ENTRY_SIZE 32 CACHE STRING "Tile size of the table entry")
+
 # Add compile definitions based on options
 if(BITNET_DEBUG)
     add_compile_definitions(BITNET_DEBUG)
@@ -19,6 +21,7 @@ if(BITNET_LUT2)
 endif()
 if(BITNET_TILING)
     add_compile_definitions(BITNET_TILING)
+    add_compile_definitions(TABLE_ENTRY_SIZE=${TABLE_ENTRY_SIZE})
 endif()
 if(BITNET_PRINT_TENSORS)
     add_compile_definitions(BITNET_PRINT_TENSORS)

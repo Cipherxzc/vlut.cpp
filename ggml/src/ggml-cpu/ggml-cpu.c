@@ -12399,6 +12399,11 @@ static void ggml_compute_forward(struct ggml_compute_params *params, struct ggml
         }
     }
 
+    // if (tensor->op == GGML_OP_MUL_MAT) {
+    //     printf("%s ", ggml_type_name(tensor->src[0]->type));
+    // }
+    // printf("%s\n", ggml_op_name(tensor->op));
+
 #ifdef BITNET_PRINT_TENSORS
     if (tensor->op == GGML_OP_MUL_MAT && type_traits_bitnet[tensor->src[0]->type].is_bitnet_type) {
         ggml_barrier(params->threadpool);

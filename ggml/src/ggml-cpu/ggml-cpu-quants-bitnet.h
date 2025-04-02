@@ -5,8 +5,6 @@
 #include "ggml-common.h"
 #include "ggml.h"
 
-#define TABLE_ENTRY_SIZE 32
-
 void quantize_row_i8_b(const float* GGML_RESTRICT x, void* GGML_RESTRICT y, int64_t n);
 void quantize_row_i8_b_trans(const float* GGML_RESTRICT x, void* GGML_RESTRICT y, int64_t n, int64_t row_size, float* scale);
 void quantize_row_i8_b_tile(const float* GGML_RESTRICT x, void* GGML_RESTRICT y, int64_t n, float* scale);
