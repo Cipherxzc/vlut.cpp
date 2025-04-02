@@ -7122,7 +7122,7 @@ UseGgmlGemm1:;
 
 #if defined(BITNET_LUT) || defined(BITNET_LUT2)
     const int gemm_lim = 0;
-    bool bitnet_trans = type_traits_bitnet[type].is_bitnet_type && (ne11 > gemm_lim);
+    bool bitnet_mulmat = type_traits_bitnet[type].is_bitnet_type && (ne11 > gemm_lim);
 
 #ifdef BITNET_LUT
     const int64_t blck_size = ggml_blck_size(type);
@@ -7144,7 +7144,6 @@ UseGgmlGemm1:;
 #endif
     assert(gemm);
 #endif
-
 #endif
 
     if (src1->type != vec_dot_type) {
@@ -7162,8 +7161,9 @@ UseGgmlGemm1:;
 #endif
         for (int64_t i13 = 0; i13 < ne13; ++i13) {
             for (int64_t i12 = 0; i12 < ne12; ++i12) {
-                #if defined(BITNET_LUT) || defined(BITNET_LUT2)
-                if (bitnet_trans) {
+#ifdef BITNET_LUT2
+// #if defined(BITNET_LUT) || defined(BITNET_LUT2)
+                if (bitnet_mulmat) {
 #ifdef BITNET_TILING
                     const size_t wdata_size = ((ne11 % TABLE_ENTRY_SIZE) ? ne11 + TABLE_ENTRY_SIZE - (ne11 % TABLE_ENTRY_SIZE): ne11) * ne10;
                     float *scale = (float *)(wdata + wdata_size);
@@ -7193,7 +7193,7 @@ UseGgmlGemm1:;
         }
 #ifdef BITNET_DEBUG
         struct timespec quant_end = get_thread_cpu_time();
-        if (bitnet_trans){
+        if (bitnet_mulmat){
             pthread_mutex_lock(&time_mutex);
             quant_time += get_time_diff(quant_start, quant_end);
             pthread_mutex_unlock(&time_mutex);
@@ -7230,7 +7230,7 @@ UseGgmlGemm2:;
 
 
 #ifdef BITNET_LUT
-    if (ggml_n_dims(src0) == 2 && bitnet_trans){
+    if (ggml_n_dims(src0) == 2 && bitnet_mulmat){
 #ifdef BITNET_DEBUG
         struct timespec make_table_start = get_thread_cpu_time();
 #endif
@@ -7238,13 +7238,21 @@ UseGgmlGemm2:;
         
         // make table
 #ifdef BITNET_TILING
-        int64_t num_per_row = ne11 / TABLE_ENTRY_SIZE + (ne11 % TABLE_ENTRY_SIZE ? 1 : 0);
-        int64_t src1_start = (ith * ne10 / blck_size * num_per_row) / nth;
-        int64_t src1_end = ((ith + 1) * ne10 / blck_size * num_per_row) / nth;
+        // int64_t num_per_row = ne11 / TABLE_ENTRY_SIZE + (ne11 % TABLE_ENTRY_SIZE ? 1 : 0);
+        // int64_t src1_start = (ith * ne10 / blck_size * num_per_row) / nth;
+        // int64_t src1_end = ((ith + 1) * ne10 / blck_size * num_per_row) / nth;
+
+        // if (src1_start < src1_end) {
+        //     make_table(src1_wdata + src1_start * blck_size * TABLE_ENTRY_SIZE, src1_end - src1_start, TABLE_ENTRY_SIZE,
+        //                table + src1_start * table_entries_num * TABLE_ENTRY_SIZE);
+        // }
+
+        int64_t src1_start = (ith * ne10 / blck_size) / nth;
+        int64_t src1_end = ((ith + 1) * ne10 / blck_size) / nth;
 
         if (src1_start < src1_end) {
-            make_table(src1_wdata + src1_start * blck_size * TABLE_ENTRY_SIZE, src1_end - src1_start, TABLE_ENTRY_SIZE,
-                       table + src1_start * table_entries_num * TABLE_ENTRY_SIZE);
+            ggml_gemm_i2_i8_s_make_table_tile2(src1_wdata + src1_start * blck_size, src1_end - src1_start, ne11, ne10,
+                                               table + src1_start * table_entries_num * TABLE_ENTRY_SIZE);
         }
 #else
         int64_t src1_start = (ith * ne10 / blck_size) / nth;
@@ -7283,7 +7291,7 @@ UseGgmlGemm2:;
         return;
     }
 #elif defined(BITNET_LUT2)
-    if (ggml_n_dims(src0) == 2 && bitnet_trans) {
+    if (ggml_n_dims(src0) == 2 && bitnet_mulmat) {
         const int8_t * src1_wdata = (src1->type == vec_dot_type) ? src1->data : params->wdata;
 
         int64_t src0_start = (ith * ne01) / nth;

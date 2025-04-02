@@ -3,7 +3,6 @@
 # Set the default options
 option(BITNET_DEBUG "Enable BITNET debug timing output" OFF)
 option(BITNET_AVX2 "Enable BITNET AVX2 feature" OFF)
-option(BITNET_LUT "Enable LUT1" ON)
 option(BITNET_LUT2 "Enable LUT2 instead of LUT1" OFF)
 option(BITNET_TILING "Enable tiling on prompt length" ON)
 option(BITNET_PRINT_TENSORS "Enable printing tensors" OFF)
@@ -19,12 +18,10 @@ if(BITNET_AVX2)
     add_compile_definitions(BITNET_AVX2)
 endif()
 
-if(BITNET_LUT AND BITNET_LUT2)
-    message(FATAL_ERROR "BITNET_LUT and BITNET_LUT2 cannot be enabled at the same time.")
-elseif(BITNET_LUT)
-    add_compile_definitions(BITNET_LUT)
-elseif(BITNET_LUT2)
+if(BITNET_LUT2)
     add_compile_definitions(BITNET_LUT2)
+else()
+    add_compile_definitions(BITNET_LUT)
 endif()
 
 if(BITNET_TILING)

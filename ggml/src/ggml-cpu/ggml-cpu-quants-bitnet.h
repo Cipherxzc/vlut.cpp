@@ -12,9 +12,10 @@ void quantize_row_i8_b_tile(const float* GGML_RESTRICT x, void* GGML_RESTRICT y,
 void ggml_vec_dot_i2_i8_b(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, size_t bx, const void* GGML_RESTRICT vy, size_t by, int nrc);
 void ggml_vec_dot_i1_58_i8_b(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, size_t bx, const void* GGML_RESTRICT vy, size_t by, int nrc);
 
-void ggml_gemm_i2_i8_b_make_table(const int8_t *GGML_RESTRICT y, int nrows, int n, int16_t *GGML_RESTRICT table);
-void ggml_gemm_i1_58_i8_b_make_table(const int8_t* GGML_RESTRICT y, int nrows, int n, int16_t* GGML_RESTRICT table);
-void ggml_gemm_i2_i8_s_make_table_tile(const int8_t* GGML_RESTRICT y, int nrows, int n, int16_t* GGML_RESTRICT table);
+void ggml_gemm_i2_i8_b_make_table(const int8_t *GGML_RESTRICT y, int ntables, int nr, int16_t *GGML_RESTRICT table);
+void ggml_gemm_i1_58_i8_b_make_table(const int8_t* GGML_RESTRICT y, int ntables, int nr, int16_t* GGML_RESTRICT table);
+void ggml_gemm_i2_i8_s_make_table_tile(const int8_t* GGML_RESTRICT y, int ntables, int nr, int16_t* GGML_RESTRICT table);
+void ggml_gemm_i2_i8_s_make_table_tile2(const int8_t* GGML_RESTRICT y, int ntables, int nr, int n, int16_t* GGML_RESTRICT table);
 
 // LUT1(LUT && !TILING)：集中打表，按列遍历 weight
 // LUT2(LUT2 && !TILING)：边计算边打表，按列遍历 weight
