@@ -441,13 +441,13 @@ static const struct ggml_type_traits_cpu type_traits_cpu[GGML_TYPE_COUNT] = {
         },
     [GGML_TYPE_I2_B] =
         {
-            .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,
+            // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,
             .vec_dot_type = GGML_TYPE_I8_B,
             .nrows = 1,
         },
     [GGML_TYPE_I1_58_B] = 
         {
-            .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i1_58_i8_b,
+            // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i1_58_i8_b,
             .vec_dot_type = GGML_TYPE_I8_B,
             .nrows = 1,
         },
@@ -457,13 +457,13 @@ static const struct ggml_type_traits_cpu type_traits_cpu[GGML_TYPE_COUNT] = {
         },
     [GGML_TYPE_I2_T] =
         {
-            .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
+            // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
             .vec_dot_type = GGML_TYPE_I8_B,
             .nrows = 1,
         },
     [GGML_TYPE_I2_S] =
         {
-            .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
+            // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
             .vec_dot_type = GGML_TYPE_I8_B,
             .nrows = 1,
         },
@@ -6995,52 +6995,30 @@ void print_tensor(FILE *outfile, const char *name, const struct ggml_tensor *ten
 int16_t *table;
 
 typedef void (*bitnet_gemm)(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
-typedef void (*bitnet_make_table)(const int8_t *GGML_RESTRICT y, int nrows, int n, int16_t *GGML_RESTRICT table);
+typedef void (*bitnet_make_table)(const int8_t *GGML_RESTRICT y, int ntables, int nr, int n, int16_t *GGML_RESTRICT table);
 
 struct ggml_type_traits_bitnet {
     bool is_bitnet_type;
     int64_t table_entries_num;
+    bitnet_make_table make_table;
     bitnet_gemm gemm;
     bitnet_gemm gemm2;
-    bitnet_gemm gemm_tile;
-    bitnet_gemm gemm2_tile;
-    bitnet_make_table make_table;
-    bitnet_make_table make_table_tile;
 };
 
 static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] = {
-    [GGML_TYPE_I2_B] =
-        {
-            .is_bitnet_type = true,
-            .table_entries_num = 256,
-            .gemm = ggml_gemm_i2_i8_b_LUT,
-            .gemm2 = ggml_gemm_i2_i8_b_LUT2,
-            .make_table = ggml_gemm_i2_i8_b_make_table,
-        },
-    [GGML_TYPE_I1_58_B] =
-        {
-            .is_bitnet_type = true,
-            .table_entries_num = 243,
-            .gemm = ggml_gemm_i1_58_i8_b_LUT,
-            .gemm2 = ggml_gemm_i1_58_i8_b_LUT2,
-            .make_table = ggml_gemm_i1_58_i8_b_make_table,
-        },
     [GGML_TYPE_I2_T] =
         {
             .is_bitnet_type = true,
             .table_entries_num = 256,
-            .gemm = ggml_gemm_i2_i8_t_LUT,
-            .gemm2 = ggml_gemm_i2_i8_t_LUT2,
-            .gemm2_tile = ggml_gemm_i2_i8_t_LUT2_tile,
-            .make_table = ggml_gemm_i2_i8_b_make_table,
+            .gemm2 = ggml_gemm_i2_i8_t_LUT2_tile,
         },
     [GGML_TYPE_I2_S] =
         {
             .is_bitnet_type = true,
             .table_entries_num = 81,
-            .gemm2_tile = ggml_gemm_i2_i8_s_LUT2_tile,
-            .gemm_tile = ggml_gemm_i2_i8_s_LUT_tile,
-            .make_table_tile = ggml_gemm_i2_i8_s_make_table_tile,
+            .make_table = ggml_gemm_i2_i8_s_make_table_tile,
+            .gemm = ggml_gemm_i2_i8_s_LUT_tile,
+            .gemm2 = ggml_gemm_i2_i8_s_LUT2_tile,
         },
 };
 #endif
@@ -7127,21 +7105,14 @@ UseGgmlGemm1:;
 #ifdef BITNET_LUT
     const int64_t blck_size = ggml_blck_size(type);
     int64_t table_entries_num = type_traits_bitnet[type].table_entries_num;
-    #ifdef BITNET_TILING
-    bitnet_make_table make_table = type_traits_bitnet[type].make_table_tile;
-    bitnet_gemm gemm = type_traits_bitnet[type].gemm_tile;
-    #else
     bitnet_make_table make_table = type_traits_bitnet[type].make_table;
     bitnet_gemm gemm = type_traits_bitnet[type].gemm;
-#endif
+
     assert(make_table);
     assert(gemm);
 #elif defined(BITNET_LUT2)
-#ifdef BITNET_TILING
-    bitnet_gemm gemm = type_traits_bitnet[type].gemm2_tile;
-#else
     bitnet_gemm gemm = type_traits_bitnet[type].gemm2;
-#endif
+    
     assert(gemm);
 #endif
 #endif
@@ -7162,9 +7133,7 @@ UseGgmlGemm1:;
         for (int64_t i13 = 0; i13 < ne13; ++i13) {
             for (int64_t i12 = 0; i12 < ne12; ++i12) {
 #ifdef BITNET_LUT2
-// #if defined(BITNET_LUT) || defined(BITNET_LUT2)
                 if (bitnet_mulmat) {
-#ifdef BITNET_TILING
                     const size_t wdata_size = ((ne11 % TABLE_ENTRY_SIZE) ? ne11 + TABLE_ENTRY_SIZE - (ne11 % TABLE_ENTRY_SIZE): ne11) * ne10;
                     float *scale = (float *)(wdata + wdata_size);
                     for (int64_t i11 = ith; i11 < ne11; i11 += nth) {
@@ -7174,14 +7143,7 @@ UseGgmlGemm1:;
                             (float *)((char *) src1->data + i13*nb13 + i12*nb12 + i11*nb11),
                             (void *) (wdata + i * TABLE_ENTRY_SIZE + j), ne10, scale + i11);
                         }
-#else
-                    const size_t wdata_size = ne10 * ne11;
-                    float *scale = (float *)(wdata + wdata_size);
-                    for (int64_t i11 = ith; i11 < ne11; i11 += nth) {
-                        quantize_row_i8_b_trans((float *)((char *)src1->data + i13 * nb13 + i12 * nb12 + i11 * nb11),
-                        (void *)(wdata + i11), ne10, ne11, scale + i11);
-                    }
-#endif
+
                     continue;
                 }
 #endif
@@ -7237,32 +7199,13 @@ UseGgmlGemm2:;
         const int8_t * src1_wdata = (src1->type == vec_dot_type) ? src1->data : params->wdata;
         
         // make table
-#ifdef BITNET_TILING
-        // int64_t num_per_row = ne11 / TABLE_ENTRY_SIZE + (ne11 % TABLE_ENTRY_SIZE ? 1 : 0);
-        // int64_t src1_start = (ith * ne10 / blck_size * num_per_row) / nth;
-        // int64_t src1_end = ((ith + 1) * ne10 / blck_size * num_per_row) / nth;
-
-        // if (src1_start < src1_end) {
-        //     make_table(src1_wdata + src1_start * blck_size * TABLE_ENTRY_SIZE, src1_end - src1_start, TABLE_ENTRY_SIZE,
-        //                table + src1_start * table_entries_num * TABLE_ENTRY_SIZE);
-        // }
-
         int64_t src1_start = (ith * ne10 / blck_size) / nth;
         int64_t src1_end = ((ith + 1) * ne10 / blck_size) / nth;
 
         if (src1_start < src1_end) {
-            ggml_gemm_i2_i8_s_make_table_tile2(src1_wdata + src1_start * blck_size, src1_end - src1_start, ne11, ne10,
+            make_table(src1_wdata + src1_start * blck_size, src1_end - src1_start, ne11, ne10,
                                                table + src1_start * table_entries_num * TABLE_ENTRY_SIZE);
         }
-#else
-        int64_t src1_start = (ith * ne10 / blck_size) / nth;
-        int64_t src1_end = ((ith + 1) * ne10 / blck_size) / nth;
-
-        if (src1_start < src1_end) {
-            make_table(src1_wdata + src1_start * blck_size * ne11, src1_end - src1_start, ne11,
-                       table + src1_start * table_entries_num * ne11);
-        }
-#endif
         
         ggml_barrier(params->threadpool);
 
