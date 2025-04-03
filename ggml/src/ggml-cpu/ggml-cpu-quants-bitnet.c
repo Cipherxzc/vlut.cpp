@@ -120,6 +120,12 @@ static long long get_time_diff(const struct timespec start, const struct timespe
 #endif
 
 
+extern const int16_t *restrict tables;
+extern int8_t *tmp_src;
+extern int16_t *sum1;
+extern int *sum2;
+
+
 void ggml_gemm_i2_i8_s_make_table_tile(const int8_t *restrict y, int ntables, int nr, int n, int16_t *restrict table) {
     // int8_t *restrict src = (int8_t *)malloc(sizeof(int8_t) * n * TABLE_ENTRY_SIZE);
     // for (int i = 0; i < nr; i += TABLE_ENTRY_SIZE) {
@@ -160,7 +166,6 @@ void ggml_gemm_i2_i8_s_make_table_tile(const int8_t *restrict y, int ntables, in
     free(src);
 }
 
-extern const int16_t *restrict table;
 
 void ggml_gemm_i2_i8_t_LUT2_tile(int n, float *restrict s, size_t bs, const void *restrict vx, const void *restrict vy,
                             int nr, int nc) {
@@ -171,12 +176,12 @@ void ggml_gemm_i2_i8_t_LUT2_tile(int n, float *restrict s, size_t bs, const void
     const int8_t *restrict y = vy;
 
     
-    int16_t *restrict ss = (int16_t *)malloc(sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
-    int *restrict ss2 = (int *)malloc(sizeof(int) * nr * nc);
+    int16_t *restrict sum_i16 = (int16_t *)malloc(sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+    int *restrict sum_i32 = (int *)malloc(sizeof(int) * nr * nc);
     int16_t *restrict table = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) << 8); // 256 total table
 
-    memset(ss, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
-    memset(ss2, 0, sizeof(int) * nr * nc);
+    memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+    memset(sum_i32, 0, sizeof(int) * nr * nc);
     memset(table, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
 
     static const int group_size = 512;
@@ -206,7 +211,7 @@ void ggml_gemm_i2_i8_t_LUT2_tile(int n, float *restrict s, size_t bs, const void
 #endif
                 for (int c = 0; c < nc; c++) {
                     int v = x[i * bs + c];
-                    int16_t *restrict rs = ss + c * TABLE_ENTRY_SIZE;
+                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
                     const int16_t *restrict rt = table + v * TABLE_ENTRY_SIZE;
                     for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
                         rs[r] += rt[r];
@@ -222,10 +227,10 @@ void ggml_gemm_i2_i8_t_LUT2_tile(int n, float *restrict s, size_t bs, const void
 #endif
             for (int i = 0; i < nc; i++){
                 for (int j = 0; j < entry_len; j++) {
-                    ss2[(t + j) * nc + i] += ss[i * TABLE_ENTRY_SIZE + j];
+                    sum_i32[(t + j) * nc + i] += sum_i16[i * TABLE_ENTRY_SIZE + j];
                 }
             }
-            memset(ss, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+            memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
 #ifdef BITNET_DEBUG
             struct timespec end_convert = get_thread_cpu_time();
             convert_duration += get_time_diff(start_convert, end_convert);
@@ -240,7 +245,7 @@ void ggml_gemm_i2_i8_t_LUT2_tile(int n, float *restrict s, size_t bs, const void
     const float *sc = (const float *)(y + y_size);
     for (int r = 0; r < nr; r++) {
         for (int c = 0; c < nc; c++) {
-            s[r * bs + c] = ss2[r * nc + c] * sc[r];  // 将输出转置回来
+            s[r * bs + c] = sum_i32[r * nc + c] * sc[r];  // 将输出转置回来
         }
     }
 #ifdef BITNET_DEBUG
@@ -256,8 +261,8 @@ void ggml_gemm_i2_i8_t_LUT2_tile(int n, float *restrict s, size_t bs, const void
 #endif
 
     free(table);
-    free(ss);
-    free(ss2);
+    free(sum_i16);
+    free(sum_i32);
 }
 
 void ggml_gemm_i2_i8_s_LUT2_tile(int n, float *restrict s, size_t bs, const void *restrict vx, const void *restrict vy,
@@ -268,12 +273,12 @@ void ggml_gemm_i2_i8_s_LUT2_tile(int n, float *restrict s, size_t bs, const void
     const uint8_t *restrict x = vx;
     const int8_t *restrict y = vy;
 
-    int16_t *restrict ss = (int16_t *)malloc(sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
-    int *restrict ss2 = (int *)malloc(sizeof(int) * nr * nc);
+    int16_t *restrict sum_i16 = (int16_t *)malloc(sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+    int *restrict sum_i32 = (int *)malloc(sizeof(int) * nr * nc);
     int16_t *restrict table = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
 
-    memset(ss, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
-    memset(ss2, 0, sizeof(int) * nr * nc);
+    memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+    memset(sum_i32, 0, sizeof(int) * nr * nc);
     memset(table + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
 
     static const int group_size = 512;
@@ -303,7 +308,7 @@ void ggml_gemm_i2_i8_s_LUT2_tile(int n, float *restrict s, size_t bs, const void
 #endif
                 for (int c = 0; c < nc; c++) {
                     int v = x[i * bs + c];
-                    int16_t *restrict rs = ss + c * TABLE_ENTRY_SIZE;
+                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
                     const int16_t *restrict rt = table + v * TABLE_ENTRY_SIZE;
                     for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
                         rs[r] += rt[r];
@@ -319,10 +324,10 @@ void ggml_gemm_i2_i8_s_LUT2_tile(int n, float *restrict s, size_t bs, const void
 #endif
             for (int i = 0; i < nc; i++) {
                 for (int j = 0; j < entry_len; j++) {
-                    ss2[(t + j) * nc + i] += ss[i * TABLE_ENTRY_SIZE + j];
+                    sum_i32[(t + j) * nc + i] += sum_i16[i * TABLE_ENTRY_SIZE + j];
                 }
             }
-            memset(ss, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+            memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
 #ifdef BITNET_DEBUG
             struct timespec end_convert = get_thread_cpu_time();
             convert_duration += get_time_diff(start_convert, end_convert);
@@ -337,7 +342,7 @@ void ggml_gemm_i2_i8_s_LUT2_tile(int n, float *restrict s, size_t bs, const void
     const float *sc = (const float *)(y + y_size);
     for (int r = 0; r < nr; r++) {
         for (int c = 0; c < nc; c++) {
-            s[r * bs + c] = ss2[r * nc + c] * sc[r];  // 将输出转置回来
+            s[r * bs + c] = sum_i32[r * nc + c] * sc[r];  // 将输出转置回来
         }
     }
 #ifdef BITNET_DEBUG
@@ -353,9 +358,10 @@ void ggml_gemm_i2_i8_s_LUT2_tile(int n, float *restrict s, size_t bs, const void
 #endif
 
     free(table);
-    free(ss);
-    free(ss2);
+    free(sum_i16);
+    free(sum_i32);
 }
+
 
 void ggml_gemm_i2_i8_s_LUT_tile(int n, float *restrict s, size_t bs, const void *restrict vx, const void *restrict vy,
                             int nr, int nc) {
@@ -365,11 +371,11 @@ void ggml_gemm_i2_i8_s_LUT_tile(int n, float *restrict s, size_t bs, const void 
     const uint8_t *restrict x = vx;
     const int8_t *restrict y = vy;
 
-    int16_t *restrict ss = (int16_t *)malloc(sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
-    int *restrict ss2 = (int *)malloc(sizeof(int) * nr * nc);
+    int16_t *restrict sum_i16 = (int16_t *)malloc(sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+    int *restrict sum_i32 = (int *)malloc(sizeof(int) * nr * nc);
 
-    memset(ss, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
-    memset(ss2, 0, sizeof(int) * nr * nc);
+    memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+    memset(sum_i32, 0, sizeof(int) * nr * nc);
 
     static const int group_size = 512;
 
@@ -380,7 +386,7 @@ void ggml_gemm_i2_i8_s_LUT_tile(int n, float *restrict s, size_t bs, const void 
 #endif
 
     for (int t = 0; t < nr; t += TABLE_ENTRY_SIZE) {
-        const int16_t *restrict table0 = table + t * n / 4 * 81;
+        const int16_t *restrict table = tables + t * n / 4 * 81;
         const int entry_len = MIN(nr - t, TABLE_ENTRY_SIZE);
         for (int g = 0; g < n; g += group_size) {
             int lim = g + group_size < n ? g + group_size : n;
@@ -388,10 +394,10 @@ void ggml_gemm_i2_i8_s_LUT_tile(int n, float *restrict s, size_t bs, const void 
 #ifdef BITNET_DEBUG
                 struct timespec start_LUT = get_thread_cpu_time();
 #endif
-            const int16_t *restrict this_table = table0 + i * 81 * TABLE_ENTRY_SIZE;
+            const int16_t *restrict this_table = table + i * 81 * TABLE_ENTRY_SIZE;
                 for (int c = 0; c < nc; c++) {
                     int v = x[i * bs + c];
-                    int16_t *restrict rs = ss + c * TABLE_ENTRY_SIZE;
+                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
                     const int16_t *restrict rt = this_table + v * TABLE_ENTRY_SIZE;
                     for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
                         rs[r] += rt[r];
@@ -407,10 +413,10 @@ void ggml_gemm_i2_i8_s_LUT_tile(int n, float *restrict s, size_t bs, const void 
 #endif
             for (int i = 0; i < nc; i++) {
                 for (int j = 0; j < entry_len; j++) {
-                    ss2[(t + j) * nc + i] += ss[i * TABLE_ENTRY_SIZE + j];
+                    sum_i32[(t + j) * nc + i] += sum_i16[i * TABLE_ENTRY_SIZE + j];
                 }
             }
-            memset(ss, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+            memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
 #ifdef BITNET_DEBUG
             struct timespec end_convert = get_thread_cpu_time();
             convert_duration += get_time_diff(start_convert, end_convert);
@@ -425,7 +431,7 @@ void ggml_gemm_i2_i8_s_LUT_tile(int n, float *restrict s, size_t bs, const void 
     for (int r = 0; r < nr; r++) {
         const float scale = *((const float *)(y + r * (n + 4) + n));
         for (int c = 0; c < nc; c++) {
-            s[r * bs + c] = ss2[r * nc + c] * scale;  // 将输出转置回来
+            s[r * bs + c] = sum_i32[r * nc + c] * scale;  // 将输出转置回来
         }
     }
 #ifdef BITNET_DEBUG
@@ -439,8 +445,8 @@ void ggml_gemm_i2_i8_s_LUT_tile(int n, float *restrict s, size_t bs, const void 
     pthread_mutex_unlock(&time_mutex);
 #endif
 
-    free(ss);
-    free(ss2);
+    free(sum_i16);
+    free(sum_i32);
 }
 
 

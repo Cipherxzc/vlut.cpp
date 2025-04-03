@@ -6992,7 +6992,6 @@ void print_tensor(FILE *outfile, const char *name, const struct ggml_tensor *ten
 }
 
 #if defined(BITNET_LUT) || defined(BITNET_LUT2)
-int16_t *table;
 
 typedef void (*bitnet_gemm)(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
 typedef void (*bitnet_make_table)(const int8_t *GGML_RESTRICT y, int ntables, int nr, int n, int16_t *GGML_RESTRICT table);
@@ -7021,6 +7020,13 @@ static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] 
             .gemm2 = ggml_gemm_i2_i8_s_LUT2_tile,
         },
 };
+
+
+int16_t *tables;
+int8_t *tmp_src;
+int16_t *sum1;
+int *sum2;
+
 #endif
 
 #ifdef BITNET_DEBUG
@@ -7204,9 +7210,9 @@ UseGgmlGemm2:;
 
         if (src1_start < src1_end) {
             make_table(src1_wdata + src1_start * blck_size, src1_end - src1_start, ne11, ne10,
-                                               table + src1_start * table_entries_num * TABLE_ENTRY_SIZE);
+                       tables + src1_start * table_entries_num * TABLE_ENTRY_SIZE);
         }
-        
+
         ggml_barrier(params->threadpool);
 
 #ifdef BITNET_DEBUG
@@ -13109,7 +13115,7 @@ struct ggml_cplan ggml_graph_plan(const struct ggml_cgraph *cgraph, int n_thread
 #endif
 
 #if defined(BITNET_LUT) || defined(BITNET_LUT2)
-    table = (int16_t *)malloc(work_size * 64 * sizeof(int16_t));
+    tables = (int16_t *)malloc(work_size * 64 * sizeof(int16_t));
 #endif
 
     const int MAX_INPUT_LENGTH = 2048;
