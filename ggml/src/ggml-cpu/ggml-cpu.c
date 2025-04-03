@@ -6993,8 +6993,9 @@ void print_tensor(FILE *outfile, const char *name, const struct ggml_tensor *ten
 
 #if defined(BITNET_LUT) || defined(BITNET_LUT2)
 
-typedef void (*bitnet_gemm)(int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
-typedef void (*bitnet_make_table)(const int8_t *GGML_RESTRICT y, int ntables, int nr, int n, int16_t *GGML_RESTRICT table);
+typedef void (*bitnet_gemm)(int ith, int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
+typedef void (*bitnet_make_table)(int ith, const int8_t *GGML_RESTRICT y, int ntables, int nr, int n,
+                                  int16_t *GGML_RESTRICT table);
 
 struct ggml_type_traits_bitnet {
     bool is_bitnet_type;
@@ -7209,7 +7210,7 @@ UseGgmlGemm2:;
         int64_t src1_end = ((ith + 1) * ne10 / blck_size) / nth;
 
         if (src1_start < src1_end) {
-            make_table(src1_wdata + src1_start * blck_size, src1_end - src1_start, ne11, ne10,
+            make_table(params->ith, src1_wdata + src1_start * blck_size, src1_end - src1_start, ne11, ne10,
                        tables + src1_start * table_entries_num * TABLE_ENTRY_SIZE);
         }
 
@@ -7228,8 +7229,8 @@ UseGgmlGemm2:;
 
         if (src0_start < src0_end) {
             size_t tmp = (type == GGML_TYPE_I2_T || type == GGML_TYPE_I2_S) ? src0_start : src0_start * nb01;
-            gemm(ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + tmp, src1_wdata, ne11,
-                 src0_end - src0_start);
+            gemm(params->ith, ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + tmp,
+                 src1_wdata, ne11, src0_end - src0_start);
         }
 #ifdef BITNET_DEBUG
         struct timespec end = get_thread_cpu_time();
@@ -7248,8 +7249,8 @@ UseGgmlGemm2:;
 
         if (src0_start < src0_end) {
             size_t tmp = (type == GGML_TYPE_I2_T || type == GGML_TYPE_I2_S) ? src0_start : src0_start * nb01;
-            gemm(ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + tmp, src1_wdata, ne11,
-                  src0_end - src0_start);
+            gemm(params->ith, ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + tmp,
+                 src1_wdata, ne11, src0_end - src0_start);
         }
 
 #ifdef BITNET_DEBUG
@@ -13114,11 +13115,14 @@ struct ggml_cplan ggml_graph_plan(const struct ggml_cgraph *cgraph, int n_thread
     work_size += TABLE_ENTRY_SIZE * 10000 * sizeof(int8_t);
 #endif
 
+    const size_t MAX_INPUT_LENGTH = 2048;
+
 #if defined(BITNET_LUT) || defined(BITNET_LUT2)
-    tables = (int16_t *)malloc(work_size * 64 * sizeof(int16_t));
+    tables = (int16_t *)malloc(work_size / 4 * 256 * sizeof(int16_t));
+    // sum1 = (int16_t *)malloc(n_threads * TABLE_ENTRY_SIZE * 8640 * sizeof(int16_t));
+    // sum2 = (int *)malloc(n_threads * 8640 * MAX_INPUT_LENGTH * sizeof(int));
 #endif
 
-    const int MAX_INPUT_LENGTH = 2048;
     work_size += MAX_INPUT_LENGTH * sizeof(float);
 
     cplan.threadpool = threadpool;

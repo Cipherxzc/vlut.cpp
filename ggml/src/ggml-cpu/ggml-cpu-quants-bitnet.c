@@ -120,13 +120,13 @@ static long long get_time_diff(const struct timespec start, const struct timespe
 #endif
 
 
-extern const int16_t *restrict tables;
+extern int16_t *restrict tables;
 extern int8_t *tmp_src;
 extern int16_t *sum1;
 extern int *sum2;
 
-
-void ggml_gemm_i2_i8_s_make_table_tile(const int8_t *restrict y, int ntables, int nr, int n, int16_t *restrict table) {
+void ggml_gemm_i2_i8_s_make_table_tile(int ith, const int8_t *restrict y, int ntables, int nr, int n,
+                                       int16_t *restrict table) {
     // int8_t *restrict src = (int8_t *)malloc(sizeof(int8_t) * n * TABLE_ENTRY_SIZE);
     // for (int i = 0; i < nr; i += TABLE_ENTRY_SIZE) {
     //     int lim = MIN(i + TABLE_ENTRY_SIZE, nr) - i;
@@ -166,9 +166,8 @@ void ggml_gemm_i2_i8_s_make_table_tile(const int8_t *restrict y, int ntables, in
     free(src);
 }
 
-
-void ggml_gemm_i2_i8_t_LUT2_tile(int n, float *restrict s, size_t bs, const void *restrict vx, const void *restrict vy,
-                            int nr, int nc) {
+void ggml_gemm_i2_i8_t_LUT2_tile(int ith, int n, float *restrict s, size_t bs, const void *restrict vx,
+                                 const void *restrict vy, int nr, int nc) {
     // nr: src1->ne[1], nc: src0->ne[1]
     assert(n % 4 == 0);
 
@@ -178,7 +177,11 @@ void ggml_gemm_i2_i8_t_LUT2_tile(int n, float *restrict s, size_t bs, const void
     
     int16_t *restrict sum_i16 = (int16_t *)malloc(sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
     int *restrict sum_i32 = (int *)malloc(sizeof(int) * nr * nc);
-    int16_t *restrict table = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) << 8); // 256 total table
+    int16_t *restrict table = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 256);
+
+    // int16_t *restrict sum_i16 = sum1 + ith * TABLE_ENTRY_SIZE * nc;
+    // int *restrict sum_i32 = sum2 + ith * nr * nc;
+    // int16_t *restrict table = tables + ith * TABLE_ENTRY_SIZE * 256;
 
     memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
     memset(sum_i32, 0, sizeof(int) * nr * nc);
@@ -265,8 +268,8 @@ void ggml_gemm_i2_i8_t_LUT2_tile(int n, float *restrict s, size_t bs, const void
     free(sum_i32);
 }
 
-void ggml_gemm_i2_i8_s_LUT2_tile(int n, float *restrict s, size_t bs, const void *restrict vx, const void *restrict vy,
-                            int nr, int nc) {
+void ggml_gemm_i2_i8_s_LUT2_tile(int ith, int n, float *restrict s, size_t bs, const void *restrict vx,
+                                 const void *restrict vy, int nr, int nc) {
     // nr: src1->ne[1], nc: src0->ne[1]
     assert(n % 4 == 0);
 
@@ -276,6 +279,10 @@ void ggml_gemm_i2_i8_s_LUT2_tile(int n, float *restrict s, size_t bs, const void
     int16_t *restrict sum_i16 = (int16_t *)malloc(sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
     int *restrict sum_i32 = (int *)malloc(sizeof(int) * nr * nc);
     int16_t *restrict table = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
+
+    // int16_t *restrict sum_i16 = sum1 + ith * TABLE_ENTRY_SIZE * nc;
+    // int *restrict sum_i32 = sum2 + ith * nr * nc;
+    // int16_t *restrict table = tables + ith * TABLE_ENTRY_SIZE * 256;
 
     memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
     memset(sum_i32, 0, sizeof(int) * nr * nc);
@@ -362,9 +369,8 @@ void ggml_gemm_i2_i8_s_LUT2_tile(int n, float *restrict s, size_t bs, const void
     free(sum_i32);
 }
 
-
-void ggml_gemm_i2_i8_s_LUT_tile(int n, float *restrict s, size_t bs, const void *restrict vx, const void *restrict vy,
-                            int nr, int nc) {
+void ggml_gemm_i2_i8_s_LUT_tile(int ith, int n, float *restrict s, size_t bs, const void *restrict vx,
+                                const void *restrict vy, int nr, int nc) {
     // nr: src1->ne[1], nc: src0->ne[1]
     assert(n % 4 == 0);
 
@@ -448,7 +454,6 @@ void ggml_gemm_i2_i8_s_LUT_tile(int n, float *restrict s, size_t bs, const void 
     free(sum_i16);
     free(sum_i32);
 }
-
 
 inline static void add_tile(int16_t *restrict t1, const int16_t *restrict t2, const int8_t *restrict y) {
     for (int i = 0; i < TABLE_ENTRY_SIZE; i++) {
