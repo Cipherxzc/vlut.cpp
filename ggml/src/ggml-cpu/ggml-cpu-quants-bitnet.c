@@ -22,6 +22,50 @@
 #include <time.h>
 #endif
 
+#if defined(BITNET_AVX512) // AVX512
+    #include <immintrin.h>
+    #define ADD_TABLE_ENTRIES(rs, rt, size) \
+    do { \
+        /* Process 32 int16_t values at a time with AVX512 */ \
+        for (int i = 0; i < (size); i += 32) { \
+            /* Load 32 elements (512 bits) */ \
+            __m512i rs_vec = _mm512_loadu_si512((__m512i*)((rs) + i)); \
+            __m512i rt_vec = _mm512_loadu_si512((__m512i*)((rt) + i)); \
+            \
+            /* Add vectors */ \
+            rs_vec = _mm512_add_epi16(rs_vec, rt_vec); \
+            \
+            /* Store result back */ \
+            _mm512_storeu_si512((__m512i*)((rs) + i), rs_vec); \
+        } \
+    } while(0)
+#elif defined(BITNET_SVE) // SVE
+    #include <arm_sve.h>
+    #define ADD_TABLE_ENTRIES(rs, rt, size) \
+    do { \
+        for (int i = 0; i < (size); i += svcntw()) { \
+            /* Create a predicate for the current chunk */ \
+            svbool_t pg = svwhilelt_b16(i, (size)); \
+            \
+            /* Load vectors */ \
+            svint16_t acc = svld1_s16(pg, (rs) + i); \
+            svint16_t tab = svld1_s16(pg, (rt) + i); \
+            \
+            /* Add vectors */ \
+            acc = svadd_s16_z(pg, acc, tab); \
+            \
+            /* Store result */ \
+            svst1_s16(pg, (rs) + i, acc); \
+        } \
+    } while(0)
+#else // Fallback to auto vectorization by compiler
+    #define ADD_TABLE_ENTRIES(rs, rt, size) \
+    do { \
+        for (int r = 0; r < (size); r++) { \
+            (rs)[r] += (rt)[r]; \
+        } \
+    } while(0)
+#endif
 
 #ifdef BITNET_AVX2
 #include <immintrin.h>
@@ -1019,9 +1063,11 @@ void ggml_gemm_i2_i8_s_LUT_tile(int n, float *restrict s, size_t bs, const void 
                     int v = x[i * bs + c];
                     int16_t *restrict rs = ss + c * TABLE_ENTRY_SIZE;
                     const int16_t *restrict rt = this_table + v * TABLE_ENTRY_SIZE;
-                    for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
-                        rs[r] += rt[r];
-                    }
+                    // for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
+                    //     rs[r] += rt[r];
+                    // }
+                    // replace with a cross-platform macro
+                    ADD_TABLE_ENTRIES(rs, rt, TABLE_ENTRY_SIZE);
                 }
 #ifdef BITNET_DEBUG
                 struct timespec end_LUT = get_thread_cpu_time();
