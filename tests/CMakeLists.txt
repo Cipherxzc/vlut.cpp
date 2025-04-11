@@ -132,6 +132,9 @@ llama_target_and_test(test-chat-template.cpp)
 llama_target_and_test(test-gguf.cpp)
 llama_target_and_test(test-backend-ops.cpp)
 
+# bitnet-specific tests @xiangyu
+llama_target_and_test(test-bitnet-gemm.cpp)
+
 llama_target_and_test(test-model-load-cancel.cpp  LABEL "model")
 llama_target_and_test(test-autorelease.cpp        LABEL "model")
 
