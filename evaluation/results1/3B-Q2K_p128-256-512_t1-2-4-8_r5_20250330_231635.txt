@@ -1,0 +1,2 @@
+Command: ./build/bin/llama-bench -m "/home/cipherxzc/Projects/llama.cpp/models/BitNet/3B-Q2K.gguf"  -p 128 -p 256 -p 512  -t 1 -t 2 -t 4 -t 8 -ngl 0 -n 0 -r 5 
+----------------------------------------
