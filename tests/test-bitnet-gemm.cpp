@@ -3607,6 +3607,7 @@ int main(int argc, char ** argv) {
     test_mode mode = MODE_TEST;
     const char * op_name_filter = NULL;
     const char * backend_filter = NULL;
+    int n_threads = 0;
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "test") == 0) {
@@ -3629,7 +3630,18 @@ int main(int argc, char ** argv) {
                 usage(argv);
                 return 1;
             }
-        } else {
+        } else if (strcmp(argv[i], "-n") == 0) {
+            if (i + 1 < argc) {
+                n_threads = atoi(argv[++i]);
+            } else {
+                usage(argv);
+                return 1;
+            }
+        } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            usage(argv);
+            return 0;
+        } else if (argv[i][0] == '-') {
+            printf("Unknown option: %s\n", argv[i]);
             usage(argv);
             return 1;
         }
@@ -3665,8 +3677,14 @@ int main(int argc, char ** argv) {
         ggml_backend_reg_t reg = ggml_backend_dev_backend_reg(dev);
         auto ggml_backend_set_n_threads_fn = (ggml_backend_set_n_threads_t) ggml_backend_reg_get_proc_address(reg, "ggml_backend_set_n_threads");
         if (ggml_backend_set_n_threads_fn) {
-            // TODO: better value for n_threads
-            ggml_backend_set_n_threads_fn(backend, std::thread::hardware_concurrency());
+            int act_n_threads = std::thread::hardware_concurrency();
+            if (n_threads > 0 && n_threads < std::thread::hardware_concurrency()) {
+                act_n_threads = n_threads;
+            } else {
+                printf("  Warning: requested %d threads, but only %u are available\n", n_threads, std::thread::hardware_concurrency());
+            }
+            ggml_backend_set_n_threads_fn(backend, act_n_threads);
+            printf("  Using %d threads\n", act_n_threads);
         }
 
         printf("  Device description: %s\n", ggml_backend_dev_description(dev));
