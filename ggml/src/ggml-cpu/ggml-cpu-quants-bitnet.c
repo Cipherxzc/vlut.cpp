@@ -22,6 +22,67 @@
 #include <time.h>
 #endif
 
+#if defined(BITNET_AVX512) // AVX512
+    #include <immintrin.h>
+    #define ADD_TABLE_ENTRIES(rs, rt, size) \
+    do { \
+        /* Process 32 int16_t values at a time with AVX512 */ \
+        for (int i = 0; i < (size); i += 32) { \
+            /* Load 32 elements (512 bits) */ \
+            __m512i rs_vec = _mm512_loadu_si512((__m512i*)((rs) + i)); \
+            __m512i rt_vec = _mm512_loadu_si512((__m512i*)((rt) + i)); \
+            \
+            /* Add vectors */ \
+            rs_vec = _mm512_add_epi16(rs_vec, rt_vec); \
+            \
+            /* Store result back */ \
+            _mm512_storeu_si512((__m512i*)((rs) + i), rs_vec); \
+        } \
+    } while(0)
+#elif defined(BITNET_SVE) // SVE
+    #include <arm_sve.h>
+    #define ADD_TABLE_ENTRIES(rs, rt, size) \
+    do { \
+        for (int i = 0; i < (size); i += svcntw()) { \
+            /* Create a predicate for the current chunk */ \
+            svbool_t pg = svwhilelt_b16(i, (size)); \
+            \
+            /* Load vectors */ \
+            svint16_t acc = svld1_s16(pg, (rs) + i); \
+            svint16_t tab = svld1_s16(pg, (rt) + i); \
+            \
+            /* Add vectors */ \
+            acc = svadd_s16_z(pg, acc, tab); \
+            \
+            /* Store result */ \
+            svst1_s16(pg, (rs) + i, acc); \
+        } \
+    } while(0)
+#else // Fallback to auto vectorization by compiler
+    #define ADD_TABLE_ENTRIES(rs, rt, size) \
+    do { \
+        for (int r = 0; r < (size); r++) { \
+            (rs)[r] += (rt)[r]; \
+        } \
+    } while(0)
+#endif
+
+// #define ACCUMULATE_TABLE_TRANS(ss, ss2, nc, entry_tile_remain, entry_tile_count) \
+//     do { \
+//         for (int i = 0; i < nc; i++) { \
+//             for (int j = 0; j < entry_tile_remain; j++) { \
+//                 ss2[(entry_tile_count * TABLE_ENTRY_SIZE + j) * nc + i] += ss[i * TABLE_ENTRY_SIZE + j]; \
+//             } \
+//         } \
+//     } while(0)
+#define ACCUMULATE_TABLE_TRANS(ss, ss2, nc, entry_tile_remain, entry_tile_count) \
+    do { \
+        for (int j = 0; j < entry_tile_remain; j++) { \
+            for (int i = 0; i < nc; i++) { \
+                ss2[(entry_tile_count * TABLE_ENTRY_SIZE + j) * nc + i] += ss[i * TABLE_ENTRY_SIZE + j]; \
+            } \
+        } \
+    } while(0)
 
 #ifdef BITNET_AVX2
 #include <immintrin.h>
@@ -372,84 +433,119 @@ void ggml_gemm_i2_i8_s_LUT2_tile(int ith, int n, float *restrict s, size_t bs, c
 void ggml_gemm_i2_i8_s_LUT_tile(int ith, int n, float *restrict s, size_t bs, const void *restrict vx,
                                 const void *restrict vy, int nr, int nc) {
     // nr: src1->ne[1], nc: src0->ne[1]
+    // [M, K] * [K, N] = [M, N]
+    // nr -> N
+    // bs -> M, bs = nc * threads
+    // n -> K
     assert(n % 4 == 0);
+    assert(bs % nc == 0);
 
-    const uint8_t *restrict x = vx;
-    const int8_t *restrict y = vy;
+    // printf("ggml_gemm_i2_i8_s_LUT_tile: %d %d %d %d\n", n, nr, nc, bs); // 3200 128 800 3200 (2160 8640)
 
     int16_t *restrict sum_i16 = (int16_t *)malloc(sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
-    int *restrict sum_i32 = (int *)malloc(sizeof(int) * nr * nc);
+    int32_t *restrict sum_i32 = (int32_t *)malloc(sizeof(int32_t) * nr * nc);
 
     memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
-    memset(sum_i32, 0, sizeof(int) * nr * nc);
+    memset(sum_i32, 0, sizeof(int32_t) * nr * nc);
 
     static const int group_size = 512;
 
-#ifdef BITNET_DEBUG
-    double convert_duration = 0.0;
-    double scale_duration = 0.0;
-    double LUT_duration = 0.0;
-#endif
+    //  *restrict local_table = table;
+    const int table_count = n / 4;
+    const int table_stride = n / 4 * 81;
+    const int group_count = n / group_size; // not including remains
+    const int group_size_remain = n % group_size;
+    const int entry_tile_count = nr / TABLE_ENTRY_SIZE; // not including remains
+    const int entry_tile_remain = nr % TABLE_ENTRY_SIZE;
 
-    for (int t = 0; t < nr; t += TABLE_ENTRY_SIZE) {
-        const int16_t *restrict table = tables + t * n / 4 * 81;
-        const int entry_len = MIN(nr - t, TABLE_ENTRY_SIZE);
-        for (int g = 0; g < n; g += group_size) {
-            int lim = g + group_size < n ? g + group_size : n;
-            for (int i = (g >> 2); i < (lim >> 2); i++) {
-#ifdef BITNET_DEBUG
-                struct timespec start_LUT = get_thread_cpu_time();
-#endif
-            const int16_t *restrict this_table = table + i * 81 * TABLE_ENTRY_SIZE;
+    // tiles
+    for (int t = 0; t < entry_tile_count; t++) {
+        // groups
+        for (int g = 0; g < group_count; g++) {
+            const int group_offset = g * group_size / 4;
+            const int16_t *local_table = tables + (t * table_stride + group_offset * 81) * TABLE_ENTRY_SIZE;
+            for (int i = 0; i < group_size / 4; i++) {
+                const int16_t *restrict this_table = local_table + i * 81 * TABLE_ENTRY_SIZE;
+                const uint8_t *restrict this_x = (uint8_t *)vx + (g * group_size / 4 + i) * bs;
                 for (int c = 0; c < nc; c++) {
-                    int v = x[i * bs + c];
+                    int v = this_x[c];
                     int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
                     const int16_t *restrict rt = this_table + v * TABLE_ENTRY_SIZE;
-                    for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
-                        rs[r] += rt[r];
-                    }
-                }
-#ifdef BITNET_DEBUG
-                struct timespec end_LUT = get_thread_cpu_time();
-                LUT_duration += get_time_diff(start_LUT, end_LUT);
-#endif
-            }
-#ifdef BITNET_DEBUG
-            struct timespec start_convert = get_thread_cpu_time();
-#endif
-            for (int i = 0; i < nc; i++) {
-                for (int j = 0; j < entry_len; j++) {
-                    sum_i32[(t + j) * nc + i] += sum_i16[i * TABLE_ENTRY_SIZE + j];
+                    ADD_TABLE_ENTRIES(rs, rt, TABLE_ENTRY_SIZE);
                 }
             }
+            ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
-#ifdef BITNET_DEBUG
-            struct timespec end_convert = get_thread_cpu_time();
-            convert_duration += get_time_diff(start_convert, end_convert);
-#endif
+        }
+        // group remain
+        if (group_size_remain > 0) {
+            const int group_offset = group_count * group_size / 4;
+            const int16_t *local_table = tables + (t * table_stride + group_offset * 81) * TABLE_ENTRY_SIZE;
+            for (int i = 0; i < group_size_remain / 4; i++) {
+                const int16_t *restrict this_table = local_table + i * 81 * TABLE_ENTRY_SIZE;
+                const uint8_t *restrict this_x = (uint8_t *)vx + (group_count * group_size / 4 + i) * bs;
+                for (int c = 0; c < nc; c++) {
+                    int v = this_x[c];
+                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
+                    const int16_t *restrict rt = this_table + v * TABLE_ENTRY_SIZE;
+                    ADD_TABLE_ENTRIES(rs, rt, TABLE_ENTRY_SIZE);
+                }
+            }
+            ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
+            memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
         }
     }
 
-#ifdef BITNET_DEBUG
-    struct timespec start_scale = get_thread_cpu_time();
-#endif
-
+    // tile remain
+    if (entry_tile_remain > 0) {
+        // groups
+        for (int g = 0; g < group_count; g++) {
+            const int group_offset = g * group_size / 4;
+            const int16_t *local_table = tables + (entry_tile_count * table_stride + group_offset * 81) * TABLE_ENTRY_SIZE;
+            for (int i = 0; i < group_size / 4; i++) {
+                const int16_t *restrict this_table = local_table + i * 81 * TABLE_ENTRY_SIZE;
+                const uint8_t *restrict this_x = (uint8_t *)vx + (g * group_size / 4 + i) * bs;
+                for (int c = 0; c < nc; c++) {
+                    int v = this_x[c];
+                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
+                    const int16_t *restrict rt = this_table + v * TABLE_ENTRY_SIZE;
+                    ADD_TABLE_ENTRIES(rs, rt, TABLE_ENTRY_SIZE);
+                }
+            }
+            ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
+            memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+        }
+        // group remain
+        if (group_size_remain > 0) {
+            const int group_offset = group_count * group_size / 4;
+            const int16_t *local_table = tables + (entry_tile_count * table_stride + group_offset * 81) * TABLE_ENTRY_SIZE;
+            for (int i = 0; i < group_size_remain / 4; i++) {
+                const int16_t *restrict this_table = local_table + i * 81 * TABLE_ENTRY_SIZE;
+                const uint8_t *restrict this_x = (uint8_t *)vx + (group_count * group_size / 4 + i) * bs;
+                for (int c = 0; c < nc; c++) {
+                    int v = this_x[c];
+                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
+                    const int16_t *restrict rt = this_table + v * TABLE_ENTRY_SIZE;
+                    ADD_TABLE_ENTRIES(rs, rt, TABLE_ENTRY_SIZE);
+                }
+            }
+            ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
+            memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+        }
+    }
+    
+    // copy back to s[N, M]
+    // TODO:
+    // multiple threads might access the same row (r) of s, although accessing different cols (nc * ith + c)
+    // will this cause any performance issue? how to avoid this?
     for (int r = 0; r < nr; r++) {
-        const float scale = *((const float *)(y + r * (n + 4) + n));
+        const float scale = *((const float *)((int8_t *)vy + r * (n + 4) + n));
+        float* restrict sr = s + r * bs;
+        const int32_t *restrict ss2r = sum_i32 + r * nc;
         for (int c = 0; c < nc; c++) {
-            s[r * bs + c] = sum_i32[r * nc + c] * scale;  // 将输出转置回来
+            sr[c] = ss2r[c] * scale;
         }
     }
-#ifdef BITNET_DEBUG
-    struct timespec end_scale = get_thread_cpu_time();
-    scale_duration += get_time_diff(start_scale, end_scale);
-
-    pthread_mutex_lock(&time_mutex);
-    convert_time += convert_duration;
-    scale_time += scale_duration;
-    LUT_time += LUT_duration;
-    pthread_mutex_unlock(&time_mutex);
-#endif
 
     free(sum_i16);
     free(sum_i32);

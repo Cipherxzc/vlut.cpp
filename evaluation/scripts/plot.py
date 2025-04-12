@@ -9,16 +9,25 @@ def get_model_display_name(filename):
     """Convert filename to display name based on specific prefixes."""
     base_name = os.path.basename(filename).split('.')[0]
     
-    if base_name.startswith("bitnet_b1_58-3B.INT_N"):
+    if base_name.startswith("bitnet"):
         return "T-MAC"
     elif base_name.startswith("ggml-model-I2_S"):
-        return "Ours I2_S"
-    elif base_name.startswith("ggml-model-I2_T"):
-        return "Ours I2_T"
+        return "Ours"
     elif base_name.startswith("ggml-model-Q2_K"):
-        return "llama.cpp Q2_K"
+        return "llama.cpp"
     else:
         return base_name  # Return original name if no match
+    
+    # if base_name.startswith("3B_"):
+    #     return "T-MAC"
+    # elif base_name.startswith("3B-I2S"):
+    #     return "Ours I2_S"
+    # elif base_name.startswith("3B-I2T"):
+    #     return "Ours I2_T"
+    # elif base_name.startswith("3B-Q2K"):
+    #     return "llama.cpp Q2_K"
+    # else:
+    #     return base_name  # Return original name if no match
 
 def read_all_results(script_dir=None):
     """Read all CSV files in the results folder and return a dictionary of dataframes."""
