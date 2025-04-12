@@ -58,6 +58,7 @@ static const std::vector<struct quant_option> QUANT_OPTIONS = {
     { "I1_58_B",  LLAMA_FTYPE_MOSTLY_I1_58_B,  "BitNet 1.58 bit",                   },
     { "I2_T",     LLAMA_FTYPE_MOSTLY_I2_T,     "BitNet 2 bit trans"                 },
     { "I2_S",     LLAMA_FTYPE_MOSTLY_I2_S,     "BitNet 2 bit trans"                 },
+    { "I1_58_T",  LLAMA_FTYPE_MOSTLY_I1_58_T,  "BitNet 1.58 bit trans"              },
 };
 
 static const char * const LLM_KV_QUANTIZE_IMATRIX_FILE       = "quantize.imatrix.file";

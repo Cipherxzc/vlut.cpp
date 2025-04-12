@@ -467,6 +467,12 @@ static const struct ggml_type_traits_cpu type_traits_cpu[GGML_TYPE_COUNT] = {
             .vec_dot_type = GGML_TYPE_I8_B,
             .nrows = 1,
         },
+    [GGML_TYPE_I1_58_T] =
+        {
+            // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
+            .vec_dot_type = GGML_TYPE_I8_B,
+            .nrows = 1,
+        },
 };
 
 const struct ggml_type_traits_cpu *ggml_get_type_traits_cpu(enum ggml_type type) { return &type_traits_cpu[type]; }
@@ -7020,6 +7026,14 @@ static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] 
             .gemm = ggml_gemm_i2_i8_s_LUT_tile,
             .gemm2 = ggml_gemm_i2_i8_s_LUT2_tile,
         },
+    [GGML_TYPE_I1_58_T] =
+        {
+            .is_bitnet_type = true,
+            .table_entries_num = 243,
+            .make_table = ggml_gemm_i1_58_i8_t_make_table_tile,
+            .gemm = ggml_gemm_i1_58_i8_t_LUT_tile,
+            .gemm2 = ggml_gemm_i1_58_i8_t_LUT2_tile,
+        },
 };
 
 
@@ -7228,7 +7242,7 @@ UseGgmlGemm2:;
         int64_t src0_end = ((ith + 1) * ne01) / nth;
 
         if (src0_start < src0_end) {
-            size_t tmp = (type == GGML_TYPE_I2_T || type == GGML_TYPE_I2_S) ? src0_start : src0_start * nb01;
+            size_t tmp = (type == GGML_TYPE_I2_T || type == GGML_TYPE_I2_S || type == GGML_TYPE_I1_58_T) ? src0_start : src0_start * nb01;
             gemm(params->ith, ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + tmp,
                  src1_wdata, ne11, src0_end - src0_start);
         }
@@ -7248,7 +7262,7 @@ UseGgmlGemm2:;
         int64_t src0_end = ((ith + 1) * ne01) / nth;
 
         if (src0_start < src0_end) {
-            size_t tmp = (type == GGML_TYPE_I2_T || type == GGML_TYPE_I2_S) ? src0_start : src0_start * nb01;
+            size_t tmp = (type == GGML_TYPE_I2_T || type == GGML_TYPE_I2_S || type == GGML_TYPE_I1_58_T) ? src0_start : src0_start * nb01;
             gemm(params->ith, ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + tmp,
                  src1_wdata, ne11, src0_end - src0_start);
         }
@@ -8727,6 +8741,7 @@ static void ggml_compute_forward_clamp(const struct ggml_compute_params *params,
         case GGML_TYPE_I8_B:
         case GGML_TYPE_I2_T:
         case GGML_TYPE_I2_S:
+        case GGML_TYPE_I1_58_T:
         case GGML_TYPE_COUNT: {
             GGML_ABORT("fatal error");
         }
@@ -12367,7 +12382,7 @@ static void ggml_compute_forward(struct ggml_compute_params *params, struct ggml
         ggml_barrier(params->threadpool);
         if (params->ith == 0) {
             printf("write tensors\n");
-            FILE *outfile = fopen("/home/cipherxzc/Projects/llama.cpp/mytest/tensors", "a");
+            FILE *outfile = fopen("/home/cipherxzc/Projects/llama.cpp-bitnet/mytest/tensors", "a");
             // print_tensor(outfile, "weight", tensor->src[0]);
             // print_tensor(outfile, "activation", tensor->src[1]);
             print_tensor(outfile, "result", tensor);

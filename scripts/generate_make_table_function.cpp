@@ -232,9 +232,37 @@ void gemm_make_table_I2S() {
     generate_function_tile(40, "gemm_make_table_I2S_tile");
 }
 
+void gemm_make_table_I1_58T() {
+    for (int i = 0; i < 243; i++) {
+        BitNetNum x = BitNetNum::fromI1_58(i), y = x;
+        if (!x.validate() || i == 121) {
+            continue;
+        }
+        if (x.upbit().second == -1) {
+            y.reverse();
+            add_edge(x.toI1_58(), y.toI1_58(), 0);
+        } else {
+            auto [pos, val] = x.lowbit();
+            if (val == 1) {
+                y.bits_[pos] = 0;
+                add_edge(x.toI1_58(), y.toI1_58(), pos + 1);
+            } else if (val == -1) {
+                y.bits_[pos] = 0;
+                add_edge(x.toI1_58(), y.toI1_58(), -pos - 1);
+            } else {
+                assert(0);
+            }
+        }
+    }
+
+    // generate_function(121, "gemm_make_table_I1_58T");
+    generate_function_tile(121, "gemm_make_table_I1_58T_tile");
+}
+
 int main() {
-    gemm_make_table_I2();
+    // gemm_make_table_I2();
     // gemm_make_table_I2S();
+    gemm_make_table_I1_58T();
 
     return 0;
 }

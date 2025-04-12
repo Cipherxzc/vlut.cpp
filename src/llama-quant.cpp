@@ -3,6 +3,7 @@
 #include "llama-impl.h"
 #include "llama-model.h"
 #include "llama-model-loader.h"
+#include "llama.h"
 
 #include <algorithm>
 #include <cmath>
@@ -507,6 +508,7 @@ static void llama_model_quantize_impl(const std::string & fname_inp, const std::
         case LLAMA_FTYPE_MOSTLY_I1_58_B: default_type = GGML_TYPE_I1_58_B; break;
         case LLAMA_FTYPE_MOSTLY_I2_T:    default_type = GGML_TYPE_I2_T;    break;
         case LLAMA_FTYPE_MOSTLY_I2_S:    default_type = GGML_TYPE_I2_S;    break;
+        case LLAMA_FTYPE_MOSTLY_I1_58_T: default_type = GGML_TYPE_I1_58_T; break;
 
         default: throw std::runtime_error(format("invalid output file type %d\n", ftype));
     }

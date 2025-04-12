@@ -1926,9 +1926,13 @@ class BitnetModel(Model):
         weight = torch.sign(weight).type(dtype)
 
         n, m = weight.shape
-        assert m % 4 == 0, "Weight tensor columns must be divisible by 4"
+        
         # 将权重reshape为(n, m//4, 4)，转置后调整为(m//4, n, 4)，最后合并为(m//4, 4n)
-        weight = weight.view(n, m // 4, 4).transpose(0, 1).reshape(m // 4, -1)
+        # assert m % 4 == 0, "Weight tensor columns must be divisible by 4"
+        # weight = weight.view(n, m // 4, 4).transpose(0, 1).reshape(m // 4, -1)
+        
+        assert m % 5 == 0, "Weight tensor columns must be divisible by 5"
+        weight = weight.view(n, m // 5, 5).transpose(0, 1).reshape(m // 5, -1)
         
         # 适应llama.cpp的模型结构
         weight = weight.reshape(n, m)

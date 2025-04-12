@@ -110,33 +110,3 @@ size_t quantize_i1_58_b(const float *restrict src, void *restrict dst, int64_t n
 
     return nrows * row_size;
 }
-
-// UNUSED
-// 由于传进来的不是完整的矩阵，无法在这个阶段转置
-size_t quantize_i2_t(const float *restrict src, void *restrict dst, int64_t nrows, int64_t n_per_row,
-                     const float *imatrix) {
-    // 2 bits per weight
-    UNUSED(imatrix);
-
-    size_t row_size = ggml_row_size(GGML_TYPE_I2_T, n_per_row);
-
-    const double eps = 1e-6;
-
-    uint8_t *i2_weight = (uint8_t *)dst;
-    for (int i = 0; i * 4 < n_per_row; i++){
-        for (int j = 0; j < nrows; j++){
-            int w = 0;
-            for (int k = 0; k < 4; k++){
-                double v = (double)src[j * n_per_row + i * 4 + k];
-                uint8_t tmp = 0;
-                if (fabs(v) > eps) {
-                    tmp = v > 0. ? 1 : 3;
-                }
-                w |= tmp << (k * 2);
-            }
-            i2_weight[i * nrows + j] = w;
-        }
-    }
-
-    return nrows * row_size;
-}

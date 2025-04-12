@@ -9,11 +9,14 @@ void quantize_row_i8_b(const float* GGML_RESTRICT x, void* GGML_RESTRICT y, int6
 void quantize_row_i8_b_tile(const float* GGML_RESTRICT x, void* GGML_RESTRICT y, int64_t n, float* scale);
 
 void ggml_gemm_i2_i8_s_make_table_tile(int ith, const int8_t* GGML_RESTRICT y, int ntables, int nr, int n, int16_t* GGML_RESTRICT table);
+void ggml_gemm_i1_58_i8_t_make_table_tile(int ith, const int8_t* GGML_RESTRICT y, int ntables, int nr, int n, int16_t* GGML_RESTRICT table);
 
 void ggml_gemm_i2_i8_s_LUT_tile(int ith, int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
+void ggml_gemm_i1_58_i8_t_LUT_tile(int ith, int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
 
 void ggml_gemm_i2_i8_t_LUT2_tile(int ith, int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
 void ggml_gemm_i2_i8_s_LUT2_tile(int ith, int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
+void ggml_gemm_i1_58_i8_t_LUT2_tile(int ith, int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
 
 #define GGML_TABLE_BEGIN(type, name, size) static const type name[size] = {
 #define GGML_TABLE_END() };
