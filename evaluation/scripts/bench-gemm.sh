@@ -14,3 +14,7 @@ for t in 1 4; do
         done
     done
 done
+
+# Extract and save MUL_MAT lines to a file
+mkdir -p $SCRIPT_DIR/../results_gemm
+grep "^  MUL_MAT" > $SCRIPT_DIR/../results_gemm/results.txt
