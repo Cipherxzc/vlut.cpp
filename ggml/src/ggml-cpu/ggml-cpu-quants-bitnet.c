@@ -670,7 +670,7 @@ void ggml_gemm_i1_58_i8_t_LUT_tile(int ith, int n, float *restrict s, size_t bs,
     // nr -> N
     // bs -> M, bs = nc * threads
     // n -> K
-    assert(n % 4 == 0);
+    assert(n % 5 == 0);
     assert(bs % nc == 0);
 
     // printf("ggml_gemm_i2_i8_s_LUT_tile: %d %d %d %d\n", n, nr, nc, bs); // 3200 128 800 3200 (2160 8640)
