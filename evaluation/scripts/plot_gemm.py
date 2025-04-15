@@ -79,6 +79,7 @@ def plot_performance_comparison(df):
         ax = axes[y * n_cols + x]
 
         subset = df[(df['m'] == m) & (df['k'] == k)]
+        subset = subset.drop_duplicates(subset=['m', 'n', 'k', 'type_a'], keep='first') # Drop duplicates
         
         # Plot lines for each type_a
         for i, type_a in enumerate(subset['type_a'].unique()):
@@ -118,6 +119,7 @@ def main():
         # ('aws1', 1),
         # ('aws2', 1),
         ('laptop1', 1),
+        ('laptop1', 4),
     ]
     
     for arch_val, threads_val in combinations:
