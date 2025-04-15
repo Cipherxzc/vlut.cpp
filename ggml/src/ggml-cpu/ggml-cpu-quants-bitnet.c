@@ -187,7 +187,7 @@ static long long get_time_diff(const struct timespec start, const struct timespe
 #endif
 
 
-extern int16_t *restrict tables;
+extern int16_t *tables;
 extern int8_t *tmp_src;
 extern int16_t *sum1;
 extern int *sum2;
@@ -196,39 +196,44 @@ void ggml_gemm_i2_i8_s_make_table_tile(int ith, const int8_t *restrict y, int nt
                                        int16_t *restrict table) {
     UNUSED(ith);
 
-    // int8_t *restrict src = (int8_t *)malloc(sizeof(int8_t) * n * TABLE_ENTRY_SIZE);
-    // for (int i = 0; i < nr; i += TABLE_ENTRY_SIZE) {
-    //     int lim = MIN(i + TABLE_ENTRY_SIZE, nr) - i;
-
-    //     const int8_t *restrict y0 = y + i * (n + 4);
-    //     for (int j = 0; j < lim; j++){
-    //         for (int k = 0; k < ntables * 4; k++){
-    //             src[k * TABLE_ENTRY_SIZE + j] = y0[j * (n + 4) + k];
-    //         }
-    //     }
-
-    //     int16_t *restrict table0 = table + n / 4 * 81 * i;
-    //     for (int j = 0; j < ntables; j++){
-    //         gemm_make_table_I2S_tile(table0 + j * 81 * TABLE_ENTRY_SIZE, src + j * 4 * TABLE_ENTRY_SIZE);
-    //     }
-    // }
-
     int8_t *restrict src = (int8_t *)malloc(sizeof(int8_t) * 4 * TABLE_ENTRY_SIZE);
-    for (int i = 0; i < nr; i += TABLE_ENTRY_SIZE) {
-        int lim = MIN(i + TABLE_ENTRY_SIZE, nr) - i;
 
-        const int8_t *restrict y0 = y + i * (n + 4);
-        int16_t *restrict table0 = table + n / 4 * 81 * i;
+    const int table_count = n / 4;
+    const int table_stride = n / 4 * 81;
+    const int entry_tile_count = nr / TABLE_ENTRY_SIZE;  // not including remains
+    const int entry_tile_remain = nr % TABLE_ENTRY_SIZE;
 
-        for (int k = 0; k < ntables; k++) {
-            const int8_t *restrict y1 = y0 + k * 4;
-            for (int j = 0; j < lim; j++) {
-                src[j] = y1[j * (n + 4)];
-                src[j + TABLE_ENTRY_SIZE] = y1[j * (n + 4) + 1];
-                src[j + TABLE_ENTRY_SIZE * 2] = y1[j * (n + 4) + 2];
-                src[j + TABLE_ENTRY_SIZE * 3] = y1[j * (n + 4) + 3];
+    // tiles
+    for (int i = 0; i < entry_tile_count; i++) {
+        const int8_t *restrict y0 = y + i * (n + 4) * TABLE_ENTRY_SIZE;
+        int16_t *restrict table0 = table + i * table_stride * TABLE_ENTRY_SIZE;
+
+        for (int j = 0; j < ntables; j++) {
+            const int8_t *restrict y1 = y0 + j * 4;
+            for (int k = 0; k < TABLE_ENTRY_SIZE; k++) {
+                src[k] = y1[k * (n + 4)];
+                src[k + TABLE_ENTRY_SIZE] = y1[k * (n + 4) + 1];
+                src[k + TABLE_ENTRY_SIZE * 2] = y1[k * (n + 4) + 2];
+                src[k + TABLE_ENTRY_SIZE * 3] = y1[k * (n + 4) + 3];
             }
-            gemm_make_table_I2S_tile(table0 + k * 81 * TABLE_ENTRY_SIZE, src);
+            gemm_make_table_I2S_tile(table0 + j * 81 * TABLE_ENTRY_SIZE, src);
+        }
+    }
+
+    // remains
+    if (entry_tile_remain > 0) {
+        const int8_t *restrict y0 = y + entry_tile_count * (n + 4) * TABLE_ENTRY_SIZE;
+        int16_t *restrict table0 = table + entry_tile_count * table_stride * TABLE_ENTRY_SIZE;
+
+        for (int j = 0; j < ntables; j++) {
+            const int8_t *restrict y1 = y0 + j * 4;
+            for (int k = 0; k < entry_tile_remain; k++) {
+                src[k] = y1[k * (n + 4)];
+                src[k + TABLE_ENTRY_SIZE] = y1[k * (n + 4) + 1];
+                src[k + TABLE_ENTRY_SIZE * 2] = y1[k * (n + 4) + 2];
+                src[k + TABLE_ENTRY_SIZE * 3] = y1[k * (n + 4) + 3];
+            }
+            gemm_make_table_I2S_tile(table0 + j * 81 * TABLE_ENTRY_SIZE, src);
         }
     }
 
@@ -239,39 +244,46 @@ void ggml_gemm_i1_58_i8_t_make_table_tile(int ith, const int8_t *restrict y, int
                                           int16_t *restrict table) {
     UNUSED(ith);
 
-    // int8_t *restrict src = (int8_t *)malloc(sizeof(int8_t) * n * TABLE_ENTRY_SIZE);
-    // for (int i = 0; i < nr; i += TABLE_ENTRY_SIZE) {
-    //     int lim = MIN(i + TABLE_ENTRY_SIZE, nr) - i;
+    int8_t *restrict src = (int8_t *)malloc(sizeof(int8_t) * 5 * TABLE_ENTRY_SIZE);
 
-    //     const int8_t *restrict y0 = y + i * (n + 4);
-    //     for (int j = 0; j < lim; j++){
-    //         for (int k = 0; k < ntables * 5; k++){
-    //             src[k * TABLE_ENTRY_SIZE + j] = y0[j * (n + 4) + k];
-    //         }
-    //     }
+    const int table_count = n / 5;
+    const int table_stride = n / 5 * 243;
+    const int entry_tile_count = nr / TABLE_ENTRY_SIZE;  // not including remains
+    const int entry_tile_remain = nr % TABLE_ENTRY_SIZE;
 
-    //     int16_t *restrict table0 = table + n / 5 * 243 * i;
-    //     for (int j = 0; j < ntables; j++){
-    //         gemm_make_table_I1_58T_tile(table0 + j * 243 * TABLE_ENTRY_SIZE, src + j * 4 * TABLE_ENTRY_SIZE);
-    //     }
-    // }
+    // tiles
+    for (int i = 0; i < entry_tile_count; i++) {
+        const int8_t *restrict y0 = y + i * (n + 4) * TABLE_ENTRY_SIZE; // scale is 4 bytes
+        int16_t *restrict table0 = table + i * table_stride * TABLE_ENTRY_SIZE;
 
-    int8_t *restrict src = (int8_t *)malloc(sizeof(int8_t) * 4 * TABLE_ENTRY_SIZE);
-    for (int i = 0; i < nr; i += TABLE_ENTRY_SIZE) {
-        int lim = MIN(i + TABLE_ENTRY_SIZE, nr) - i;
-
-        const int8_t *restrict y0 = y + i * (n + 4);
-        int16_t *restrict table0 = table + n / 5 * 243 * i;
-
-        for (int k = 0; k < ntables; k++) {
-            const int8_t *restrict y1 = y0 + k * 5;
-            for (int j = 0; j < lim; j++) {
-                src[j] = y1[j * (n + 4)];
-                src[j + TABLE_ENTRY_SIZE] = y1[j * (n + 4) + 1];
-                src[j + TABLE_ENTRY_SIZE * 2] = y1[j * (n + 4) + 2];
-                src[j + TABLE_ENTRY_SIZE * 3] = y1[j * (n + 4) + 3];
+        for (int j = 0; j < ntables; j++) {
+            const int8_t *restrict y1 = y0 + j * 5;
+            for (int k = 0; k < TABLE_ENTRY_SIZE; k++) {
+                src[k] = y1[k * (n + 4)];
+                src[k + TABLE_ENTRY_SIZE] = y1[k * (n + 4) + 1];
+                src[k + TABLE_ENTRY_SIZE * 2] = y1[k * (n + 4) + 2];
+                src[k + TABLE_ENTRY_SIZE * 3] = y1[k * (n + 4) + 3];
+                src[k + TABLE_ENTRY_SIZE * 4] = y1[k * (n + 4) + 4];
             }
-            gemm_make_table_I1_58T_tile(table0 + k * 243 * TABLE_ENTRY_SIZE, src);
+            gemm_make_table_I1_58T_tile(table0 + j *243 * TABLE_ENTRY_SIZE, src);
+        }
+    }
+
+    // remains
+    if (entry_tile_remain > 0) {
+        const int8_t *restrict y0 = y + entry_tile_count * (n + 4) * TABLE_ENTRY_SIZE;
+        int16_t *restrict table0 = table + entry_tile_count * table_stride * TABLE_ENTRY_SIZE;
+
+        for (int j = 0; j < ntables; j++) {
+            const int8_t *restrict y1 = y0 + j * 5;
+            for (int k = 0; k < entry_tile_remain; k++) {
+                src[k] = y1[k * (n + 4)];
+                src[k + TABLE_ENTRY_SIZE] = y1[k * (n + 4) + 1];
+                src[k + TABLE_ENTRY_SIZE * 2] = y1[k * (n + 4) + 2];
+                src[k + TABLE_ENTRY_SIZE * 3] = y1[k * (n + 4) + 3];
+                src[k + TABLE_ENTRY_SIZE * 4] = y1[k * (n + 4) + 4];
+            }
+            gemm_make_table_I1_58T_tile(table0 + j *243 * TABLE_ENTRY_SIZE, src);
         }
     }
 
