@@ -8,6 +8,7 @@ option(BITNET_TILING "Enable tiling on prompt length" ON)
 option(BITNET_PRINT_TENSORS "Enable printing tensors" OFF)
 option(BITNET_AVX512 "Enable AVX512 intrinsics" OFF)
 option(BITNET_SVE "Enable SVE intrinsics" OFF)
+option(BITNET_ACCELERATE "Enable Accelerate framework on Apple devices" OFF)
 
 set(TABLE_ENTRY_SIZE 32 CACHE STRING "Tile size of the table entry")
 
@@ -41,4 +42,8 @@ endif()
 
 if(BITNET_SVE)
     add_compile_definitions(BITNET_SVE)
+endif()
+
+if(BITNET_ACCELERATE)
+    add_compile_definitions(BITNET_ACCELERATE)
 endif()

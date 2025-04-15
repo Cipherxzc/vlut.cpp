@@ -58,6 +58,12 @@
             svst1_s16(pg, (rs) + i, acc); \
         } \
     } while(0)
+#elif defined(BITNET_ACCELERATE) // Accelerate framework of Apple
+    #include <Accelerate/Accelerate.h>
+    #define ADD_TABLE_ENTRIES(rs, rt, size) \
+    do { \
+        vDSP_vadd((rs), 1, (rt), 1, (rs), 1, (size)); \
+    } while(0)
 #else // Fallback to auto vectorization by compiler
     #define ADD_TABLE_ENTRIES(rs, rt, size) \
     do { \
