@@ -7124,10 +7124,11 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
         const size_t nbw3 = nbw2 * ne12;
 
         assert(params->wsize >= ne13 * nbw3);
+        assert(ggml_n_dims(src0) == 2);
 
+#if defined(BITNET_LUT2)
         for (int64_t i13 = 0; i13 < ne13; ++i13) {
             for (int64_t i12 = 0; i12 < ne12; ++i12) {
-#if defined(BITNET_LUT2)
                 const size_t wdata_size = ((ne11 % TABLE_ENTRY_SIZE) ? ne11 + TABLE_ENTRY_SIZE - (ne11 % TABLE_ENTRY_SIZE): ne11) * ne10;
                 float *scale = (float *)(wdata + wdata_size);
                 for (int64_t i11 = ith; i11 < ne11; i11 += nth) {
@@ -7136,23 +7137,34 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
                     quantize_row_i8_b_tile(
                         (float *)((char *) src1->data + i13*nb13 + i12*nb12 + i11*nb11),
                         (void *) (wdata + i * TABLE_ENTRY_SIZE + j), ne10, scale + i11);
-                    }
-#elif defined(BITNET_LUT)
-                for (int64_t i11 = ith; i11 < ne11; i11 += nth) {
-                    from_float((float *)((char *)src1->data + i13 * nb13 + i12 * nb12 + i11 * nb11),
-                            (void *)(wdata + i13 * nbw3 + i12 * nbw2 + i11 * nbw1), ne10);
                 }
-#endif // BITNET_LUT2
             }
         }
+        
+        ggml_barrier(params->threadpool);
 
+        const int8_t * src1_wdata = (src1->type == vec_dot_type) ? src1->data : params->wdata;
+
+        int64_t src0_start = (ith * ne01) / nth;
+        int64_t src0_end = ((ith + 1) * ne01) / nth;
+
+        if (src0_start < src0_end) {
+            gemm(params->ith, ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + src0_start,
+                src1_wdata, ne11, src0_end - src0_start);
+        }
+#elif defined(BITNET_LUT)
+
+        for (int64_t i13 = 0; i13 < ne13; ++i13) {
+            for (int64_t i12 = 0; i12 < ne12; ++i12) {
+                for (int64_t i11 = ith; i11 < ne11; i11 += nth) {
+                    from_float((float *)((char *)src1->data + i13 * nb13 + i12 * nb12 + i11 * nb11),
+                            (void *)(wdata + i13 * nbw3 + i12 * nbw2 + i11 * nbw1), ne10);  // quantize on activation's row (K dim)
+                }
+            }
+        }
         // TODO: fuse from_float and make_table
         ggml_barrier(params->threadpool);
 
-        // LUT kernel
-        assert(ggml_n_dims(src0) == 2);
-
-#if defined(BITNET_LUT)
         const int8_t * src1_wdata = (src1->type == vec_dot_type) ? src1->data : params->wdata;
 
         int64_t src1_start = (ith * ne10 / blck_size) / nth;
@@ -7172,17 +7184,7 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
             gemm(params->ith, ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + src0_start,
                 src1_wdata, ne11, src0_end - src0_start);
         }
-#elif defined(BITNET_LUT2)
-        const int8_t * src1_wdata = (src1->type == vec_dot_type) ? src1->data : params->wdata;
-
-        int64_t src0_start = (ith * ne01) / nth;
-        int64_t src0_end = ((ith + 1) * ne01) / nth;
-
-        if (src0_start < src0_end) {
-            gemm(params->ith, ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + src0_start,
-                src1_wdata, ne11, src0_end - src0_start);
-        }
-#endif // BITNET_LUT
+#endif // BITNET_LUT2
         return;
     } // bitnet_mulmat
 #endif // BITNET_LUT || BITNET_LUT2
