@@ -7061,10 +7061,6 @@ static long long get_time_diff(const struct timespec start, const struct timespe
 #endif
 
 static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *params, struct ggml_tensor *dst) {
-#ifdef BITNET_DEBUG
-    struct timespec start = get_thread_cpu_time();
-#endif
-
     const struct ggml_tensor *src0 = dst->src[0];
     const struct ggml_tensor *src1 = dst->src[1];
 
@@ -7173,8 +7169,7 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
         int64_t src0_end = ((ith + 1) * ne01) / nth;
 
         if (src0_start < src0_end) {
-            size_t tmp = (type == GGML_TYPE_I2_T || type == GGML_TYPE_I2_S || type == GGML_TYPE_I1_58_T) ? src0_start : src0_start * nb01;
-            gemm(params->ith, ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + tmp,
+            gemm(params->ith, ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + src0_start,
                 src1_wdata, ne11, src0_end - src0_start);
         }
 #elif defined(BITNET_LUT2)
@@ -7184,8 +7179,7 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
         int64_t src0_end = ((ith + 1) * ne01) / nth;
 
         if (src0_start < src0_end) {
-            size_t tmp = (type == GGML_TYPE_I2_T || type == GGML_TYPE_I2_S || type == GGML_TYPE_I1_58_T) ? src0_start : src0_start * nb01;
-            gemm(params->ith, ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + tmp,
+            gemm(params->ith, ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + src0_start,
                 src1_wdata, ne11, src0_end - src0_start);
         }
 #endif // BITNET_LUT
