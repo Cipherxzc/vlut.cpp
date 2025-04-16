@@ -51,6 +51,7 @@ class Model:
     dir_model: Path
     ftype: gguf.LlamaFileType
     fname_out: Path
+    layout: str
     is_big_endian: bool
     endianess: gguf.GGUFEndian
     use_temp_file: bool
@@ -69,7 +70,7 @@ class Model:
     # subclasses should define this!
     model_arch: gguf.MODEL_ARCH
 
-    def __init__(self, dir_model: Path, ftype: gguf.LlamaFileType, fname_out: Path, is_big_endian: bool = False,
+    def __init__(self, dir_model: Path, ftype: gguf.LlamaFileType, fname_out: Path, layout: str, is_big_endian: bool = False,
                  use_temp_file: bool = False, eager: bool = False,
                  metadata_override: Path | None = None, model_name: str | None = None,
                  split_max_tensors: int = 0, split_max_size: int = 0, dry_run: bool = False,
@@ -80,6 +81,7 @@ class Model:
         self.dir_model = dir_model
         self.ftype = ftype
         self.fname_out = fname_out
+        self.layout = layout
         self.is_big_endian = is_big_endian
         self.endianess = gguf.GGUFEndian.BIG if is_big_endian else gguf.GGUFEndian.LITTLE
         self.use_temp_file = use_temp_file
@@ -1927,14 +1929,17 @@ class BitnetModel(Model):
 
         n, m = weight.shape
         
-        # 将权重reshape为(n, m//4, 4)，转置后调整为(m//4, n, 4)，最后合并为(m//4, 4n)
-        assert m % 4 == 0, "Weight tensor columns must be divisible by 4"
-        weight = weight.view(n, m // 4, 4).transpose(0, 1).reshape(m // 4, -1)
+        if self.layout == "I2_S" and m % 4 == 0:
+            # reshape to (n, m//4, 4), transpose to (m//4, n, 4), merge to (m//4, 4n)
+            weight = weight.view(n, m // 4, 4).transpose(0, 1).reshape(m // 4, -1)
+        elif self.layout == "I1_58_T" and m % 5 == 0:
+            # reshape to (n, m//5, 5), transpose to (m//5, n, 5), merge to (m//5, 5n)
+            weight = weight.view(n, m // 5, 5).transpose(0, 1).reshape(m // 5, -1)
+        else:
+            # report error
+            raise ValueError(f"Conver bitnet failed! layout: {self.layout}, m: {m}")
         
-        # assert m % 5 == 0, "Weight tensor columns must be divisible by 5"
-        # weight = weight.view(n, m // 5, 5).transpose(0, 1).reshape(m // 5, -1)
-        
-        # 适应llama.cpp的模型结构
+        # adapt to llama.cpp format
         weight = weight.reshape(n, m)
     
         return weight.type(dtype), scale.type(torch.float32)
@@ -4970,6 +4975,11 @@ def parse_args() -> argparse.Namespace:
         help="output format - use f32 for float32, f16 for float16, bf16 for bfloat16, q8_0 for Q8_0, tq1_0 or tq2_0 for ternary, and auto for the highest-fidelity 16-bit float type depending on the first loaded tensor type",
     )
     parser.add_argument(
+        "--layout", type=str, choices=["I2_S", "I1_58_T", ""], default="",
+        help="weight layout for specific quantization types; default: "".",
+        # TODO: add this to the suffix of outfile if not specified.
+    )
+    parser.add_argument(
         "--bigendian", action="store_true",
         help="model is executed on big endian machine",
     )
@@ -5022,6 +5032,8 @@ def parse_args() -> argparse.Namespace:
     args = parser.parse_args()
     if not args.print_supported_models and args.model is None:
         parser.error("the following arguments are required: model")
+    if args.layout == "":
+        parser.error("you must specify a layout for the output file when converting ternary models")
     return args
 
 
@@ -5096,7 +5108,7 @@ def main() -> None:
             logger.error(f"Model {model_architecture} is not supported")
             sys.exit(1)
 
-        model_instance = model_class(dir_model=dir_model, ftype=output_type, fname_out=fname_out,
+        model_instance = model_class(dir_model=dir_model, ftype=output_type, fname_out=fname_out, layout=args.layout,
                                      is_big_endian=args.bigendian, use_temp_file=args.use_temp_file,
                                      eager=args.no_lazy,
                                      metadata_override=args.metadata, model_name=args.model_name,
