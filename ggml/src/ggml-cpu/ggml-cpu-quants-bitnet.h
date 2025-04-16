@@ -11,6 +11,8 @@ void quantize_row_i8_b_tile(const float* GGML_RESTRICT x, void* GGML_RESTRICT y,
 void ggml_gemm_i2_i8_s_make_table_tile(int ith, const int8_t* GGML_RESTRICT y, int ntables, int nr, int n, int16_t* GGML_RESTRICT table);
 void ggml_gemm_i1_58_i8_t_make_table_tile(int ith, const int8_t* GGML_RESTRICT y, int ntables, int nr, int n, int16_t* GGML_RESTRICT table);
 
+void ggml_gemm_i2_i8_s_make_table_quant(int ith, const float *restrict y, float *restrict scale, int nr, int n, int16_t *restrict table);
+
 void ggml_gemm_i2_i8_s_LUT_tile(int ith, int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
 void ggml_gemm_i1_58_i8_t_LUT_tile(int ith, int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
 

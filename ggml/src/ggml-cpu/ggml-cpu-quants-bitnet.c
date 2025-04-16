@@ -15,6 +15,7 @@
 
 
 #define UNUSED GGML_UNUSED
+#define eps 1e-5
 
 
 #ifdef BITNET_DEBUG
@@ -303,7 +304,6 @@ static inline __m256i bitnet_mul(const __m256i x, const __m256i y) {
 void quantize_row_i8_b(const float *x, void *y, int64_t n) {
     int8_t *dst = (int8_t *)y;
 
-    const double eps = 1e-5;
     double max = eps;
     for (int i = 0; i < n; i++) {
         max = MAX(max, (double)x[i]);
@@ -329,7 +329,6 @@ void quantize_row_i8_b(const float *x, void *y, int64_t n) {
 void quantize_row_i8_b_tile(const float *x, void *y, int64_t n, float *scale) {
     int8_t *dst = (int8_t *)y;
 
-    const double eps = 1e-5;
     double max = eps;
     for (int i = 0; i < n; i++) {
         max = MAX(max, (double)x[i]);
@@ -469,6 +468,82 @@ void ggml_gemm_i1_58_i8_t_make_table_tile(int ith, const int8_t *restrict y, int
                 src[k + TABLE_ENTRY_SIZE * 4] = y1[k * (n + 4) + 4];
             }
             gemm_make_table_I1_58T_tile(table0 + j *243 * TABLE_ENTRY_SIZE, src);
+        }
+    }
+
+    free(src);
+}
+
+void ggml_gemm_i2_i8_s_make_table_quant(int ith, const float *restrict y, float *restrict scale, int nr, int n,
+                                        int16_t *restrict table) {
+    UNUSED(ith);
+
+    int8_t *restrict src = (int8_t *)malloc(sizeof(int8_t) * n * TABLE_ENTRY_SIZE);
+
+    const int table_count = n / 4;
+    const int table_stride = n / 4 * 81;
+    const int entry_tile_count = nr / TABLE_ENTRY_SIZE;  // not including remains
+    const int entry_tile_remain = nr % TABLE_ENTRY_SIZE;
+
+    // tiles
+    for (int i = 0; i < entry_tile_count; i++) {
+        const float *restrict local_y = y + i * n * TABLE_ENTRY_SIZE;
+
+        for (int j = 0; j < TABLE_ENTRY_SIZE; j++){
+            const float *restrict y_row = local_y + j * n;
+
+            double max = eps;
+            for (int k = 0; k < n; k++) {
+                max = MAX(max, (double)y_row[k]);
+            }
+            const double s = max / 127;
+            const double is = 1e0 / MAX(s, eps);
+            scale[i * TABLE_ENTRY_SIZE + j] = s;
+
+            for (int k = 0; k < n; k++) {
+                float v = round((double)y_row[k] * is);
+                if (v > 127) v = 127;
+                if (v < -128) v = -128;
+                src[k * TABLE_ENTRY_SIZE + j] = (int8_t)v;
+            }
+        }
+
+        int16_t *restrict local_table = table + i * table_stride * TABLE_ENTRY_SIZE;
+
+        for (int j = 0; j < table_count; j++) {
+            gemm_make_table_I2S_tile(local_table + j * 81 * TABLE_ENTRY_SIZE, src + j * 4 * TABLE_ENTRY_SIZE);
+        }
+    }
+
+    // remains
+    if (entry_tile_remain > 0) {
+        memset(src, 0, sizeof(int8_t) * n * TABLE_ENTRY_SIZE);
+
+        const float *restrict local_y = y + entry_tile_count * n * TABLE_ENTRY_SIZE;
+
+        for (int j = 0; j < entry_tile_remain; j++) {
+            const float *restrict y_row = local_y + j * n;
+
+            double max = eps;
+            for (int k = 0; k < n; k++) {
+                max = MAX(max, (double)y_row[k]);
+            }
+            const double s = max / 127;
+            const double is = 1e0 / MAX(s, eps);
+            scale[entry_tile_count * TABLE_ENTRY_SIZE + j] = s;
+
+            for (int k = 0; k < n; k++) {
+                float v = round((double)y_row[k] * is);
+                if (v > 127) v = 127;
+                if (v < -128) v = -128;
+                src[k * TABLE_ENTRY_SIZE + j] = (int8_t)v;
+            }
+        }
+
+        int16_t *restrict local_table = table + entry_tile_count * table_stride * TABLE_ENTRY_SIZE;
+
+        for (int j = 0; j < table_count; j++) {
+            gemm_make_table_I2S_tile(local_table + j * 81 * TABLE_ENTRY_SIZE, src + j * 4 * TABLE_ENTRY_SIZE);
         }
     }
 
@@ -862,7 +937,8 @@ void ggml_gemm_i2_i8_s_LUT_tile(int ith, int n, float *restrict s, size_t bs, co
     // multiple threads might access the same row (r) of s, although accessing different cols (nc * ith + c)
     // will this cause any performance issue? how to avoid this?
     for (int r = 0; r < nr; r++) {
-        const float scale = *((const float *)((const int8_t *)vy + r * (n + 4) + n));
+        // const float scale = *((const float *)((const int8_t *)vy + r * (n + 4) + n));
+        const float scale = *((const float *)vy + r);
         float* restrict sr = s + r * bs;
         const int32_t *restrict ss2r = sum_i32 + r * nc;
         for (int c = 0; c < nc; c++) {
