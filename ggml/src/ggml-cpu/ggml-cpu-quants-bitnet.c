@@ -479,6 +479,7 @@ void ggml_gemm_i2_i8_s_make_table_quant(int ith, const float *restrict y, float 
     UNUSED(ith);
 
     int8_t *restrict src = (int8_t *)malloc(sizeof(int8_t) * n * TABLE_ENTRY_SIZE);
+    int8_t *restrict src2 = (int8_t *)malloc(sizeof(int8_t) * 4 * TABLE_ENTRY_SIZE);
 
     const int table_count = n / 4;
     const int table_stride = n / 4 * 81;
@@ -490,6 +491,97 @@ void ggml_gemm_i2_i8_s_make_table_quant(int ith, const float *restrict y, float 
         const float *restrict local_y = y + i * n * TABLE_ENTRY_SIZE;
 
         for (int j = 0; j < TABLE_ENTRY_SIZE; j++){
+            const float *restrict y_row = local_y + j * n;
+
+            double max = eps;
+            for (int k = 0; k < n; k++) {
+                max = MAX(max, (double)y_row[k]);
+            }
+            const double s = max / 127;
+            const double is = 1e0 / MAX(s, eps);
+            scale[i * TABLE_ENTRY_SIZE + j] = s;
+
+            for (int k = 0; k < n; k++) {
+                float v = round((double)y_row[k] * is);
+                if (v > 127) v = 127;
+                if (v < -128) v = -128;
+                src[j * n + k] = (int8_t)v;
+            }
+        }
+
+        int16_t *restrict local_table = table + i * table_stride * TABLE_ENTRY_SIZE;
+
+        for (int j = 0; j < table_count; j++) {
+            const int8_t *restrict src_local = src + j * 4;
+            for (int k = 0; k < TABLE_ENTRY_SIZE; k++) {
+                src2[k] = src_local[k * n];
+                src2[k + TABLE_ENTRY_SIZE] = src_local[k * n + 1];
+                src2[k + TABLE_ENTRY_SIZE * 2] = src_local[k * n + 2];
+                src2[k + TABLE_ENTRY_SIZE * 3] = src_local[k * n + 3];
+            }
+            gemm_make_table_I2S_tile(local_table + j * 81 * TABLE_ENTRY_SIZE, src2);
+        }
+    }
+
+    // remains
+    if (entry_tile_remain > 0) {
+        memset(src2, 0, sizeof(int8_t) * 4 * TABLE_ENTRY_SIZE);
+
+        const float *restrict local_y = y + entry_tile_count * n * TABLE_ENTRY_SIZE;
+
+        for (int j = 0; j < entry_tile_remain; j++) {
+            const float *restrict y_row = local_y + j * n;
+
+            double max = eps;
+            for (int k = 0; k < n; k++) {
+                max = MAX(max, (double)y_row[k]);
+            }
+            const double s = max / 127;
+            const double is = 1e0 / MAX(s, eps);
+            scale[entry_tile_count * TABLE_ENTRY_SIZE + j] = s;
+
+            for (int k = 0; k < n; k++) {
+                float v = round((double)y_row[k] * is);
+                if (v > 127) v = 127;
+                if (v < -128) v = -128;
+                src[j * n + k] = (int8_t)v;
+            }
+        }
+
+        int16_t *restrict local_table = table + entry_tile_count * table_stride * TABLE_ENTRY_SIZE;
+
+        for (int j = 0; j < table_count; j++) {
+            const int8_t *restrict src_local = src + j * 4;
+            for (int k = 0; k < entry_tile_remain; k++) {
+                src2[k] = src_local[k * n];
+                src2[k + TABLE_ENTRY_SIZE] = src_local[k * n + 1];
+                src2[k + TABLE_ENTRY_SIZE * 2] = src_local[k * n + 2];
+                src2[k + TABLE_ENTRY_SIZE * 3] = src_local[k * n + 3];
+            }
+            gemm_make_table_I2S_tile(local_table + j * 81 * TABLE_ENTRY_SIZE, src2);
+        }
+    }
+
+    free(src);
+    free(src2);
+}
+
+void ggml_gemm_i2_i8_s_make_table_quant2(int ith, const float *restrict y, float *restrict scale, int nr, int n,
+                                         int16_t *restrict table) {
+    UNUSED(ith);
+
+    int8_t *restrict src = (int8_t *)malloc(sizeof(int8_t) * n * TABLE_ENTRY_SIZE);
+
+    const int table_count = n / 4;
+    const int table_stride = n / 4 * 81;
+    const int entry_tile_count = nr / TABLE_ENTRY_SIZE;  // not including remains
+    const int entry_tile_remain = nr % TABLE_ENTRY_SIZE;
+
+    // tiles
+    for (int i = 0; i < entry_tile_count; i++) {
+        const float *restrict local_y = y + i * n * TABLE_ENTRY_SIZE;
+
+        for (int j = 0; j < TABLE_ENTRY_SIZE; j++) {
             const float *restrict y_row = local_y + j * n;
 
             double max = eps;
