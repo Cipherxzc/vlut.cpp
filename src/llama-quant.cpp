@@ -176,8 +176,8 @@ static ggml_type llama_tensor_get_type(quantize_state_impl & qs, ggml_type new_t
             qs.params->ftype == LLAMA_FTYPE_MOSTLY_I2_T ||
             qs.params->ftype == LLAMA_FTYPE_MOSTLY_I2_S ||
             qs.params->ftype == LLAMA_FTYPE_MOSTLY_I1_58_T){
-            new_type = GGML_TYPE_F16;
-        }else if (qs.params->token_embedding_type < GGML_TYPE_COUNT) {
+            new_type = GGML_TYPE_Q6_K;
+        } else if (qs.params->token_embedding_type < GGML_TYPE_COUNT) {
             new_type = qs.params->token_embedding_type;
         } else {
             if (ftype == LLAMA_FTYPE_MOSTLY_IQ2_XXS || ftype == LLAMA_FTYPE_MOSTLY_IQ2_XS ||
