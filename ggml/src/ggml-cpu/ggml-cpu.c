@@ -12368,14 +12368,14 @@ static void ggml_compute_forward(struct ggml_compute_params *params, struct ggml
         }
     }
 
-    // if (tensor->op == GGML_OP_MUL_MAT && type_traits_bitnet[tensor->src[0]->type].is_bitnet_type) {
+    // if (tensor->op == GGML_OP_MUL_MAT) {
     //     ggml_barrier(params->threadpool);
     //     if (params->ith == 0) {
     //         printf("write tensors\n");
     //         FILE *outfile = fopen("/home/cipherxzc/Projects/llama.cpp-bitnet/mytest/tensors", "a");
-    //         // print_tensor(outfile, "weight", tensor->src[0]);
-    //         print_tensor(outfile, "activation", tensor->src[1]);
-    //         print_tensor(outfile, "result", tensor);
+    //         print_tensor(outfile, "weight", tensor->src[0]);
+    //         // print_tensor(outfile, "activation", tensor->src[1]);
+    //         // print_tensor(outfile, "result", tensor);
     //         fclose(outfile);
     //         static int cnt = 0;
     //         cnt++;

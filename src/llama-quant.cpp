@@ -872,7 +872,10 @@ static void llama_model_quantize_impl(const std::string & fname_inp, const std::
             const int64_t nrows = tensor->ne[1];
 
             static const int64_t min_chunk_size = 32 * 512;
-            const int64_t chunk_size = (n_per_row >= min_chunk_size ? n_per_row : n_per_row * ((min_chunk_size + n_per_row - 1)/n_per_row));
+            int64_t chunk_size = (n_per_row >= min_chunk_size ? n_per_row : n_per_row * ((min_chunk_size + n_per_row - 1)/n_per_row));
+            if (new_type == GGML_TYPE_I2_T || new_type == GGML_TYPE_I2_S || new_type == GGML_TYPE_I1_58_T){
+                chunk_size = n_per_row * nrows;
+            }
 
             const int64_t nelements_matrix = tensor->ne[0] * tensor->ne[1];
             const int64_t nchunk = (nelements_matrix + chunk_size - 1)/chunk_size;

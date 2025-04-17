@@ -1029,8 +1029,8 @@ void ggml_gemm_i2_i8_s_LUT_tile(int ith, int n, float *restrict s, size_t bs, co
     // multiple threads might access the same row (r) of s, although accessing different cols (nc * ith + c)
     // will this cause any performance issue? how to avoid this?
     for (int r = 0; r < nr; r++) {
-        // const float scale = *((const float *)((const int8_t *)vy + r * (n + 4) + n));
-        const float scale = *((const float *)vy + r);
+        const float scale = *((const float *)((const int8_t *)vy + r * (n + 4) + n));
+        // const float scale = *((const float *)vy + r);
         float* restrict sr = s + r * bs;
         const int32_t *restrict ss2r = sum_i32 + r * nc;
         for (int c = 0; c < nc; c++) {

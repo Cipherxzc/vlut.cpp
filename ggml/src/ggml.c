@@ -6549,7 +6549,7 @@ size_t ggml_quantize_chunk(
             result = quantize_i1_58_b(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
         case GGML_TYPE_I2_T:
-            result = quantize_i2_b(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
+            result = quantize_i2_t(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
         case GGML_TYPE_I2_S:
             result = quantize_i2_s(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
