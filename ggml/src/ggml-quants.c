@@ -5226,11 +5226,9 @@ bool ggml_validate_row_data(enum ggml_type type, const void * data, size_t nbyte
         case GGML_TYPE_I16:
         case GGML_TYPE_I32:
         case GGML_TYPE_I64:
-        case GGML_TYPE_I2_B:
-        case GGML_TYPE_I1_58_B:
-        case GGML_TYPE_I2_T:
+        // BitNet type
         case GGML_TYPE_I2_S:
-        case GGML_TYPE_I1_58_T:
+        case GGML_TYPE_I1_S:
             // nothing to validate
             break;
         default:

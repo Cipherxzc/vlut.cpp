@@ -179,11 +179,9 @@ extern "C" {
         //LLAMA_FTYPE_MOSTLY_Q4_0_8_8      = 35, // removed from gguf files, use Q4_0 and runtime repack
         LLAMA_FTYPE_MOSTLY_TQ1_0         = 36, // except 1d tensors
         LLAMA_FTYPE_MOSTLY_TQ2_0         = 37, // except 1d tensors
-        LLAMA_FTYPE_MOSTLY_I2_B          = 38, // BitNet
-        LLAMA_FTYPE_MOSTLY_I1_58_B       = 39, // BitNet
-        LLAMA_FTYPE_MOSTLY_I2_T          = 40, // BitNet
-        LLAMA_FTYPE_MOSTLY_I2_S          = 41, // BitNet
-        LLAMA_FTYPE_MOSTLY_I1_58_T       = 42, // BitNet
+        // BitNet type
+        LLAMA_FTYPE_MOSTLY_I2_S          = 38, // BitNet
+        LLAMA_FTYPE_MOSTLY_I1_S          = 39, // BitNet
 
         LLAMA_FTYPE_GUESSED = 1024, // not specified in the model file
     };

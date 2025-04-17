@@ -1932,7 +1932,7 @@ class BitnetModel(Model):
         if self.layout == "I2_S" and m % 4 == 0:
             # reshape to (n, m//4, 4), transpose to (m//4, n, 4), merge to (m//4, 4n)
             weight = weight.view(n, m // 4, 4).transpose(0, 1).reshape(m // 4, -1)
-        elif self.layout == "I1_58_T" and m % 5 == 0:
+        elif self.layout == "I1_S" and m % 5 == 0:
             # reshape to (n, m//5, 5), transpose to (m//5, n, 5), merge to (m//5, 5n)
             weight = weight.view(n, m // 5, 5).transpose(0, 1).reshape(m // 5, -1)
         else:
@@ -4975,7 +4975,7 @@ def parse_args() -> argparse.Namespace:
         help="output format - use f32 for float32, f16 for float16, bf16 for bfloat16, q8_0 for Q8_0, tq1_0 or tq2_0 for ternary, and auto for the highest-fidelity 16-bit float type depending on the first loaded tensor type",
     )
     parser.add_argument(
-        "--layout", type=str, choices=["I2_S", "I1_58_T", ""], default="",
+        "--layout", type=str, choices=["I2_S", "I1_S", ""], default="",
         help="weight layout for specific quantization types; default: "".",
         # TODO: add this to the suffix of outfile if not specified.
     )

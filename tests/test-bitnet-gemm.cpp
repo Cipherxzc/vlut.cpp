@@ -1126,7 +1126,7 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_eval() {
     std::uniform_int_distribution<> dist_n(16, 128);
     std::uniform_int_distribution<> dist_k(1, 16);
     for (int i = 0; i < 1000; i++) {
-        for (ggml_type type_a : {GGML_TYPE_I2_S, GGML_TYPE_I1_58_T}) {
+        for (ggml_type type_a : {GGML_TYPE_I2_S, GGML_TYPE_I1_S}) {
             for (ggml_type type_b : {GGML_TYPE_F32}) {
                 int m = dist_m(rng);
                 int n = dist_n(rng);
@@ -1152,7 +1152,7 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_perf(const char* 
     };
 
     std::vector<ModelConfig> models = {
-        {"bitnet_3b",  3200, 8640, {GGML_TYPE_Q4_0, GGML_TYPE_I2_S, GGML_TYPE_I1_58_T}},
+        {"bitnet_3b",  3200, 8640, {GGML_TYPE_Q4_0, GGML_TYPE_I2_S, GGML_TYPE_I1_S}},
         {"llama3_8b",  4096, 14336, {GGML_TYPE_TQ2_0, GGML_TYPE_I2_S, GGML_TYPE_TQ1_0}},
         {"falcon_1b",  2048, 8192, {GGML_TYPE_TQ2_0, GGML_TYPE_I2_S, GGML_TYPE_TQ1_0}},
         {"trilm_1.5b", 2048, 6144, {GGML_TYPE_TQ2_0, GGML_TYPE_I2_S, GGML_TYPE_TQ1_0}},

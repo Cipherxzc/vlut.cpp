@@ -893,32 +893,11 @@ static const struct ggml_type_traits type_traits[GGML_TYPE_COUNT] =
                 .type_size = 0,
                 .is_quantized = false,
             },
-        [GGML_TYPE_I2_B] =
-            {
-                .type_name = "i2_b",
-                .blck_size = 4,
-                .type_size = sizeof(uint8_t),
-                .is_quantized = true,
-            },
-        [GGML_TYPE_I1_58_B] =
-            {
-                .type_name = "i1_58_b",
-                .blck_size = 5,
-                .type_size = sizeof(uint8_t),
-                .is_quantized = true,
-            },
         [GGML_TYPE_I8_B] =
             {
                 .type_name = "i8_b",
                 .blck_size = 1,
                 .type_size = sizeof(int8_t),
-                .is_quantized = true,
-            },
-        [GGML_TYPE_I2_T] =
-            {
-                .type_name = "i2_t",
-                .blck_size = 4,
-                .type_size = sizeof(uint8_t),
                 .is_quantized = true,
             },
         [GGML_TYPE_I2_S] =
@@ -928,9 +907,9 @@ static const struct ggml_type_traits type_traits[GGML_TYPE_COUNT] =
                 .type_size = sizeof(uint8_t),
                 .is_quantized = true,
             },
-        [GGML_TYPE_I1_58_T] =
+        [GGML_TYPE_I1_S] =
             {
-                .type_name = "i1_58_t",
+                .type_name = "i1_58_s",
                 .blck_size = 5,
                 .type_size = sizeof(uint8_t),
                 .is_quantized = true,
@@ -6541,21 +6520,12 @@ size_t ggml_quantize_chunk(
                 result = n * elemsize;
                 memcpy((uint8_t *)dst + start * elemsize, src + start, result);
             } break;
-        // BitNet
-        case GGML_TYPE_I2_B:
-            result = quantize_i2_b(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
-            break;
-        case GGML_TYPE_I1_58_B:
-            result = quantize_i1_58_b(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
-            break;
-        case GGML_TYPE_I2_T:
-            result = quantize_i2_t(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
-            break;
+        // BitNet type
         case GGML_TYPE_I2_S:
             result = quantize_i2_s(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
-        case GGML_TYPE_I1_58_T:
-            result = quantize_i1_58_b(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
+        case GGML_TYPE_I1_S:
+            result = quantize_i1_s(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
         default:
             assert(false);

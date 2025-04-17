@@ -439,27 +439,9 @@ static const struct ggml_type_traits_cpu type_traits_cpu[GGML_TYPE_COUNT] = {
             .vec_dot_type = GGML_TYPE_Q8_K,
             .nrows = 1,
         },
-    [GGML_TYPE_I2_B] =
-        {
-            // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,
-            .vec_dot_type = GGML_TYPE_I8_B,
-            .nrows = 1,
-        },
-    [GGML_TYPE_I1_58_B] = 
-        {
-            // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i1_58_i8_b,
-            .vec_dot_type = GGML_TYPE_I8_B,
-            .nrows = 1,
-        },
     [GGML_TYPE_I8_B] = 
         {
             .from_float = quantize_row_i8_b,
-        },
-    [GGML_TYPE_I2_T] =
-        {
-            // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
-            .vec_dot_type = GGML_TYPE_I8_B,
-            .nrows = 1,
         },
     [GGML_TYPE_I2_S] =
         {
@@ -467,7 +449,7 @@ static const struct ggml_type_traits_cpu type_traits_cpu[GGML_TYPE_COUNT] = {
             .vec_dot_type = GGML_TYPE_I8_B,
             .nrows = 1,
         },
-    [GGML_TYPE_I1_58_T] =
+    [GGML_TYPE_I1_S] =
         {
             // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
             .vec_dot_type = GGML_TYPE_I8_B,
@@ -7012,27 +6994,21 @@ struct ggml_type_traits_bitnet {
 };
 
 static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] = {
-    [GGML_TYPE_I2_T] =
-        {
-            .is_bitnet_type = true,
-            .table_entries_num = 256,
-            .gemm2 = ggml_gemm_i2_i8_t_LUT2_tile,
-        },
     [GGML_TYPE_I2_S] =
         {
             .is_bitnet_type = true,
             .table_entries_num = 81,
-            .make_table = ggml_gemm_i2_i8_s_make_table_tile,
-            .gemm = ggml_gemm_i2_i8_s_LUT_tile,
-            .gemm2 = ggml_gemm_i2_i8_s_LUT2_tile,
+            .make_table = ggml_gemm_i2s_i8b_make_table,
+            .gemm = ggml_gemm_i2s_i8b_LUT,
+            .gemm2 = ggml_gemm_i2s_i8b_LUT2,
         },
-    [GGML_TYPE_I1_58_T] =
+    [GGML_TYPE_I1_S] =
         {
             .is_bitnet_type = true,
             .table_entries_num = 243,
-            .make_table = ggml_gemm_i1_58_i8_t_make_table_tile,
-            .gemm = ggml_gemm_i1_58_i8_t_LUT_tile,
-            .gemm2 = ggml_gemm_i1_58_i8_t_LUT2_tile,
+            .make_table = ggml_gemm_i1s_i8b_make_table,
+            .gemm = ggml_gemm_i1s_i8b_LUT,
+            .gemm2 = ggml_gemm_i1s_i8b_LUT2,
         },
 };
 
@@ -7158,12 +7134,11 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
             for (int64_t i12 = 0; i12 < ne12; ++i12) {
                 for (int64_t i11 = ith; i11 < ne11; i11 += nth) {
                     // quantize on activation's row (K dim)
-                    from_float((float *)((char *)src1->data + i13 * nb13 + i12 * nb12 + i11 * nb11),
-                               (void *)(wdata + i13 * nbw3 + i12 * nbw2 + i11 * nbw1), ne10);
+                    quantize_row_i8_b((float *)((char *)src1->data + i13 * nb13 + i12 * nb12 + i11 * nb11),
+                                      (void *)(wdata + i13 * nbw3 + i12 * nbw2 + i11 * nbw1), ne10);
                 }
             }
         }
-        // TODO: fuse from_float and make_table
         ggml_barrier(params->threadpool);
 
         int64_t src1_start = (ith * ne10 / blck_size) / nth;
@@ -7184,7 +7159,7 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
         // (src1_end   % TABLE_ENTRY_SIZE): src1_end; src1_end = MIN(src1_end, ne11);
 
         // if (src1_start < src1_end) {
-        //     ggml_gemm_i2_i8_s_make_table_quant(params->ith, (float *)src1->data + src1_start * blck_size,
+        //     ggml_gemm_i2s_i8b_make_table_quant(params->ith, (float *)src1->data + src1_start * blck_size,
         //                                        (float *)wdata + src1_start, ne11, ne10,
         //                                        tables + ne10 / blck_size * table_entries_num * src1_start);
         // }
@@ -8732,12 +8707,9 @@ static void ggml_compute_forward_clamp(const struct ggml_compute_params *params,
         case GGML_TYPE_I32:
         case GGML_TYPE_I64:
         case GGML_TYPE_F64:
-        case GGML_TYPE_I2_B:
-        case GGML_TYPE_I1_58_B:
         case GGML_TYPE_I8_B:
-        case GGML_TYPE_I2_T:
         case GGML_TYPE_I2_S:
-        case GGML_TYPE_I1_58_T:
+        case GGML_TYPE_I1_S:
         case GGML_TYPE_COUNT: {
             GGML_ABORT("fatal error");
         }

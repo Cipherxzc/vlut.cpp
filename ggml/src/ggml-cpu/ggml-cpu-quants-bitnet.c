@@ -351,9 +351,8 @@ void quantize_row_i8_b_tile(const float *x, void *y, int64_t n, float *scale) {
 }
 
 
-inline static void gemm_make_table_I2_tile(int16_t *restrict table, const int8_t *restrict y);
-inline static void gemm_make_table_I2S_tile(int16_t *restrict table, const int8_t *restrict y);
-inline static void gemm_make_table_I1_58T_tile(int16_t *restrict table, const int8_t *restrict y);
+inline static void gemm_make_table_I2S(int16_t *restrict table, const int8_t *restrict y);
+inline static void gemm_make_table_I1_58S(int16_t *restrict table, const int8_t *restrict y);
 
 #ifdef BITNET_DEBUG
 extern long long make_table_time, convert_time, scale_time, LUT_time;
@@ -376,7 +375,7 @@ extern int8_t *tmp_src;
 extern int16_t *sum1;
 extern int *sum2;
 
-void ggml_gemm_i2_i8_s_make_table_tile(int ith, const int8_t *restrict y, int ntables, int nr, int n,
+void ggml_gemm_i2s_i8b_make_table(int ith, const int8_t *restrict y, int ntables, int nr, int n,
                                        int16_t *restrict table) {
     UNUSED(ith);
 
@@ -400,7 +399,7 @@ void ggml_gemm_i2_i8_s_make_table_tile(int ith, const int8_t *restrict y, int nt
                 src[k + TABLE_ENTRY_SIZE * 2] = y1[k * (n + 4) + 2];
                 src[k + TABLE_ENTRY_SIZE * 3] = y1[k * (n + 4) + 3];
             }
-            gemm_make_table_I2S_tile(table0 + j * 81 * TABLE_ENTRY_SIZE, src);
+            gemm_make_table_I2S(table0 + j * 81 * TABLE_ENTRY_SIZE, src);
         }
     }
 
@@ -417,14 +416,14 @@ void ggml_gemm_i2_i8_s_make_table_tile(int ith, const int8_t *restrict y, int nt
                 src[k + TABLE_ENTRY_SIZE * 2] = y1[k * (n + 4) + 2];
                 src[k + TABLE_ENTRY_SIZE * 3] = y1[k * (n + 4) + 3];
             }
-            gemm_make_table_I2S_tile(table0 + j * 81 * TABLE_ENTRY_SIZE, src);
+            gemm_make_table_I2S(table0 + j * 81 * TABLE_ENTRY_SIZE, src);
         }
     }
 
     free(src);
 }
 
-void ggml_gemm_i1_58_i8_t_make_table_tile(int ith, const int8_t *restrict y, int ntables, int nr, int n,
+void ggml_gemm_i1s_i8b_make_table(int ith, const int8_t *restrict y, int ntables, int nr, int n,
                                           int16_t *restrict table) {
     UNUSED(ith);
 
@@ -449,7 +448,7 @@ void ggml_gemm_i1_58_i8_t_make_table_tile(int ith, const int8_t *restrict y, int
                 src[k + TABLE_ENTRY_SIZE * 3] = y1[k * (n + 4) + 3];
                 src[k + TABLE_ENTRY_SIZE * 4] = y1[k * (n + 4) + 4];
             }
-            gemm_make_table_I1_58T_tile(table0 + j *243 * TABLE_ENTRY_SIZE, src);
+            gemm_make_table_I1_58S(table0 + j *243 * TABLE_ENTRY_SIZE, src);
         }
     }
 
@@ -467,14 +466,14 @@ void ggml_gemm_i1_58_i8_t_make_table_tile(int ith, const int8_t *restrict y, int
                 src[k + TABLE_ENTRY_SIZE * 3] = y1[k * (n + 4) + 3];
                 src[k + TABLE_ENTRY_SIZE * 4] = y1[k * (n + 4) + 4];
             }
-            gemm_make_table_I1_58T_tile(table0 + j *243 * TABLE_ENTRY_SIZE, src);
+            gemm_make_table_I1_58S(table0 + j *243 * TABLE_ENTRY_SIZE, src);
         }
     }
 
     free(src);
 }
 
-void ggml_gemm_i2_i8_s_make_table_quant(int ith, const float *restrict y, float *restrict scale, int nr, int n,
+void ggml_gemm_i2s_i8b_make_table_quant(int ith, const float *restrict y, float *restrict scale, int nr, int n,
                                         int16_t *restrict table) {
     UNUSED(ith);
 
@@ -519,7 +518,7 @@ void ggml_gemm_i2_i8_s_make_table_quant(int ith, const float *restrict y, float 
                 src2[k + TABLE_ENTRY_SIZE * 2] = src_local[k * n + 2];
                 src2[k + TABLE_ENTRY_SIZE * 3] = src_local[k * n + 3];
             }
-            gemm_make_table_I2S_tile(local_table + j * 81 * TABLE_ENTRY_SIZE, src2);
+            gemm_make_table_I2S(local_table + j * 81 * TABLE_ENTRY_SIZE, src2);
         }
     }
 
@@ -558,7 +557,7 @@ void ggml_gemm_i2_i8_s_make_table_quant(int ith, const float *restrict y, float 
                 src2[k + TABLE_ENTRY_SIZE * 2] = src_local[k * n + 2];
                 src2[k + TABLE_ENTRY_SIZE * 3] = src_local[k * n + 3];
             }
-            gemm_make_table_I2S_tile(local_table + j * 81 * TABLE_ENTRY_SIZE, src2);
+            gemm_make_table_I2S(local_table + j * 81 * TABLE_ENTRY_SIZE, src2);
         }
     }
 
@@ -566,7 +565,7 @@ void ggml_gemm_i2_i8_s_make_table_quant(int ith, const float *restrict y, float 
     free(src2);
 }
 
-void ggml_gemm_i2_i8_s_make_table_quant2(int ith, const float *restrict y, float *restrict scale, int nr, int n,
+void ggml_gemm_i2s_i8b_make_table_quant2(int ith, const float *restrict y, float *restrict scale, int nr, int n,
                                          int16_t *restrict table) {
     UNUSED(ith);
 
@@ -603,7 +602,7 @@ void ggml_gemm_i2_i8_s_make_table_quant2(int ith, const float *restrict y, float
         int16_t *restrict local_table = table + i * table_stride * TABLE_ENTRY_SIZE;
 
         for (int j = 0; j < table_count; j++) {
-            gemm_make_table_I2S_tile(local_table + j * 81 * TABLE_ENTRY_SIZE, src + j * 4 * TABLE_ENTRY_SIZE);
+            gemm_make_table_I2S(local_table + j * 81 * TABLE_ENTRY_SIZE, src + j * 4 * TABLE_ENTRY_SIZE);
         }
     }
 
@@ -635,118 +634,14 @@ void ggml_gemm_i2_i8_s_make_table_quant2(int ith, const float *restrict y, float
         int16_t *restrict local_table = table + entry_tile_count * table_stride * TABLE_ENTRY_SIZE;
 
         for (int j = 0; j < table_count; j++) {
-            gemm_make_table_I2S_tile(local_table + j * 81 * TABLE_ENTRY_SIZE, src + j * 4 * TABLE_ENTRY_SIZE);
+            gemm_make_table_I2S(local_table + j * 81 * TABLE_ENTRY_SIZE, src + j * 4 * TABLE_ENTRY_SIZE);
         }
     }
 
     free(src);
 }
 
-void ggml_gemm_i2_i8_t_LUT2_tile(int ith, int n, float *restrict s, size_t bs, const void *restrict vx,
-                                 const void *restrict vy, int nr, int nc) {
-    // nr: src1->ne[1], nc: src0->ne[1]
-    UNUSED(ith);
-
-    assert(n % 4 == 0);
-
-    const uint8_t *restrict x = vx;
-    const int8_t *restrict y = vy;
-
-    
-    int16_t *restrict sum_i16 = (int16_t *)malloc(sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
-    int *restrict sum_i32 = (int *)malloc(sizeof(int) * nr * nc);
-    int16_t *restrict table = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 256);
-
-    // int16_t *restrict sum_i16 = sum1 + ith * TABLE_ENTRY_SIZE * nc;
-    // int *restrict sum_i32 = sum2 + ith * nr * nc;
-    // int16_t *restrict table = tables + ith * TABLE_ENTRY_SIZE * 256;
-
-    memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
-    memset(sum_i32, 0, sizeof(int) * nr * nc);
-    memset(table, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
-
-    static const int group_size = 512;
-
-#ifdef BITNET_DEBUG
-    double make_table_duration = 0.0;
-    double convert_duration = 0.0;
-    double scale_duration = 0.0;
-    double LUT_duration = 0.0;
-#endif
-
-    for (int t = 0; t < nr; t += TABLE_ENTRY_SIZE){
-        const int8_t *restrict y0 = y + t * n;
-        const int entry_len = MIN(nr - t, TABLE_ENTRY_SIZE);
-        for (int g = 0; g < n; g += group_size) {
-            int lim = g + group_size < n ? g + group_size : n;
-            for (int i = (g >> 2); i < (lim >> 2); i++) {
-#ifdef BITNET_DEBUG
-                struct timespec start_make_table = get_thread_cpu_time();
-#endif
-                gemm_make_table_I2_tile(table, y0 + i * 4 * TABLE_ENTRY_SIZE);
-#ifdef BITNET_DEBUG
-                struct timespec end_make_table = get_thread_cpu_time();
-                make_table_duration += get_time_diff(start_make_table, end_make_table);
-
-                struct timespec start_LUT = get_thread_cpu_time();
-#endif
-                for (int c = 0; c < nc; c++) {
-                    int v = x[i * bs + c];
-                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt = table + v * TABLE_ENTRY_SIZE;
-                    for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
-                        rs[r] += rt[r];
-                    }
-                }
-#ifdef BITNET_DEBUG
-                struct timespec end_LUT = get_thread_cpu_time();
-                LUT_duration += get_time_diff(start_LUT, end_LUT);
-#endif
-            }
-#ifdef BITNET_DEBUG
-            struct timespec start_convert = get_thread_cpu_time();
-#endif
-            for (int i = 0; i < nc; i++){
-                for (int j = 0; j < entry_len; j++) {
-                    sum_i32[(t + j) * nc + i] += sum_i16[i * TABLE_ENTRY_SIZE + j];
-                }
-            }
-            memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
-#ifdef BITNET_DEBUG
-            struct timespec end_convert = get_thread_cpu_time();
-            convert_duration += get_time_diff(start_convert, end_convert);
-#endif
-        }
-    }
-
-#ifdef BITNET_DEBUG
-    struct timespec start_scale = get_thread_cpu_time();
-#endif
-    const size_t y_size = ((nr % TABLE_ENTRY_SIZE) ? nr + TABLE_ENTRY_SIZE - (nr % TABLE_ENTRY_SIZE): nr) * n;
-    const float *sc = (const float *)(y + y_size);
-    for (int r = 0; r < nr; r++) {
-        for (int c = 0; c < nc; c++) {
-            s[r * bs + c] = sum_i32[r * nc + c] * sc[r];  // 将输出转置回来
-        }
-    }
-#ifdef BITNET_DEBUG
-    struct timespec end_scale = get_thread_cpu_time();
-    scale_duration += get_time_diff(start_scale, end_scale);
-
-    pthread_mutex_lock(&time_mutex);
-    make_table_time += make_table_duration;
-    convert_time += convert_duration;
-    scale_time += scale_duration;
-    LUT_time += LUT_duration;
-    pthread_mutex_unlock(&time_mutex);
-#endif
-
-    free(table);
-    free(sum_i16);
-    free(sum_i32);
-}
-
-void ggml_gemm_i2_i8_s_LUT2_tile(int ith, int n, float *restrict s, size_t bs, const void *restrict vx,
+void ggml_gemm_i2s_i8b_LUT2(int ith, int n, float *restrict s, size_t bs, const void *restrict vx,
                                  const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
 
@@ -776,7 +671,7 @@ void ggml_gemm_i2_i8_s_LUT2_tile(int ith, int n, float *restrict s, size_t bs, c
         // groups
         for (int g = 0; g < group_count; g++) {
             for (int i = 0; i < group_size / 4; i++) {
-                gemm_make_table_I2S_tile(this_table, y0 + (g * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
+                gemm_make_table_I2S(this_table, y0 + (g * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 4 + i) * bs;
                 ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
             }
@@ -786,7 +681,7 @@ void ggml_gemm_i2_i8_s_LUT2_tile(int ith, int n, float *restrict s, size_t bs, c
         // group remain
         if (group_size_remain > 0) {
             for (int i = 0; i < group_size_remain / 4; i++) {
-                gemm_make_table_I2S_tile(this_table, y0 + (group_count * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
+                gemm_make_table_I2S(this_table, y0 + (group_count * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 4 + i) * bs;
                 ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
             }
@@ -801,7 +696,7 @@ void ggml_gemm_i2_i8_s_LUT2_tile(int ith, int n, float *restrict s, size_t bs, c
         // groups
         for (int g = 0; g < group_count; g++) {
             for (int i = 0; i < group_size / 4; i++) {
-                gemm_make_table_I2S_tile(this_table, y0 + (g * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
+                gemm_make_table_I2S(this_table, y0 + (g * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 4 + i) * bs;
                 ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
             }
@@ -811,7 +706,7 @@ void ggml_gemm_i2_i8_s_LUT2_tile(int ith, int n, float *restrict s, size_t bs, c
         // group remain
         if (group_size_remain > 0) {
             for (int i = 0; i < group_size_remain / 4; i++) {
-                gemm_make_table_I2S_tile(this_table, y0 + (group_count * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
+                gemm_make_table_I2S(this_table, y0 + (group_count * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 4 + i) * bs;
                 ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
             }
@@ -836,7 +731,7 @@ void ggml_gemm_i2_i8_s_LUT2_tile(int ith, int n, float *restrict s, size_t bs, c
     free(sum_i32);
 }
 
-void ggml_gemm_i1_58_i8_t_LUT2_tile(int ith, int n, float *restrict s, size_t bs, const void *restrict vx,
+void ggml_gemm_i1s_i8b_LUT2(int ith, int n, float *restrict s, size_t bs, const void *restrict vx,
                                     const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
 
@@ -866,7 +761,7 @@ void ggml_gemm_i1_58_i8_t_LUT2_tile(int ith, int n, float *restrict s, size_t bs
         // groups
         for (int g = 0; g < group_count; g++) {
             for (int i = 0; i < group_size / 5; i++) {
-                gemm_make_table_I2S_tile(this_table, y0 + (g * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
+                gemm_make_table_I2S(this_table, y0 + (g * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 5 + i) * bs;
                 ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
             }
@@ -876,7 +771,7 @@ void ggml_gemm_i1_58_i8_t_LUT2_tile(int ith, int n, float *restrict s, size_t bs
         // group remain
         if (group_size_remain > 0) {
             for (int i = 0; i < group_size_remain / 5; i++) {
-                gemm_make_table_I2S_tile(this_table, y0 + (group_count * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
+                gemm_make_table_I2S(this_table, y0 + (group_count * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 5 + i) * bs;
                 ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
             }
@@ -891,7 +786,7 @@ void ggml_gemm_i1_58_i8_t_LUT2_tile(int ith, int n, float *restrict s, size_t bs
         // groups
         for (int g = 0; g < group_count; g++) {
             for (int i = 0; i < group_size / 5; i++) {
-                gemm_make_table_I2S_tile(this_table, y0 + (g * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
+                gemm_make_table_I2S(this_table, y0 + (g * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 5 + i) * bs;
                 ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
             }
@@ -901,7 +796,7 @@ void ggml_gemm_i1_58_i8_t_LUT2_tile(int ith, int n, float *restrict s, size_t bs
         // group remain
         if (group_size_remain > 0) {
             for (int i = 0; i < group_size_remain / 5; i++) {
-                gemm_make_table_I2S_tile(this_table, y0 + (group_count * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
+                gemm_make_table_I2S(this_table, y0 + (group_count * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 5 + i) * bs;
                 ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
             }
@@ -926,7 +821,7 @@ void ggml_gemm_i1_58_i8_t_LUT2_tile(int ith, int n, float *restrict s, size_t bs
     free(sum_i32);
 }
 
-void ggml_gemm_i2_i8_s_LUT_tile(int ith, int n, float *restrict s, size_t bs, const void *restrict vx,
+void ggml_gemm_i2s_i8b_LUT(int ith, int n, float *restrict s, size_t bs, const void *restrict vx,
                                 const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
 
@@ -938,7 +833,7 @@ void ggml_gemm_i2_i8_s_LUT_tile(int ith, int n, float *restrict s, size_t bs, co
     assert(n % 4 == 0);
     assert(bs % nc == 0);
 
-    // printf("ggml_gemm_i2_i8_s_LUT_tile: %d %d %d %d\n", n, nr, nc, bs); // 3200 128 800 3200 (2160 8640)
+    // printf("ggml_gemm_i2s_i8b_LUT: %d %d %d %d\n", n, nr, nc, bs); // 3200 128 800 3200 (2160 8640)
 
     int16_t *restrict sum_i16 = (int16_t *)malloc(sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
     int32_t *restrict sum_i32 = (int32_t *)malloc(sizeof(int32_t) * nr * nc);
@@ -1042,7 +937,7 @@ void ggml_gemm_i2_i8_s_LUT_tile(int ith, int n, float *restrict s, size_t bs, co
     free(sum_i32);
 }
 
-void ggml_gemm_i1_58_i8_t_LUT_tile(int ith, int n, float *restrict s, size_t bs, const void *restrict vx,
+void ggml_gemm_i1s_i8b_LUT(int ith, int n, float *restrict s, size_t bs, const void *restrict vx,
                                    const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
 
@@ -1054,7 +949,7 @@ void ggml_gemm_i1_58_i8_t_LUT_tile(int ith, int n, float *restrict s, size_t bs,
     assert(n % 5 == 0);
     assert(bs % nc == 0);
 
-    // printf("ggml_gemm_i2_i8_s_LUT_tile: %d %d %d %d\n", n, nr, nc, bs); // 3200 128 800 3200 (2160 8640)
+    // printf("ggml_gemm_i2s_i8b_LUT: %d %d %d %d\n", n, nr, nc, bs); // 3200 128 800 3200 (2160 8640)
 
     int16_t *restrict sum_i16 = (int16_t *)malloc(sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
     int32_t *restrict sum_i32 = (int32_t *)malloc(sizeof(int32_t) * nr * nc);
@@ -1159,447 +1054,359 @@ void ggml_gemm_i1_58_i8_t_LUT_tile(int ith, int n, float *restrict s, size_t bs,
     free(sum_i32);
 }
 
-inline static void add_tile(int16_t *restrict t1, const int16_t *restrict t2, const int8_t *restrict y) {
+inline static void add(int16_t *restrict t1, const int16_t *restrict t2, const int8_t *restrict y) {
     for (int i = 0; i < TABLE_ENTRY_SIZE; i++) {
         t1[i] = t2[i] + y[i];
     }
 }
 
-inline static void sub_tile(int16_t *restrict t1, const int16_t *restrict t2, const int8_t *restrict y) {
+inline static void sub(int16_t *restrict t1, const int16_t *restrict t2, const int8_t *restrict y) {
     for (int i = 0; i < TABLE_ENTRY_SIZE; i++) {
         t1[i] = t2[i] - y[i];
     }
 }
 
-inline static void rev_tile(int16_t *restrict t1, const int16_t *restrict t2) {
+inline static void rev(int16_t *restrict t1, const int16_t *restrict t2) {
     for (int i = 0; i < TABLE_ENTRY_SIZE; i++) {
         t1[i] = -t2[i];
     }
 }
 
-void gemm_make_table_I2_tile(int16_t *restrict table, const int8_t *restrict y) {
+void gemm_make_table_I2S(int16_t *restrict table, const int8_t *restrict y) {
     const int8_t *restrict y0 = y;
     const int8_t *restrict y1 = y0 + TABLE_ENTRY_SIZE;
     const int8_t *restrict y2 = y1 + TABLE_ENTRY_SIZE;
     const int8_t *restrict y3 = y2 + TABLE_ENTRY_SIZE;
 
-    add_tile(table + 1 * TABLE_ENTRY_SIZE, table + 0 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 3 * TABLE_ENTRY_SIZE, table + 0 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 4 * TABLE_ENTRY_SIZE, table + 0 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 12 * TABLE_ENTRY_SIZE, table + 0 * TABLE_ENTRY_SIZE, y1);
-    add_tile(table + 16 * TABLE_ENTRY_SIZE, table + 0 * TABLE_ENTRY_SIZE, y2);
-    sub_tile(table + 48 * TABLE_ENTRY_SIZE, table + 0 * TABLE_ENTRY_SIZE, y2);
-    add_tile(table + 64 * TABLE_ENTRY_SIZE, table + 0 * TABLE_ENTRY_SIZE, y3);
-    sub_tile(table + 192 * TABLE_ENTRY_SIZE, table + 0 * TABLE_ENTRY_SIZE, y3);
-    add_tile(table + 5 * TABLE_ENTRY_SIZE, table + 4 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 7 * TABLE_ENTRY_SIZE, table + 4 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 13 * TABLE_ENTRY_SIZE, table + 12 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 15 * TABLE_ENTRY_SIZE, table + 12 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 17 * TABLE_ENTRY_SIZE, table + 16 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 19 * TABLE_ENTRY_SIZE, table + 16 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 20 * TABLE_ENTRY_SIZE, table + 16 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 28 * TABLE_ENTRY_SIZE, table + 16 * TABLE_ENTRY_SIZE, y1);
-    add_tile(table + 49 * TABLE_ENTRY_SIZE, table + 48 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 51 * TABLE_ENTRY_SIZE, table + 48 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 52 * TABLE_ENTRY_SIZE, table + 48 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 60 * TABLE_ENTRY_SIZE, table + 48 * TABLE_ENTRY_SIZE, y1);
-    add_tile(table + 65 * TABLE_ENTRY_SIZE, table + 64 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 67 * TABLE_ENTRY_SIZE, table + 64 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 68 * TABLE_ENTRY_SIZE, table + 64 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 76 * TABLE_ENTRY_SIZE, table + 64 * TABLE_ENTRY_SIZE, y1);
-    add_tile(table + 80 * TABLE_ENTRY_SIZE, table + 64 * TABLE_ENTRY_SIZE, y2);
-    sub_tile(table + 112 * TABLE_ENTRY_SIZE, table + 64 * TABLE_ENTRY_SIZE, y2);
-    add_tile(table + 193 * TABLE_ENTRY_SIZE, table + 192 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 195 * TABLE_ENTRY_SIZE, table + 192 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 196 * TABLE_ENTRY_SIZE, table + 192 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 204 * TABLE_ENTRY_SIZE, table + 192 * TABLE_ENTRY_SIZE, y1);
-    add_tile(table + 208 * TABLE_ENTRY_SIZE, table + 192 * TABLE_ENTRY_SIZE, y2);
-    sub_tile(table + 240 * TABLE_ENTRY_SIZE, table + 192 * TABLE_ENTRY_SIZE, y2);
-    add_tile(table + 21 * TABLE_ENTRY_SIZE, table + 20 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 23 * TABLE_ENTRY_SIZE, table + 20 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 29 * TABLE_ENTRY_SIZE, table + 28 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 31 * TABLE_ENTRY_SIZE, table + 28 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 53 * TABLE_ENTRY_SIZE, table + 52 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 55 * TABLE_ENTRY_SIZE, table + 52 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 61 * TABLE_ENTRY_SIZE, table + 60 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 63 * TABLE_ENTRY_SIZE, table + 60 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 69 * TABLE_ENTRY_SIZE, table + 68 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 71 * TABLE_ENTRY_SIZE, table + 68 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 77 * TABLE_ENTRY_SIZE, table + 76 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 79 * TABLE_ENTRY_SIZE, table + 76 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 81 * TABLE_ENTRY_SIZE, table + 80 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 83 * TABLE_ENTRY_SIZE, table + 80 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 84 * TABLE_ENTRY_SIZE, table + 80 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 92 * TABLE_ENTRY_SIZE, table + 80 * TABLE_ENTRY_SIZE, y1);
-    add_tile(table + 113 * TABLE_ENTRY_SIZE, table + 112 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 115 * TABLE_ENTRY_SIZE, table + 112 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 116 * TABLE_ENTRY_SIZE, table + 112 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 124 * TABLE_ENTRY_SIZE, table + 112 * TABLE_ENTRY_SIZE, y1);
-    add_tile(table + 197 * TABLE_ENTRY_SIZE, table + 196 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 199 * TABLE_ENTRY_SIZE, table + 196 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 205 * TABLE_ENTRY_SIZE, table + 204 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 207 * TABLE_ENTRY_SIZE, table + 204 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 209 * TABLE_ENTRY_SIZE, table + 208 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 211 * TABLE_ENTRY_SIZE, table + 208 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 212 * TABLE_ENTRY_SIZE, table + 208 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 220 * TABLE_ENTRY_SIZE, table + 208 * TABLE_ENTRY_SIZE, y1);
-    add_tile(table + 241 * TABLE_ENTRY_SIZE, table + 240 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 243 * TABLE_ENTRY_SIZE, table + 240 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 244 * TABLE_ENTRY_SIZE, table + 240 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 252 * TABLE_ENTRY_SIZE, table + 240 * TABLE_ENTRY_SIZE, y1);
-    add_tile(table + 85 * TABLE_ENTRY_SIZE, table + 84 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 87 * TABLE_ENTRY_SIZE, table + 84 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 93 * TABLE_ENTRY_SIZE, table + 92 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 95 * TABLE_ENTRY_SIZE, table + 92 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 117 * TABLE_ENTRY_SIZE, table + 116 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 119 * TABLE_ENTRY_SIZE, table + 116 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 125 * TABLE_ENTRY_SIZE, table + 124 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 127 * TABLE_ENTRY_SIZE, table + 124 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 213 * TABLE_ENTRY_SIZE, table + 212 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 215 * TABLE_ENTRY_SIZE, table + 212 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 221 * TABLE_ENTRY_SIZE, table + 220 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 223 * TABLE_ENTRY_SIZE, table + 220 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 245 * TABLE_ENTRY_SIZE, table + 244 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 247 * TABLE_ENTRY_SIZE, table + 244 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 253 * TABLE_ENTRY_SIZE, table + 252 * TABLE_ENTRY_SIZE, y0);
-    sub_tile(table + 255 * TABLE_ENTRY_SIZE, table + 252 * TABLE_ENTRY_SIZE, y0);
+    add(table + 41 * TABLE_ENTRY_SIZE, table + 40 * TABLE_ENTRY_SIZE, y0);
+    add(table + 43 * TABLE_ENTRY_SIZE, table + 40 * TABLE_ENTRY_SIZE, y1);
+    add(table + 49 * TABLE_ENTRY_SIZE, table + 40 * TABLE_ENTRY_SIZE, y2);
+    add(table + 67 * TABLE_ENTRY_SIZE, table + 40 * TABLE_ENTRY_SIZE, y3);
+    rev(table + 39 * TABLE_ENTRY_SIZE, table + 41 * TABLE_ENTRY_SIZE);
+    rev(table + 37 * TABLE_ENTRY_SIZE, table + 43 * TABLE_ENTRY_SIZE);
+    sub(table + 42 * TABLE_ENTRY_SIZE, table + 43 * TABLE_ENTRY_SIZE, y0);
+    add(table + 44 * TABLE_ENTRY_SIZE, table + 43 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 31 * TABLE_ENTRY_SIZE, table + 49 * TABLE_ENTRY_SIZE);
+    sub(table + 46 * TABLE_ENTRY_SIZE, table + 49 * TABLE_ENTRY_SIZE, y1);
+    sub(table + 48 * TABLE_ENTRY_SIZE, table + 49 * TABLE_ENTRY_SIZE, y0);
+    add(table + 50 * TABLE_ENTRY_SIZE, table + 49 * TABLE_ENTRY_SIZE, y0);
+    add(table + 52 * TABLE_ENTRY_SIZE, table + 49 * TABLE_ENTRY_SIZE, y1);
+    rev(table + 13 * TABLE_ENTRY_SIZE, table + 67 * TABLE_ENTRY_SIZE);
+    sub(table + 58 * TABLE_ENTRY_SIZE, table + 67 * TABLE_ENTRY_SIZE, y2);
+    sub(table + 64 * TABLE_ENTRY_SIZE, table + 67 * TABLE_ENTRY_SIZE, y1);
+    sub(table + 66 * TABLE_ENTRY_SIZE, table + 67 * TABLE_ENTRY_SIZE, y0);
+    add(table + 68 * TABLE_ENTRY_SIZE, table + 67 * TABLE_ENTRY_SIZE, y0);
+    add(table + 70 * TABLE_ENTRY_SIZE, table + 67 * TABLE_ENTRY_SIZE, y1);
+    add(table + 76 * TABLE_ENTRY_SIZE, table + 67 * TABLE_ENTRY_SIZE, y2);
+    rev(table + 38 * TABLE_ENTRY_SIZE, table + 42 * TABLE_ENTRY_SIZE);
+    rev(table + 36 * TABLE_ENTRY_SIZE, table + 44 * TABLE_ENTRY_SIZE);
+    rev(table + 34 * TABLE_ENTRY_SIZE, table + 46 * TABLE_ENTRY_SIZE);
+    sub(table + 45 * TABLE_ENTRY_SIZE, table + 46 * TABLE_ENTRY_SIZE, y0);
+    add(table + 47 * TABLE_ENTRY_SIZE, table + 46 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 32 * TABLE_ENTRY_SIZE, table + 48 * TABLE_ENTRY_SIZE);
+    rev(table + 30 * TABLE_ENTRY_SIZE, table + 50 * TABLE_ENTRY_SIZE);
+    rev(table + 28 * TABLE_ENTRY_SIZE, table + 52 * TABLE_ENTRY_SIZE);
+    sub(table + 51 * TABLE_ENTRY_SIZE, table + 52 * TABLE_ENTRY_SIZE, y0);
+    add(table + 53 * TABLE_ENTRY_SIZE, table + 52 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 22 * TABLE_ENTRY_SIZE, table + 58 * TABLE_ENTRY_SIZE);
+    sub(table + 55 * TABLE_ENTRY_SIZE, table + 58 * TABLE_ENTRY_SIZE, y1);
+    sub(table + 57 * TABLE_ENTRY_SIZE, table + 58 * TABLE_ENTRY_SIZE, y0);
+    add(table + 59 * TABLE_ENTRY_SIZE, table + 58 * TABLE_ENTRY_SIZE, y0);
+    add(table + 61 * TABLE_ENTRY_SIZE, table + 58 * TABLE_ENTRY_SIZE, y1);
+    rev(table + 16 * TABLE_ENTRY_SIZE, table + 64 * TABLE_ENTRY_SIZE);
+    sub(table + 63 * TABLE_ENTRY_SIZE, table + 64 * TABLE_ENTRY_SIZE, y0);
+    add(table + 65 * TABLE_ENTRY_SIZE, table + 64 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 14 * TABLE_ENTRY_SIZE, table + 66 * TABLE_ENTRY_SIZE);
+    rev(table + 12 * TABLE_ENTRY_SIZE, table + 68 * TABLE_ENTRY_SIZE);
+    rev(table + 10 * TABLE_ENTRY_SIZE, table + 70 * TABLE_ENTRY_SIZE);
+    sub(table + 69 * TABLE_ENTRY_SIZE, table + 70 * TABLE_ENTRY_SIZE, y0);
+    add(table + 71 * TABLE_ENTRY_SIZE, table + 70 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 4 * TABLE_ENTRY_SIZE, table + 76 * TABLE_ENTRY_SIZE);
+    sub(table + 73 * TABLE_ENTRY_SIZE, table + 76 * TABLE_ENTRY_SIZE, y1);
+    sub(table + 75 * TABLE_ENTRY_SIZE, table + 76 * TABLE_ENTRY_SIZE, y0);
+    add(table + 77 * TABLE_ENTRY_SIZE, table + 76 * TABLE_ENTRY_SIZE, y0);
+    add(table + 79 * TABLE_ENTRY_SIZE, table + 76 * TABLE_ENTRY_SIZE, y1);
+    rev(table + 35 * TABLE_ENTRY_SIZE, table + 45 * TABLE_ENTRY_SIZE);
+    rev(table + 33 * TABLE_ENTRY_SIZE, table + 47 * TABLE_ENTRY_SIZE);
+    rev(table + 29 * TABLE_ENTRY_SIZE, table + 51 * TABLE_ENTRY_SIZE);
+    rev(table + 27 * TABLE_ENTRY_SIZE, table + 53 * TABLE_ENTRY_SIZE);
+    rev(table + 25 * TABLE_ENTRY_SIZE, table + 55 * TABLE_ENTRY_SIZE);
+    sub(table + 54 * TABLE_ENTRY_SIZE, table + 55 * TABLE_ENTRY_SIZE, y0);
+    add(table + 56 * TABLE_ENTRY_SIZE, table + 55 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 23 * TABLE_ENTRY_SIZE, table + 57 * TABLE_ENTRY_SIZE);
+    rev(table + 21 * TABLE_ENTRY_SIZE, table + 59 * TABLE_ENTRY_SIZE);
+    rev(table + 19 * TABLE_ENTRY_SIZE, table + 61 * TABLE_ENTRY_SIZE);
+    sub(table + 60 * TABLE_ENTRY_SIZE, table + 61 * TABLE_ENTRY_SIZE, y0);
+    add(table + 62 * TABLE_ENTRY_SIZE, table + 61 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 17 * TABLE_ENTRY_SIZE, table + 63 * TABLE_ENTRY_SIZE);
+    rev(table + 15 * TABLE_ENTRY_SIZE, table + 65 * TABLE_ENTRY_SIZE);
+    rev(table + 11 * TABLE_ENTRY_SIZE, table + 69 * TABLE_ENTRY_SIZE);
+    rev(table + 9 * TABLE_ENTRY_SIZE, table + 71 * TABLE_ENTRY_SIZE);
+    rev(table + 7 * TABLE_ENTRY_SIZE, table + 73 * TABLE_ENTRY_SIZE);
+    sub(table + 72 * TABLE_ENTRY_SIZE, table + 73 * TABLE_ENTRY_SIZE, y0);
+    add(table + 74 * TABLE_ENTRY_SIZE, table + 73 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 5 * TABLE_ENTRY_SIZE, table + 75 * TABLE_ENTRY_SIZE);
+    rev(table + 3 * TABLE_ENTRY_SIZE, table + 77 * TABLE_ENTRY_SIZE);
+    rev(table + 1 * TABLE_ENTRY_SIZE, table + 79 * TABLE_ENTRY_SIZE);
+    sub(table + 78 * TABLE_ENTRY_SIZE, table + 79 * TABLE_ENTRY_SIZE, y0);
+    add(table + 80 * TABLE_ENTRY_SIZE, table + 79 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 26 * TABLE_ENTRY_SIZE, table + 54 * TABLE_ENTRY_SIZE);
+    rev(table + 24 * TABLE_ENTRY_SIZE, table + 56 * TABLE_ENTRY_SIZE);
+    rev(table + 20 * TABLE_ENTRY_SIZE, table + 60 * TABLE_ENTRY_SIZE);
+    rev(table + 18 * TABLE_ENTRY_SIZE, table + 62 * TABLE_ENTRY_SIZE);
+    rev(table + 8 * TABLE_ENTRY_SIZE, table + 72 * TABLE_ENTRY_SIZE);
+    rev(table + 6 * TABLE_ENTRY_SIZE, table + 74 * TABLE_ENTRY_SIZE);
+    rev(table + 2 * TABLE_ENTRY_SIZE, table + 78 * TABLE_ENTRY_SIZE);
+    rev(table + 0 * TABLE_ENTRY_SIZE, table + 80 * TABLE_ENTRY_SIZE);
 }
 
-void gemm_make_table_I2S_tile(int16_t *restrict table, const int8_t *restrict y) {
-    const int8_t *restrict y0 = y;
-    const int8_t *restrict y1 = y0 + TABLE_ENTRY_SIZE;
-    const int8_t *restrict y2 = y1 + TABLE_ENTRY_SIZE;
-    const int8_t *restrict y3 = y2 + TABLE_ENTRY_SIZE;
-
-    add_tile(table + 41 * TABLE_ENTRY_SIZE, table + 40 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 43 * TABLE_ENTRY_SIZE, table + 40 * TABLE_ENTRY_SIZE, y1);
-    add_tile(table + 49 * TABLE_ENTRY_SIZE, table + 40 * TABLE_ENTRY_SIZE, y2);
-    add_tile(table + 67 * TABLE_ENTRY_SIZE, table + 40 * TABLE_ENTRY_SIZE, y3);
-    rev_tile(table + 39 * TABLE_ENTRY_SIZE, table + 41 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 37 * TABLE_ENTRY_SIZE, table + 43 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 42 * TABLE_ENTRY_SIZE, table + 43 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 44 * TABLE_ENTRY_SIZE, table + 43 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 31 * TABLE_ENTRY_SIZE, table + 49 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 46 * TABLE_ENTRY_SIZE, table + 49 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 48 * TABLE_ENTRY_SIZE, table + 49 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 50 * TABLE_ENTRY_SIZE, table + 49 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 52 * TABLE_ENTRY_SIZE, table + 49 * TABLE_ENTRY_SIZE, y1);
-    rev_tile(table + 13 * TABLE_ENTRY_SIZE, table + 67 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 58 * TABLE_ENTRY_SIZE, table + 67 * TABLE_ENTRY_SIZE, y2);
-    sub_tile(table + 64 * TABLE_ENTRY_SIZE, table + 67 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 66 * TABLE_ENTRY_SIZE, table + 67 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 68 * TABLE_ENTRY_SIZE, table + 67 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 70 * TABLE_ENTRY_SIZE, table + 67 * TABLE_ENTRY_SIZE, y1);
-    add_tile(table + 76 * TABLE_ENTRY_SIZE, table + 67 * TABLE_ENTRY_SIZE, y2);
-    rev_tile(table + 38 * TABLE_ENTRY_SIZE, table + 42 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 36 * TABLE_ENTRY_SIZE, table + 44 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 34 * TABLE_ENTRY_SIZE, table + 46 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 45 * TABLE_ENTRY_SIZE, table + 46 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 47 * TABLE_ENTRY_SIZE, table + 46 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 32 * TABLE_ENTRY_SIZE, table + 48 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 30 * TABLE_ENTRY_SIZE, table + 50 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 28 * TABLE_ENTRY_SIZE, table + 52 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 51 * TABLE_ENTRY_SIZE, table + 52 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 53 * TABLE_ENTRY_SIZE, table + 52 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 22 * TABLE_ENTRY_SIZE, table + 58 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 55 * TABLE_ENTRY_SIZE, table + 58 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 57 * TABLE_ENTRY_SIZE, table + 58 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 59 * TABLE_ENTRY_SIZE, table + 58 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 61 * TABLE_ENTRY_SIZE, table + 58 * TABLE_ENTRY_SIZE, y1);
-    rev_tile(table + 16 * TABLE_ENTRY_SIZE, table + 64 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 63 * TABLE_ENTRY_SIZE, table + 64 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 65 * TABLE_ENTRY_SIZE, table + 64 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 14 * TABLE_ENTRY_SIZE, table + 66 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 12 * TABLE_ENTRY_SIZE, table + 68 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 10 * TABLE_ENTRY_SIZE, table + 70 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 69 * TABLE_ENTRY_SIZE, table + 70 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 71 * TABLE_ENTRY_SIZE, table + 70 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 4 * TABLE_ENTRY_SIZE, table + 76 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 73 * TABLE_ENTRY_SIZE, table + 76 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 75 * TABLE_ENTRY_SIZE, table + 76 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 77 * TABLE_ENTRY_SIZE, table + 76 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 79 * TABLE_ENTRY_SIZE, table + 76 * TABLE_ENTRY_SIZE, y1);
-    rev_tile(table + 35 * TABLE_ENTRY_SIZE, table + 45 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 33 * TABLE_ENTRY_SIZE, table + 47 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 29 * TABLE_ENTRY_SIZE, table + 51 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 27 * TABLE_ENTRY_SIZE, table + 53 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 25 * TABLE_ENTRY_SIZE, table + 55 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 54 * TABLE_ENTRY_SIZE, table + 55 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 56 * TABLE_ENTRY_SIZE, table + 55 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 23 * TABLE_ENTRY_SIZE, table + 57 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 21 * TABLE_ENTRY_SIZE, table + 59 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 19 * TABLE_ENTRY_SIZE, table + 61 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 60 * TABLE_ENTRY_SIZE, table + 61 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 62 * TABLE_ENTRY_SIZE, table + 61 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 17 * TABLE_ENTRY_SIZE, table + 63 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 15 * TABLE_ENTRY_SIZE, table + 65 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 11 * TABLE_ENTRY_SIZE, table + 69 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 9 * TABLE_ENTRY_SIZE, table + 71 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 7 * TABLE_ENTRY_SIZE, table + 73 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 72 * TABLE_ENTRY_SIZE, table + 73 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 74 * TABLE_ENTRY_SIZE, table + 73 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 5 * TABLE_ENTRY_SIZE, table + 75 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 3 * TABLE_ENTRY_SIZE, table + 77 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 1 * TABLE_ENTRY_SIZE, table + 79 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 78 * TABLE_ENTRY_SIZE, table + 79 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 80 * TABLE_ENTRY_SIZE, table + 79 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 26 * TABLE_ENTRY_SIZE, table + 54 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 24 * TABLE_ENTRY_SIZE, table + 56 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 20 * TABLE_ENTRY_SIZE, table + 60 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 18 * TABLE_ENTRY_SIZE, table + 62 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 8 * TABLE_ENTRY_SIZE, table + 72 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 6 * TABLE_ENTRY_SIZE, table + 74 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 2 * TABLE_ENTRY_SIZE, table + 78 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 0 * TABLE_ENTRY_SIZE, table + 80 * TABLE_ENTRY_SIZE);
-}
-
-void gemm_make_table_I1_58T_tile(int16_t *restrict table, const int8_t *restrict y) {
+void gemm_make_table_I1_58S(int16_t *restrict table, const int8_t *restrict y) {
     const int8_t *restrict y0 = y;
     const int8_t *restrict y1 = y0 + TABLE_ENTRY_SIZE;
     const int8_t *restrict y2 = y1 + TABLE_ENTRY_SIZE;
     const int8_t *restrict y3 = y2 + TABLE_ENTRY_SIZE;
     const int8_t *restrict y4 = y3 + TABLE_ENTRY_SIZE;
 
-    add_tile(table + 122 * TABLE_ENTRY_SIZE, table + 121 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 124 * TABLE_ENTRY_SIZE, table + 121 * TABLE_ENTRY_SIZE, y1);
-    add_tile(table + 130 * TABLE_ENTRY_SIZE, table + 121 * TABLE_ENTRY_SIZE, y2);
-    add_tile(table + 148 * TABLE_ENTRY_SIZE, table + 121 * TABLE_ENTRY_SIZE, y3);
-    add_tile(table + 202 * TABLE_ENTRY_SIZE, table + 121 * TABLE_ENTRY_SIZE, y4);
-    rev_tile(table + 120 * TABLE_ENTRY_SIZE, table + 122 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 118 * TABLE_ENTRY_SIZE, table + 124 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 123 * TABLE_ENTRY_SIZE, table + 124 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 125 * TABLE_ENTRY_SIZE, table + 124 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 112 * TABLE_ENTRY_SIZE, table + 130 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 127 * TABLE_ENTRY_SIZE, table + 130 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 129 * TABLE_ENTRY_SIZE, table + 130 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 131 * TABLE_ENTRY_SIZE, table + 130 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 133 * TABLE_ENTRY_SIZE, table + 130 * TABLE_ENTRY_SIZE, y1);
-    rev_tile(table + 94 * TABLE_ENTRY_SIZE, table + 148 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 139 * TABLE_ENTRY_SIZE, table + 148 * TABLE_ENTRY_SIZE, y2);
-    sub_tile(table + 145 * TABLE_ENTRY_SIZE, table + 148 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 147 * TABLE_ENTRY_SIZE, table + 148 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 149 * TABLE_ENTRY_SIZE, table + 148 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 151 * TABLE_ENTRY_SIZE, table + 148 * TABLE_ENTRY_SIZE, y1);
-    add_tile(table + 157 * TABLE_ENTRY_SIZE, table + 148 * TABLE_ENTRY_SIZE, y2);
-    rev_tile(table + 40 * TABLE_ENTRY_SIZE, table + 202 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 175 * TABLE_ENTRY_SIZE, table + 202 * TABLE_ENTRY_SIZE, y3);
-    sub_tile(table + 193 * TABLE_ENTRY_SIZE, table + 202 * TABLE_ENTRY_SIZE, y2);
-    sub_tile(table + 199 * TABLE_ENTRY_SIZE, table + 202 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 201 * TABLE_ENTRY_SIZE, table + 202 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 203 * TABLE_ENTRY_SIZE, table + 202 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 205 * TABLE_ENTRY_SIZE, table + 202 * TABLE_ENTRY_SIZE, y1);
-    add_tile(table + 211 * TABLE_ENTRY_SIZE, table + 202 * TABLE_ENTRY_SIZE, y2);
-    add_tile(table + 229 * TABLE_ENTRY_SIZE, table + 202 * TABLE_ENTRY_SIZE, y3);
-    rev_tile(table + 119 * TABLE_ENTRY_SIZE, table + 123 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 117 * TABLE_ENTRY_SIZE, table + 125 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 115 * TABLE_ENTRY_SIZE, table + 127 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 126 * TABLE_ENTRY_SIZE, table + 127 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 128 * TABLE_ENTRY_SIZE, table + 127 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 113 * TABLE_ENTRY_SIZE, table + 129 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 111 * TABLE_ENTRY_SIZE, table + 131 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 109 * TABLE_ENTRY_SIZE, table + 133 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 132 * TABLE_ENTRY_SIZE, table + 133 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 134 * TABLE_ENTRY_SIZE, table + 133 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 103 * TABLE_ENTRY_SIZE, table + 139 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 136 * TABLE_ENTRY_SIZE, table + 139 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 138 * TABLE_ENTRY_SIZE, table + 139 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 140 * TABLE_ENTRY_SIZE, table + 139 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 142 * TABLE_ENTRY_SIZE, table + 139 * TABLE_ENTRY_SIZE, y1);
-    rev_tile(table + 97 * TABLE_ENTRY_SIZE, table + 145 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 144 * TABLE_ENTRY_SIZE, table + 145 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 146 * TABLE_ENTRY_SIZE, table + 145 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 95 * TABLE_ENTRY_SIZE, table + 147 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 93 * TABLE_ENTRY_SIZE, table + 149 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 91 * TABLE_ENTRY_SIZE, table + 151 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 150 * TABLE_ENTRY_SIZE, table + 151 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 152 * TABLE_ENTRY_SIZE, table + 151 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 85 * TABLE_ENTRY_SIZE, table + 157 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 154 * TABLE_ENTRY_SIZE, table + 157 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 156 * TABLE_ENTRY_SIZE, table + 157 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 158 * TABLE_ENTRY_SIZE, table + 157 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 160 * TABLE_ENTRY_SIZE, table + 157 * TABLE_ENTRY_SIZE, y1);
-    rev_tile(table + 67 * TABLE_ENTRY_SIZE, table + 175 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 166 * TABLE_ENTRY_SIZE, table + 175 * TABLE_ENTRY_SIZE, y2);
-    sub_tile(table + 172 * TABLE_ENTRY_SIZE, table + 175 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 174 * TABLE_ENTRY_SIZE, table + 175 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 176 * TABLE_ENTRY_SIZE, table + 175 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 178 * TABLE_ENTRY_SIZE, table + 175 * TABLE_ENTRY_SIZE, y1);
-    add_tile(table + 184 * TABLE_ENTRY_SIZE, table + 175 * TABLE_ENTRY_SIZE, y2);
-    rev_tile(table + 49 * TABLE_ENTRY_SIZE, table + 193 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 190 * TABLE_ENTRY_SIZE, table + 193 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 192 * TABLE_ENTRY_SIZE, table + 193 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 194 * TABLE_ENTRY_SIZE, table + 193 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 196 * TABLE_ENTRY_SIZE, table + 193 * TABLE_ENTRY_SIZE, y1);
-    rev_tile(table + 43 * TABLE_ENTRY_SIZE, table + 199 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 198 * TABLE_ENTRY_SIZE, table + 199 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 200 * TABLE_ENTRY_SIZE, table + 199 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 41 * TABLE_ENTRY_SIZE, table + 201 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 39 * TABLE_ENTRY_SIZE, table + 203 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 37 * TABLE_ENTRY_SIZE, table + 205 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 204 * TABLE_ENTRY_SIZE, table + 205 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 206 * TABLE_ENTRY_SIZE, table + 205 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 31 * TABLE_ENTRY_SIZE, table + 211 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 208 * TABLE_ENTRY_SIZE, table + 211 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 210 * TABLE_ENTRY_SIZE, table + 211 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 212 * TABLE_ENTRY_SIZE, table + 211 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 214 * TABLE_ENTRY_SIZE, table + 211 * TABLE_ENTRY_SIZE, y1);
-    rev_tile(table + 13 * TABLE_ENTRY_SIZE, table + 229 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 220 * TABLE_ENTRY_SIZE, table + 229 * TABLE_ENTRY_SIZE, y2);
-    sub_tile(table + 226 * TABLE_ENTRY_SIZE, table + 229 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 228 * TABLE_ENTRY_SIZE, table + 229 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 230 * TABLE_ENTRY_SIZE, table + 229 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 232 * TABLE_ENTRY_SIZE, table + 229 * TABLE_ENTRY_SIZE, y1);
-    add_tile(table + 238 * TABLE_ENTRY_SIZE, table + 229 * TABLE_ENTRY_SIZE, y2);
-    rev_tile(table + 116 * TABLE_ENTRY_SIZE, table + 126 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 114 * TABLE_ENTRY_SIZE, table + 128 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 110 * TABLE_ENTRY_SIZE, table + 132 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 108 * TABLE_ENTRY_SIZE, table + 134 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 106 * TABLE_ENTRY_SIZE, table + 136 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 135 * TABLE_ENTRY_SIZE, table + 136 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 137 * TABLE_ENTRY_SIZE, table + 136 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 104 * TABLE_ENTRY_SIZE, table + 138 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 102 * TABLE_ENTRY_SIZE, table + 140 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 100 * TABLE_ENTRY_SIZE, table + 142 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 141 * TABLE_ENTRY_SIZE, table + 142 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 143 * TABLE_ENTRY_SIZE, table + 142 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 98 * TABLE_ENTRY_SIZE, table + 144 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 96 * TABLE_ENTRY_SIZE, table + 146 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 92 * TABLE_ENTRY_SIZE, table + 150 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 90 * TABLE_ENTRY_SIZE, table + 152 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 88 * TABLE_ENTRY_SIZE, table + 154 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 153 * TABLE_ENTRY_SIZE, table + 154 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 155 * TABLE_ENTRY_SIZE, table + 154 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 86 * TABLE_ENTRY_SIZE, table + 156 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 84 * TABLE_ENTRY_SIZE, table + 158 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 82 * TABLE_ENTRY_SIZE, table + 160 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 159 * TABLE_ENTRY_SIZE, table + 160 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 161 * TABLE_ENTRY_SIZE, table + 160 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 76 * TABLE_ENTRY_SIZE, table + 166 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 163 * TABLE_ENTRY_SIZE, table + 166 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 165 * TABLE_ENTRY_SIZE, table + 166 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 167 * TABLE_ENTRY_SIZE, table + 166 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 169 * TABLE_ENTRY_SIZE, table + 166 * TABLE_ENTRY_SIZE, y1);
-    rev_tile(table + 70 * TABLE_ENTRY_SIZE, table + 172 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 171 * TABLE_ENTRY_SIZE, table + 172 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 173 * TABLE_ENTRY_SIZE, table + 172 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 68 * TABLE_ENTRY_SIZE, table + 174 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 66 * TABLE_ENTRY_SIZE, table + 176 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 64 * TABLE_ENTRY_SIZE, table + 178 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 177 * TABLE_ENTRY_SIZE, table + 178 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 179 * TABLE_ENTRY_SIZE, table + 178 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 58 * TABLE_ENTRY_SIZE, table + 184 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 181 * TABLE_ENTRY_SIZE, table + 184 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 183 * TABLE_ENTRY_SIZE, table + 184 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 185 * TABLE_ENTRY_SIZE, table + 184 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 187 * TABLE_ENTRY_SIZE, table + 184 * TABLE_ENTRY_SIZE, y1);
-    rev_tile(table + 52 * TABLE_ENTRY_SIZE, table + 190 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 189 * TABLE_ENTRY_SIZE, table + 190 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 191 * TABLE_ENTRY_SIZE, table + 190 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 50 * TABLE_ENTRY_SIZE, table + 192 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 48 * TABLE_ENTRY_SIZE, table + 194 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 46 * TABLE_ENTRY_SIZE, table + 196 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 195 * TABLE_ENTRY_SIZE, table + 196 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 197 * TABLE_ENTRY_SIZE, table + 196 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 44 * TABLE_ENTRY_SIZE, table + 198 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 42 * TABLE_ENTRY_SIZE, table + 200 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 38 * TABLE_ENTRY_SIZE, table + 204 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 36 * TABLE_ENTRY_SIZE, table + 206 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 34 * TABLE_ENTRY_SIZE, table + 208 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 207 * TABLE_ENTRY_SIZE, table + 208 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 209 * TABLE_ENTRY_SIZE, table + 208 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 32 * TABLE_ENTRY_SIZE, table + 210 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 30 * TABLE_ENTRY_SIZE, table + 212 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 28 * TABLE_ENTRY_SIZE, table + 214 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 213 * TABLE_ENTRY_SIZE, table + 214 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 215 * TABLE_ENTRY_SIZE, table + 214 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 22 * TABLE_ENTRY_SIZE, table + 220 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 217 * TABLE_ENTRY_SIZE, table + 220 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 219 * TABLE_ENTRY_SIZE, table + 220 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 221 * TABLE_ENTRY_SIZE, table + 220 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 223 * TABLE_ENTRY_SIZE, table + 220 * TABLE_ENTRY_SIZE, y1);
-    rev_tile(table + 16 * TABLE_ENTRY_SIZE, table + 226 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 225 * TABLE_ENTRY_SIZE, table + 226 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 227 * TABLE_ENTRY_SIZE, table + 226 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 14 * TABLE_ENTRY_SIZE, table + 228 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 12 * TABLE_ENTRY_SIZE, table + 230 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 10 * TABLE_ENTRY_SIZE, table + 232 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 231 * TABLE_ENTRY_SIZE, table + 232 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 233 * TABLE_ENTRY_SIZE, table + 232 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 4 * TABLE_ENTRY_SIZE, table + 238 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 235 * TABLE_ENTRY_SIZE, table + 238 * TABLE_ENTRY_SIZE, y1);
-    sub_tile(table + 237 * TABLE_ENTRY_SIZE, table + 238 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 239 * TABLE_ENTRY_SIZE, table + 238 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 241 * TABLE_ENTRY_SIZE, table + 238 * TABLE_ENTRY_SIZE, y1);
-    rev_tile(table + 107 * TABLE_ENTRY_SIZE, table + 135 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 105 * TABLE_ENTRY_SIZE, table + 137 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 101 * TABLE_ENTRY_SIZE, table + 141 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 99 * TABLE_ENTRY_SIZE, table + 143 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 89 * TABLE_ENTRY_SIZE, table + 153 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 87 * TABLE_ENTRY_SIZE, table + 155 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 83 * TABLE_ENTRY_SIZE, table + 159 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 81 * TABLE_ENTRY_SIZE, table + 161 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 79 * TABLE_ENTRY_SIZE, table + 163 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 162 * TABLE_ENTRY_SIZE, table + 163 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 164 * TABLE_ENTRY_SIZE, table + 163 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 77 * TABLE_ENTRY_SIZE, table + 165 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 75 * TABLE_ENTRY_SIZE, table + 167 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 73 * TABLE_ENTRY_SIZE, table + 169 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 168 * TABLE_ENTRY_SIZE, table + 169 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 170 * TABLE_ENTRY_SIZE, table + 169 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 71 * TABLE_ENTRY_SIZE, table + 171 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 69 * TABLE_ENTRY_SIZE, table + 173 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 65 * TABLE_ENTRY_SIZE, table + 177 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 63 * TABLE_ENTRY_SIZE, table + 179 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 61 * TABLE_ENTRY_SIZE, table + 181 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 180 * TABLE_ENTRY_SIZE, table + 181 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 182 * TABLE_ENTRY_SIZE, table + 181 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 59 * TABLE_ENTRY_SIZE, table + 183 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 57 * TABLE_ENTRY_SIZE, table + 185 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 55 * TABLE_ENTRY_SIZE, table + 187 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 186 * TABLE_ENTRY_SIZE, table + 187 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 188 * TABLE_ENTRY_SIZE, table + 187 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 53 * TABLE_ENTRY_SIZE, table + 189 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 51 * TABLE_ENTRY_SIZE, table + 191 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 47 * TABLE_ENTRY_SIZE, table + 195 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 45 * TABLE_ENTRY_SIZE, table + 197 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 35 * TABLE_ENTRY_SIZE, table + 207 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 33 * TABLE_ENTRY_SIZE, table + 209 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 29 * TABLE_ENTRY_SIZE, table + 213 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 27 * TABLE_ENTRY_SIZE, table + 215 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 25 * TABLE_ENTRY_SIZE, table + 217 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 216 * TABLE_ENTRY_SIZE, table + 217 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 218 * TABLE_ENTRY_SIZE, table + 217 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 23 * TABLE_ENTRY_SIZE, table + 219 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 21 * TABLE_ENTRY_SIZE, table + 221 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 19 * TABLE_ENTRY_SIZE, table + 223 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 222 * TABLE_ENTRY_SIZE, table + 223 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 224 * TABLE_ENTRY_SIZE, table + 223 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 17 * TABLE_ENTRY_SIZE, table + 225 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 15 * TABLE_ENTRY_SIZE, table + 227 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 11 * TABLE_ENTRY_SIZE, table + 231 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 9 * TABLE_ENTRY_SIZE, table + 233 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 7 * TABLE_ENTRY_SIZE, table + 235 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 234 * TABLE_ENTRY_SIZE, table + 235 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 236 * TABLE_ENTRY_SIZE, table + 235 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 5 * TABLE_ENTRY_SIZE, table + 237 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 3 * TABLE_ENTRY_SIZE, table + 239 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 1 * TABLE_ENTRY_SIZE, table + 241 * TABLE_ENTRY_SIZE);
-    sub_tile(table + 240 * TABLE_ENTRY_SIZE, table + 241 * TABLE_ENTRY_SIZE, y0);
-    add_tile(table + 242 * TABLE_ENTRY_SIZE, table + 241 * TABLE_ENTRY_SIZE, y0);
-    rev_tile(table + 80 * TABLE_ENTRY_SIZE, table + 162 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 78 * TABLE_ENTRY_SIZE, table + 164 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 74 * TABLE_ENTRY_SIZE, table + 168 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 72 * TABLE_ENTRY_SIZE, table + 170 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 62 * TABLE_ENTRY_SIZE, table + 180 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 60 * TABLE_ENTRY_SIZE, table + 182 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 56 * TABLE_ENTRY_SIZE, table + 186 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 54 * TABLE_ENTRY_SIZE, table + 188 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 26 * TABLE_ENTRY_SIZE, table + 216 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 24 * TABLE_ENTRY_SIZE, table + 218 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 20 * TABLE_ENTRY_SIZE, table + 222 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 18 * TABLE_ENTRY_SIZE, table + 224 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 8 * TABLE_ENTRY_SIZE, table + 234 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 6 * TABLE_ENTRY_SIZE, table + 236 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 2 * TABLE_ENTRY_SIZE, table + 240 * TABLE_ENTRY_SIZE);
-    rev_tile(table + 0 * TABLE_ENTRY_SIZE, table + 242 * TABLE_ENTRY_SIZE);
+    add(table + 122 * TABLE_ENTRY_SIZE, table + 121 * TABLE_ENTRY_SIZE, y0);
+    add(table + 124 * TABLE_ENTRY_SIZE, table + 121 * TABLE_ENTRY_SIZE, y1);
+    add(table + 130 * TABLE_ENTRY_SIZE, table + 121 * TABLE_ENTRY_SIZE, y2);
+    add(table + 148 * TABLE_ENTRY_SIZE, table + 121 * TABLE_ENTRY_SIZE, y3);
+    add(table + 202 * TABLE_ENTRY_SIZE, table + 121 * TABLE_ENTRY_SIZE, y4);
+    rev(table + 120 * TABLE_ENTRY_SIZE, table + 122 * TABLE_ENTRY_SIZE);
+    rev(table + 118 * TABLE_ENTRY_SIZE, table + 124 * TABLE_ENTRY_SIZE);
+    sub(table + 123 * TABLE_ENTRY_SIZE, table + 124 * TABLE_ENTRY_SIZE, y0);
+    add(table + 125 * TABLE_ENTRY_SIZE, table + 124 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 112 * TABLE_ENTRY_SIZE, table + 130 * TABLE_ENTRY_SIZE);
+    sub(table + 127 * TABLE_ENTRY_SIZE, table + 130 * TABLE_ENTRY_SIZE, y1);
+    sub(table + 129 * TABLE_ENTRY_SIZE, table + 130 * TABLE_ENTRY_SIZE, y0);
+    add(table + 131 * TABLE_ENTRY_SIZE, table + 130 * TABLE_ENTRY_SIZE, y0);
+    add(table + 133 * TABLE_ENTRY_SIZE, table + 130 * TABLE_ENTRY_SIZE, y1);
+    rev(table + 94 * TABLE_ENTRY_SIZE, table + 148 * TABLE_ENTRY_SIZE);
+    sub(table + 139 * TABLE_ENTRY_SIZE, table + 148 * TABLE_ENTRY_SIZE, y2);
+    sub(table + 145 * TABLE_ENTRY_SIZE, table + 148 * TABLE_ENTRY_SIZE, y1);
+    sub(table + 147 * TABLE_ENTRY_SIZE, table + 148 * TABLE_ENTRY_SIZE, y0);
+    add(table + 149 * TABLE_ENTRY_SIZE, table + 148 * TABLE_ENTRY_SIZE, y0);
+    add(table + 151 * TABLE_ENTRY_SIZE, table + 148 * TABLE_ENTRY_SIZE, y1);
+    add(table + 157 * TABLE_ENTRY_SIZE, table + 148 * TABLE_ENTRY_SIZE, y2);
+    rev(table + 40 * TABLE_ENTRY_SIZE, table + 202 * TABLE_ENTRY_SIZE);
+    sub(table + 175 * TABLE_ENTRY_SIZE, table + 202 * TABLE_ENTRY_SIZE, y3);
+    sub(table + 193 * TABLE_ENTRY_SIZE, table + 202 * TABLE_ENTRY_SIZE, y2);
+    sub(table + 199 * TABLE_ENTRY_SIZE, table + 202 * TABLE_ENTRY_SIZE, y1);
+    sub(table + 201 * TABLE_ENTRY_SIZE, table + 202 * TABLE_ENTRY_SIZE, y0);
+    add(table + 203 * TABLE_ENTRY_SIZE, table + 202 * TABLE_ENTRY_SIZE, y0);
+    add(table + 205 * TABLE_ENTRY_SIZE, table + 202 * TABLE_ENTRY_SIZE, y1);
+    add(table + 211 * TABLE_ENTRY_SIZE, table + 202 * TABLE_ENTRY_SIZE, y2);
+    add(table + 229 * TABLE_ENTRY_SIZE, table + 202 * TABLE_ENTRY_SIZE, y3);
+    rev(table + 119 * TABLE_ENTRY_SIZE, table + 123 * TABLE_ENTRY_SIZE);
+    rev(table + 117 * TABLE_ENTRY_SIZE, table + 125 * TABLE_ENTRY_SIZE);
+    rev(table + 115 * TABLE_ENTRY_SIZE, table + 127 * TABLE_ENTRY_SIZE);
+    sub(table + 126 * TABLE_ENTRY_SIZE, table + 127 * TABLE_ENTRY_SIZE, y0);
+    add(table + 128 * TABLE_ENTRY_SIZE, table + 127 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 113 * TABLE_ENTRY_SIZE, table + 129 * TABLE_ENTRY_SIZE);
+    rev(table + 111 * TABLE_ENTRY_SIZE, table + 131 * TABLE_ENTRY_SIZE);
+    rev(table + 109 * TABLE_ENTRY_SIZE, table + 133 * TABLE_ENTRY_SIZE);
+    sub(table + 132 * TABLE_ENTRY_SIZE, table + 133 * TABLE_ENTRY_SIZE, y0);
+    add(table + 134 * TABLE_ENTRY_SIZE, table + 133 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 103 * TABLE_ENTRY_SIZE, table + 139 * TABLE_ENTRY_SIZE);
+    sub(table + 136 * TABLE_ENTRY_SIZE, table + 139 * TABLE_ENTRY_SIZE, y1);
+    sub(table + 138 * TABLE_ENTRY_SIZE, table + 139 * TABLE_ENTRY_SIZE, y0);
+    add(table + 140 * TABLE_ENTRY_SIZE, table + 139 * TABLE_ENTRY_SIZE, y0);
+    add(table + 142 * TABLE_ENTRY_SIZE, table + 139 * TABLE_ENTRY_SIZE, y1);
+    rev(table + 97 * TABLE_ENTRY_SIZE, table + 145 * TABLE_ENTRY_SIZE);
+    sub(table + 144 * TABLE_ENTRY_SIZE, table + 145 * TABLE_ENTRY_SIZE, y0);
+    add(table + 146 * TABLE_ENTRY_SIZE, table + 145 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 95 * TABLE_ENTRY_SIZE, table + 147 * TABLE_ENTRY_SIZE);
+    rev(table + 93 * TABLE_ENTRY_SIZE, table + 149 * TABLE_ENTRY_SIZE);
+    rev(table + 91 * TABLE_ENTRY_SIZE, table + 151 * TABLE_ENTRY_SIZE);
+    sub(table + 150 * TABLE_ENTRY_SIZE, table + 151 * TABLE_ENTRY_SIZE, y0);
+    add(table + 152 * TABLE_ENTRY_SIZE, table + 151 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 85 * TABLE_ENTRY_SIZE, table + 157 * TABLE_ENTRY_SIZE);
+    sub(table + 154 * TABLE_ENTRY_SIZE, table + 157 * TABLE_ENTRY_SIZE, y1);
+    sub(table + 156 * TABLE_ENTRY_SIZE, table + 157 * TABLE_ENTRY_SIZE, y0);
+    add(table + 158 * TABLE_ENTRY_SIZE, table + 157 * TABLE_ENTRY_SIZE, y0);
+    add(table + 160 * TABLE_ENTRY_SIZE, table + 157 * TABLE_ENTRY_SIZE, y1);
+    rev(table + 67 * TABLE_ENTRY_SIZE, table + 175 * TABLE_ENTRY_SIZE);
+    sub(table + 166 * TABLE_ENTRY_SIZE, table + 175 * TABLE_ENTRY_SIZE, y2);
+    sub(table + 172 * TABLE_ENTRY_SIZE, table + 175 * TABLE_ENTRY_SIZE, y1);
+    sub(table + 174 * TABLE_ENTRY_SIZE, table + 175 * TABLE_ENTRY_SIZE, y0);
+    add(table + 176 * TABLE_ENTRY_SIZE, table + 175 * TABLE_ENTRY_SIZE, y0);
+    add(table + 178 * TABLE_ENTRY_SIZE, table + 175 * TABLE_ENTRY_SIZE, y1);
+    add(table + 184 * TABLE_ENTRY_SIZE, table + 175 * TABLE_ENTRY_SIZE, y2);
+    rev(table + 49 * TABLE_ENTRY_SIZE, table + 193 * TABLE_ENTRY_SIZE);
+    sub(table + 190 * TABLE_ENTRY_SIZE, table + 193 * TABLE_ENTRY_SIZE, y1);
+    sub(table + 192 * TABLE_ENTRY_SIZE, table + 193 * TABLE_ENTRY_SIZE, y0);
+    add(table + 194 * TABLE_ENTRY_SIZE, table + 193 * TABLE_ENTRY_SIZE, y0);
+    add(table + 196 * TABLE_ENTRY_SIZE, table + 193 * TABLE_ENTRY_SIZE, y1);
+    rev(table + 43 * TABLE_ENTRY_SIZE, table + 199 * TABLE_ENTRY_SIZE);
+    sub(table + 198 * TABLE_ENTRY_SIZE, table + 199 * TABLE_ENTRY_SIZE, y0);
+    add(table + 200 * TABLE_ENTRY_SIZE, table + 199 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 41 * TABLE_ENTRY_SIZE, table + 201 * TABLE_ENTRY_SIZE);
+    rev(table + 39 * TABLE_ENTRY_SIZE, table + 203 * TABLE_ENTRY_SIZE);
+    rev(table + 37 * TABLE_ENTRY_SIZE, table + 205 * TABLE_ENTRY_SIZE);
+    sub(table + 204 * TABLE_ENTRY_SIZE, table + 205 * TABLE_ENTRY_SIZE, y0);
+    add(table + 206 * TABLE_ENTRY_SIZE, table + 205 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 31 * TABLE_ENTRY_SIZE, table + 211 * TABLE_ENTRY_SIZE);
+    sub(table + 208 * TABLE_ENTRY_SIZE, table + 211 * TABLE_ENTRY_SIZE, y1);
+    sub(table + 210 * TABLE_ENTRY_SIZE, table + 211 * TABLE_ENTRY_SIZE, y0);
+    add(table + 212 * TABLE_ENTRY_SIZE, table + 211 * TABLE_ENTRY_SIZE, y0);
+    add(table + 214 * TABLE_ENTRY_SIZE, table + 211 * TABLE_ENTRY_SIZE, y1);
+    rev(table + 13 * TABLE_ENTRY_SIZE, table + 229 * TABLE_ENTRY_SIZE);
+    sub(table + 220 * TABLE_ENTRY_SIZE, table + 229 * TABLE_ENTRY_SIZE, y2);
+    sub(table + 226 * TABLE_ENTRY_SIZE, table + 229 * TABLE_ENTRY_SIZE, y1);
+    sub(table + 228 * TABLE_ENTRY_SIZE, table + 229 * TABLE_ENTRY_SIZE, y0);
+    add(table + 230 * TABLE_ENTRY_SIZE, table + 229 * TABLE_ENTRY_SIZE, y0);
+    add(table + 232 * TABLE_ENTRY_SIZE, table + 229 * TABLE_ENTRY_SIZE, y1);
+    add(table + 238 * TABLE_ENTRY_SIZE, table + 229 * TABLE_ENTRY_SIZE, y2);
+    rev(table + 116 * TABLE_ENTRY_SIZE, table + 126 * TABLE_ENTRY_SIZE);
+    rev(table + 114 * TABLE_ENTRY_SIZE, table + 128 * TABLE_ENTRY_SIZE);
+    rev(table + 110 * TABLE_ENTRY_SIZE, table + 132 * TABLE_ENTRY_SIZE);
+    rev(table + 108 * TABLE_ENTRY_SIZE, table + 134 * TABLE_ENTRY_SIZE);
+    rev(table + 106 * TABLE_ENTRY_SIZE, table + 136 * TABLE_ENTRY_SIZE);
+    sub(table + 135 * TABLE_ENTRY_SIZE, table + 136 * TABLE_ENTRY_SIZE, y0);
+    add(table + 137 * TABLE_ENTRY_SIZE, table + 136 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 104 * TABLE_ENTRY_SIZE, table + 138 * TABLE_ENTRY_SIZE);
+    rev(table + 102 * TABLE_ENTRY_SIZE, table + 140 * TABLE_ENTRY_SIZE);
+    rev(table + 100 * TABLE_ENTRY_SIZE, table + 142 * TABLE_ENTRY_SIZE);
+    sub(table + 141 * TABLE_ENTRY_SIZE, table + 142 * TABLE_ENTRY_SIZE, y0);
+    add(table + 143 * TABLE_ENTRY_SIZE, table + 142 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 98 * TABLE_ENTRY_SIZE, table + 144 * TABLE_ENTRY_SIZE);
+    rev(table + 96 * TABLE_ENTRY_SIZE, table + 146 * TABLE_ENTRY_SIZE);
+    rev(table + 92 * TABLE_ENTRY_SIZE, table + 150 * TABLE_ENTRY_SIZE);
+    rev(table + 90 * TABLE_ENTRY_SIZE, table + 152 * TABLE_ENTRY_SIZE);
+    rev(table + 88 * TABLE_ENTRY_SIZE, table + 154 * TABLE_ENTRY_SIZE);
+    sub(table + 153 * TABLE_ENTRY_SIZE, table + 154 * TABLE_ENTRY_SIZE, y0);
+    add(table + 155 * TABLE_ENTRY_SIZE, table + 154 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 86 * TABLE_ENTRY_SIZE, table + 156 * TABLE_ENTRY_SIZE);
+    rev(table + 84 * TABLE_ENTRY_SIZE, table + 158 * TABLE_ENTRY_SIZE);
+    rev(table + 82 * TABLE_ENTRY_SIZE, table + 160 * TABLE_ENTRY_SIZE);
+    sub(table + 159 * TABLE_ENTRY_SIZE, table + 160 * TABLE_ENTRY_SIZE, y0);
+    add(table + 161 * TABLE_ENTRY_SIZE, table + 160 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 76 * TABLE_ENTRY_SIZE, table + 166 * TABLE_ENTRY_SIZE);
+    sub(table + 163 * TABLE_ENTRY_SIZE, table + 166 * TABLE_ENTRY_SIZE, y1);
+    sub(table + 165 * TABLE_ENTRY_SIZE, table + 166 * TABLE_ENTRY_SIZE, y0);
+    add(table + 167 * TABLE_ENTRY_SIZE, table + 166 * TABLE_ENTRY_SIZE, y0);
+    add(table + 169 * TABLE_ENTRY_SIZE, table + 166 * TABLE_ENTRY_SIZE, y1);
+    rev(table + 70 * TABLE_ENTRY_SIZE, table + 172 * TABLE_ENTRY_SIZE);
+    sub(table + 171 * TABLE_ENTRY_SIZE, table + 172 * TABLE_ENTRY_SIZE, y0);
+    add(table + 173 * TABLE_ENTRY_SIZE, table + 172 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 68 * TABLE_ENTRY_SIZE, table + 174 * TABLE_ENTRY_SIZE);
+    rev(table + 66 * TABLE_ENTRY_SIZE, table + 176 * TABLE_ENTRY_SIZE);
+    rev(table + 64 * TABLE_ENTRY_SIZE, table + 178 * TABLE_ENTRY_SIZE);
+    sub(table + 177 * TABLE_ENTRY_SIZE, table + 178 * TABLE_ENTRY_SIZE, y0);
+    add(table + 179 * TABLE_ENTRY_SIZE, table + 178 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 58 * TABLE_ENTRY_SIZE, table + 184 * TABLE_ENTRY_SIZE);
+    sub(table + 181 * TABLE_ENTRY_SIZE, table + 184 * TABLE_ENTRY_SIZE, y1);
+    sub(table + 183 * TABLE_ENTRY_SIZE, table + 184 * TABLE_ENTRY_SIZE, y0);
+    add(table + 185 * TABLE_ENTRY_SIZE, table + 184 * TABLE_ENTRY_SIZE, y0);
+    add(table + 187 * TABLE_ENTRY_SIZE, table + 184 * TABLE_ENTRY_SIZE, y1);
+    rev(table + 52 * TABLE_ENTRY_SIZE, table + 190 * TABLE_ENTRY_SIZE);
+    sub(table + 189 * TABLE_ENTRY_SIZE, table + 190 * TABLE_ENTRY_SIZE, y0);
+    add(table + 191 * TABLE_ENTRY_SIZE, table + 190 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 50 * TABLE_ENTRY_SIZE, table + 192 * TABLE_ENTRY_SIZE);
+    rev(table + 48 * TABLE_ENTRY_SIZE, table + 194 * TABLE_ENTRY_SIZE);
+    rev(table + 46 * TABLE_ENTRY_SIZE, table + 196 * TABLE_ENTRY_SIZE);
+    sub(table + 195 * TABLE_ENTRY_SIZE, table + 196 * TABLE_ENTRY_SIZE, y0);
+    add(table + 197 * TABLE_ENTRY_SIZE, table + 196 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 44 * TABLE_ENTRY_SIZE, table + 198 * TABLE_ENTRY_SIZE);
+    rev(table + 42 * TABLE_ENTRY_SIZE, table + 200 * TABLE_ENTRY_SIZE);
+    rev(table + 38 * TABLE_ENTRY_SIZE, table + 204 * TABLE_ENTRY_SIZE);
+    rev(table + 36 * TABLE_ENTRY_SIZE, table + 206 * TABLE_ENTRY_SIZE);
+    rev(table + 34 * TABLE_ENTRY_SIZE, table + 208 * TABLE_ENTRY_SIZE);
+    sub(table + 207 * TABLE_ENTRY_SIZE, table + 208 * TABLE_ENTRY_SIZE, y0);
+    add(table + 209 * TABLE_ENTRY_SIZE, table + 208 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 32 * TABLE_ENTRY_SIZE, table + 210 * TABLE_ENTRY_SIZE);
+    rev(table + 30 * TABLE_ENTRY_SIZE, table + 212 * TABLE_ENTRY_SIZE);
+    rev(table + 28 * TABLE_ENTRY_SIZE, table + 214 * TABLE_ENTRY_SIZE);
+    sub(table + 213 * TABLE_ENTRY_SIZE, table + 214 * TABLE_ENTRY_SIZE, y0);
+    add(table + 215 * TABLE_ENTRY_SIZE, table + 214 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 22 * TABLE_ENTRY_SIZE, table + 220 * TABLE_ENTRY_SIZE);
+    sub(table + 217 * TABLE_ENTRY_SIZE, table + 220 * TABLE_ENTRY_SIZE, y1);
+    sub(table + 219 * TABLE_ENTRY_SIZE, table + 220 * TABLE_ENTRY_SIZE, y0);
+    add(table + 221 * TABLE_ENTRY_SIZE, table + 220 * TABLE_ENTRY_SIZE, y0);
+    add(table + 223 * TABLE_ENTRY_SIZE, table + 220 * TABLE_ENTRY_SIZE, y1);
+    rev(table + 16 * TABLE_ENTRY_SIZE, table + 226 * TABLE_ENTRY_SIZE);
+    sub(table + 225 * TABLE_ENTRY_SIZE, table + 226 * TABLE_ENTRY_SIZE, y0);
+    add(table + 227 * TABLE_ENTRY_SIZE, table + 226 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 14 * TABLE_ENTRY_SIZE, table + 228 * TABLE_ENTRY_SIZE);
+    rev(table + 12 * TABLE_ENTRY_SIZE, table + 230 * TABLE_ENTRY_SIZE);
+    rev(table + 10 * TABLE_ENTRY_SIZE, table + 232 * TABLE_ENTRY_SIZE);
+    sub(table + 231 * TABLE_ENTRY_SIZE, table + 232 * TABLE_ENTRY_SIZE, y0);
+    add(table + 233 * TABLE_ENTRY_SIZE, table + 232 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 4 * TABLE_ENTRY_SIZE, table + 238 * TABLE_ENTRY_SIZE);
+    sub(table + 235 * TABLE_ENTRY_SIZE, table + 238 * TABLE_ENTRY_SIZE, y1);
+    sub(table + 237 * TABLE_ENTRY_SIZE, table + 238 * TABLE_ENTRY_SIZE, y0);
+    add(table + 239 * TABLE_ENTRY_SIZE, table + 238 * TABLE_ENTRY_SIZE, y0);
+    add(table + 241 * TABLE_ENTRY_SIZE, table + 238 * TABLE_ENTRY_SIZE, y1);
+    rev(table + 107 * TABLE_ENTRY_SIZE, table + 135 * TABLE_ENTRY_SIZE);
+    rev(table + 105 * TABLE_ENTRY_SIZE, table + 137 * TABLE_ENTRY_SIZE);
+    rev(table + 101 * TABLE_ENTRY_SIZE, table + 141 * TABLE_ENTRY_SIZE);
+    rev(table + 99 * TABLE_ENTRY_SIZE, table + 143 * TABLE_ENTRY_SIZE);
+    rev(table + 89 * TABLE_ENTRY_SIZE, table + 153 * TABLE_ENTRY_SIZE);
+    rev(table + 87 * TABLE_ENTRY_SIZE, table + 155 * TABLE_ENTRY_SIZE);
+    rev(table + 83 * TABLE_ENTRY_SIZE, table + 159 * TABLE_ENTRY_SIZE);
+    rev(table + 81 * TABLE_ENTRY_SIZE, table + 161 * TABLE_ENTRY_SIZE);
+    rev(table + 79 * TABLE_ENTRY_SIZE, table + 163 * TABLE_ENTRY_SIZE);
+    sub(table + 162 * TABLE_ENTRY_SIZE, table + 163 * TABLE_ENTRY_SIZE, y0);
+    add(table + 164 * TABLE_ENTRY_SIZE, table + 163 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 77 * TABLE_ENTRY_SIZE, table + 165 * TABLE_ENTRY_SIZE);
+    rev(table + 75 * TABLE_ENTRY_SIZE, table + 167 * TABLE_ENTRY_SIZE);
+    rev(table + 73 * TABLE_ENTRY_SIZE, table + 169 * TABLE_ENTRY_SIZE);
+    sub(table + 168 * TABLE_ENTRY_SIZE, table + 169 * TABLE_ENTRY_SIZE, y0);
+    add(table + 170 * TABLE_ENTRY_SIZE, table + 169 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 71 * TABLE_ENTRY_SIZE, table + 171 * TABLE_ENTRY_SIZE);
+    rev(table + 69 * TABLE_ENTRY_SIZE, table + 173 * TABLE_ENTRY_SIZE);
+    rev(table + 65 * TABLE_ENTRY_SIZE, table + 177 * TABLE_ENTRY_SIZE);
+    rev(table + 63 * TABLE_ENTRY_SIZE, table + 179 * TABLE_ENTRY_SIZE);
+    rev(table + 61 * TABLE_ENTRY_SIZE, table + 181 * TABLE_ENTRY_SIZE);
+    sub(table + 180 * TABLE_ENTRY_SIZE, table + 181 * TABLE_ENTRY_SIZE, y0);
+    add(table + 182 * TABLE_ENTRY_SIZE, table + 181 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 59 * TABLE_ENTRY_SIZE, table + 183 * TABLE_ENTRY_SIZE);
+    rev(table + 57 * TABLE_ENTRY_SIZE, table + 185 * TABLE_ENTRY_SIZE);
+    rev(table + 55 * TABLE_ENTRY_SIZE, table + 187 * TABLE_ENTRY_SIZE);
+    sub(table + 186 * TABLE_ENTRY_SIZE, table + 187 * TABLE_ENTRY_SIZE, y0);
+    add(table + 188 * TABLE_ENTRY_SIZE, table + 187 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 53 * TABLE_ENTRY_SIZE, table + 189 * TABLE_ENTRY_SIZE);
+    rev(table + 51 * TABLE_ENTRY_SIZE, table + 191 * TABLE_ENTRY_SIZE);
+    rev(table + 47 * TABLE_ENTRY_SIZE, table + 195 * TABLE_ENTRY_SIZE);
+    rev(table + 45 * TABLE_ENTRY_SIZE, table + 197 * TABLE_ENTRY_SIZE);
+    rev(table + 35 * TABLE_ENTRY_SIZE, table + 207 * TABLE_ENTRY_SIZE);
+    rev(table + 33 * TABLE_ENTRY_SIZE, table + 209 * TABLE_ENTRY_SIZE);
+    rev(table + 29 * TABLE_ENTRY_SIZE, table + 213 * TABLE_ENTRY_SIZE);
+    rev(table + 27 * TABLE_ENTRY_SIZE, table + 215 * TABLE_ENTRY_SIZE);
+    rev(table + 25 * TABLE_ENTRY_SIZE, table + 217 * TABLE_ENTRY_SIZE);
+    sub(table + 216 * TABLE_ENTRY_SIZE, table + 217 * TABLE_ENTRY_SIZE, y0);
+    add(table + 218 * TABLE_ENTRY_SIZE, table + 217 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 23 * TABLE_ENTRY_SIZE, table + 219 * TABLE_ENTRY_SIZE);
+    rev(table + 21 * TABLE_ENTRY_SIZE, table + 221 * TABLE_ENTRY_SIZE);
+    rev(table + 19 * TABLE_ENTRY_SIZE, table + 223 * TABLE_ENTRY_SIZE);
+    sub(table + 222 * TABLE_ENTRY_SIZE, table + 223 * TABLE_ENTRY_SIZE, y0);
+    add(table + 224 * TABLE_ENTRY_SIZE, table + 223 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 17 * TABLE_ENTRY_SIZE, table + 225 * TABLE_ENTRY_SIZE);
+    rev(table + 15 * TABLE_ENTRY_SIZE, table + 227 * TABLE_ENTRY_SIZE);
+    rev(table + 11 * TABLE_ENTRY_SIZE, table + 231 * TABLE_ENTRY_SIZE);
+    rev(table + 9 * TABLE_ENTRY_SIZE, table + 233 * TABLE_ENTRY_SIZE);
+    rev(table + 7 * TABLE_ENTRY_SIZE, table + 235 * TABLE_ENTRY_SIZE);
+    sub(table + 234 * TABLE_ENTRY_SIZE, table + 235 * TABLE_ENTRY_SIZE, y0);
+    add(table + 236 * TABLE_ENTRY_SIZE, table + 235 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 5 * TABLE_ENTRY_SIZE, table + 237 * TABLE_ENTRY_SIZE);
+    rev(table + 3 * TABLE_ENTRY_SIZE, table + 239 * TABLE_ENTRY_SIZE);
+    rev(table + 1 * TABLE_ENTRY_SIZE, table + 241 * TABLE_ENTRY_SIZE);
+    sub(table + 240 * TABLE_ENTRY_SIZE, table + 241 * TABLE_ENTRY_SIZE, y0);
+    add(table + 242 * TABLE_ENTRY_SIZE, table + 241 * TABLE_ENTRY_SIZE, y0);
+    rev(table + 80 * TABLE_ENTRY_SIZE, table + 162 * TABLE_ENTRY_SIZE);
+    rev(table + 78 * TABLE_ENTRY_SIZE, table + 164 * TABLE_ENTRY_SIZE);
+    rev(table + 74 * TABLE_ENTRY_SIZE, table + 168 * TABLE_ENTRY_SIZE);
+    rev(table + 72 * TABLE_ENTRY_SIZE, table + 170 * TABLE_ENTRY_SIZE);
+    rev(table + 62 * TABLE_ENTRY_SIZE, table + 180 * TABLE_ENTRY_SIZE);
+    rev(table + 60 * TABLE_ENTRY_SIZE, table + 182 * TABLE_ENTRY_SIZE);
+    rev(table + 56 * TABLE_ENTRY_SIZE, table + 186 * TABLE_ENTRY_SIZE);
+    rev(table + 54 * TABLE_ENTRY_SIZE, table + 188 * TABLE_ENTRY_SIZE);
+    rev(table + 26 * TABLE_ENTRY_SIZE, table + 216 * TABLE_ENTRY_SIZE);
+    rev(table + 24 * TABLE_ENTRY_SIZE, table + 218 * TABLE_ENTRY_SIZE);
+    rev(table + 20 * TABLE_ENTRY_SIZE, table + 222 * TABLE_ENTRY_SIZE);
+    rev(table + 18 * TABLE_ENTRY_SIZE, table + 224 * TABLE_ENTRY_SIZE);
+    rev(table + 8 * TABLE_ENTRY_SIZE, table + 234 * TABLE_ENTRY_SIZE);
+    rev(table + 6 * TABLE_ENTRY_SIZE, table + 236 * TABLE_ENTRY_SIZE);
+    rev(table + 2 * TABLE_ENTRY_SIZE, table + 240 * TABLE_ENTRY_SIZE);
+    rev(table + 0 * TABLE_ENTRY_SIZE, table + 242 * TABLE_ENTRY_SIZE);
 }
