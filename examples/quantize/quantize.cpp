@@ -54,8 +54,9 @@ static const std::vector<struct quant_option> QUANT_OPTIONS = {
     // Note: Ensure COPY comes after F32 to avoid ftype 0 from matching.
     { "COPY",     LLAMA_FTYPE_ALL_F32,         "only copy tensors, no quantizing",  },
     // BitNet
-    { "I2_S",     LLAMA_FTYPE_MOSTLY_I2_S,     "BitNet 2 bit trans"                 },
-    { "I1_S",     LLAMA_FTYPE_MOSTLY_I1_S,     "BitNet 1.58 bit trans"              },
+    { "I2_S",     LLAMA_FTYPE_MOSTLY_I2_S,     "BitNet 2 bit"                       },
+    { "I1_S",     LLAMA_FTYPE_MOSTLY_I1_S,     "BitNet 1.58 bit"                    },
+    { "I1_M",     LLAMA_FTYPE_MOSTLY_I1_M,     "BitNet 1.58 bit with 2 bit"         },
 };
 
 static const char * const LLM_KV_QUANTIZE_IMATRIX_FILE       = "quantize.imatrix.file";

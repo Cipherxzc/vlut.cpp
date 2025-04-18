@@ -455,6 +455,12 @@ static const struct ggml_type_traits_cpu type_traits_cpu[GGML_TYPE_COUNT] = {
             .vec_dot_type = GGML_TYPE_I8_B,
             .nrows = 1,
         },
+    [GGML_TYPE_I1_M] =
+        {
+            // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
+            .vec_dot_type = GGML_TYPE_I8_B,
+            .nrows = 1,
+        },
 };
 
 const struct ggml_type_traits_cpu *ggml_get_type_traits_cpu(enum ggml_type type) { return &type_traits_cpu[type]; }
@@ -6982,8 +6988,7 @@ void print_tensor(FILE *outfile, const char *name, const struct ggml_tensor *ten
 #if defined(BITNET_LUT) || defined(BITNET_LUT2)
 
 typedef void (*bitnet_gemm)(int ith, int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
-typedef void (*bitnet_make_table)(int ith, const int8_t *GGML_RESTRICT y, int ntables, int nr, int n,
-                                  int16_t *GGML_RESTRICT table);
+typedef void (*bitnet_make_table)(int ith, const int8_t *GGML_RESTRICT y, int ntables, int nr, int n, int16_t *GGML_RESTRICT table);
 
 struct ggml_type_traits_bitnet {
     bool is_bitnet_type;
@@ -7010,8 +7015,15 @@ static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] 
             .gemm = ggml_gemm_i1s_i8b_LUT,
             .gemm2 = ggml_gemm_i1s_i8b_LUT2,
         },
+    [GGML_TYPE_I1_M] =
+        {
+            .is_bitnet_type = true,
+            .table_entries_num = 243,
+            // .make_table = ggml_gemm_i1s_i8b_make_table,
+            // .gemm = ggml_gemm_i1s_i8b_LUT,
+            .gemm2 = ggml_gemm_i1m_i8b_LUT2,
+        },
 };
-
 
 int16_t *tables;
 int8_t *tmp_src;
@@ -8710,6 +8722,7 @@ static void ggml_compute_forward_clamp(const struct ggml_compute_params *params,
         case GGML_TYPE_I8_B:
         case GGML_TYPE_I2_S:
         case GGML_TYPE_I1_S:
+        case GGML_TYPE_I1_M:
         case GGML_TYPE_COUNT: {
             GGML_ABORT("fatal error");
         }

@@ -172,7 +172,8 @@ static ggml_type llama_tensor_get_type(quantize_state_impl & qs, ggml_type new_t
     } else if (name == "token_embd.weight") {
         // this is a special case for the BitNet token embedding matrix
         if (qs.params->ftype == LLAMA_FTYPE_MOSTLY_I2_S ||
-            qs.params->ftype == LLAMA_FTYPE_MOSTLY_I1_S){
+            qs.params->ftype == LLAMA_FTYPE_MOSTLY_I1_S ||
+            qs.params->ftype == LLAMA_FTYPE_MOSTLY_I1_M){
             new_type = GGML_TYPE_Q6_K;
         } else if (qs.params->token_embedding_type < GGML_TYPE_COUNT) {
             new_type = qs.params->token_embedding_type;
@@ -511,6 +512,7 @@ static void llama_model_quantize_impl(const std::string & fname_inp, const std::
         // BitNet types
         case LLAMA_FTYPE_MOSTLY_I2_S:    default_type = GGML_TYPE_I2_S;    break;
         case LLAMA_FTYPE_MOSTLY_I1_S:    default_type = GGML_TYPE_I1_S;    break;
+        case LLAMA_FTYPE_MOSTLY_I1_M:    default_type = GGML_TYPE_I1_M;    break;
 
         default: throw std::runtime_error(format("invalid output file type %d\n", ftype));
     }
@@ -867,7 +869,7 @@ static void llama_model_quantize_impl(const std::string & fname_inp, const std::
 
             static const int64_t min_chunk_size = 32 * 512;
             int64_t chunk_size = (n_per_row >= min_chunk_size ? n_per_row : n_per_row * ((min_chunk_size + n_per_row - 1)/n_per_row));
-            if (new_type == GGML_TYPE_I2_S || new_type == GGML_TYPE_I1_S){
+            if (new_type == GGML_TYPE_I2_S || new_type == GGML_TYPE_I1_S || new_type == GGML_TYPE_I1_M){
                 chunk_size = n_per_row * nrows;
             }
 

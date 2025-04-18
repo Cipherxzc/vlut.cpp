@@ -914,6 +914,13 @@ static const struct ggml_type_traits type_traits[GGML_TYPE_COUNT] =
                 .type_size = sizeof(uint8_t),
                 .is_quantized = true,
             },
+        [GGML_TYPE_I1_M] =
+            {
+                .type_name = "i1_58_m",
+                .blck_size = 5,
+                .type_size = sizeof(uint8_t),
+                .is_quantized = true,
+            },
 };
 
 const struct ggml_type_traits * ggml_get_type_traits(enum ggml_type type) {
@@ -1251,6 +1258,11 @@ size_t ggml_type_size(enum ggml_type type) {
 size_t ggml_row_size(enum ggml_type type, int64_t ne) {
     if (type == GGML_TYPE_I8_B) {
         return sizeof(int8_t) * ne + sizeof(float);
+    } else if (type == GGML_TYPE_I1_M){
+        assert(ne % 4 == 0);
+        int64_t blck_num = ne / 20 * 4;
+        int64_t blck_remain = ne % 20 / 4;
+        return sizeof(uint8_t) * (blck_num + blck_remain);
     }
     assert(ne % ggml_blck_size(type) == 0);
     return ggml_type_size(type)*ne/ggml_blck_size(type);
@@ -6526,6 +6538,9 @@ size_t ggml_quantize_chunk(
             break;
         case GGML_TYPE_I1_S:
             result = quantize_i1_s(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
+            break;
+        case GGML_TYPE_I1_M:
+            result = quantize_i1_m(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
         default:
             assert(false);

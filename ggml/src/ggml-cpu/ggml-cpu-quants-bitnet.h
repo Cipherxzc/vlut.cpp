@@ -19,3 +19,4 @@ void ggml_gemm_i1s_i8b_LUT(int ith, int n, float* GGML_RESTRICT s, size_t bs, co
 
 void ggml_gemm_i2s_i8b_LUT2(int ith, int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
 void ggml_gemm_i1s_i8b_LUT2(int ith, int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
+void ggml_gemm_i1m_i8b_LUT2(int ith, int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
