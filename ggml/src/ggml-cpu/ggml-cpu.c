@@ -6987,8 +6987,8 @@ void print_tensor(FILE *outfile, const char *name, const struct ggml_tensor *ten
 
 #if defined(BITNET_LUT) || defined(BITNET_LUT2)
 
-typedef void (*bitnet_gemm)(int ith, int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
-typedef void (*bitnet_make_table)(int ith, const int8_t *GGML_RESTRICT y, int ntables, int nr, int n, int16_t *GGML_RESTRICT table);
+typedef void (*bitnet_gemm)(int ith, int nth, int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
+typedef void (*bitnet_make_table)(int ith, int nth, const int8_t *GGML_RESTRICT y, int ntables, int nr, int n, int16_t *GGML_RESTRICT table);
 
 struct ggml_type_traits_bitnet {
     bool is_bitnet_type;
@@ -7019,8 +7019,8 @@ static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] 
         {
             .is_bitnet_type = true,
             .table_entries_num = 243,
-            // .make_table = ggml_gemm_i1s_i8b_make_table,
-            // .gemm = ggml_gemm_i1s_i8b_LUT,
+            .make_table = ggml_gemm_i1m_i8b_make_table,
+            .gemm = ggml_gemm_i1m_i8b_LUT,
             .gemm2 = ggml_gemm_i1m_i8b_LUT2,
         },
 };
@@ -7137,7 +7137,7 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
         int64_t src0_end = ((ith + 1) * ne01) / nth;
 
         if (src0_start < src0_end) {
-            gemm(params->ith, ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + src0_start,
+            gemm(params->ith, params->nth, ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + src0_start,
                 src1_wdata, ne11, src0_end - src0_start);
         }
         
@@ -7153,12 +7153,16 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
         }
         ggml_barrier(params->threadpool);
 
-        int64_t src1_start = (ith * ne10 / blck_size) / nth;
-        int64_t src1_end = ((ith + 1) * ne10 / blck_size) / nth;
+        int64_t table_num = ne10 / blck_size;
+        if (type == GGML_TYPE_I1_M) {
+            table_num = ne10 / 20 * 4;
+        }
+        int64_t src1_start = (ith * table_num) / nth;
+        int64_t src1_end = ((ith + 1) * table_num) / nth;
 
         if (src1_start < src1_end) {
-            make_table(params->ith, (const int8_t *)wdata + src1_start * blck_size, src1_end - src1_start, ne11, ne10,
-                        tables + src1_start * table_entries_num * TABLE_ENTRY_SIZE);
+            make_table(params->ith, params->nth, (const int8_t *)wdata + src1_start * blck_size, src1_end - src1_start, ne11, ne10,
+                       tables + src1_start * table_entries_num * TABLE_ENTRY_SIZE);
         }
 
         ggml_barrier(params->threadpool);
@@ -7171,9 +7175,9 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
         // (src1_end   % TABLE_ENTRY_SIZE): src1_end; src1_end = MIN(src1_end, ne11);
 
         // if (src1_start < src1_end) {
-        //     ggml_gemm_i2s_i8b_make_table_quant(params->ith, (float *)src1->data + src1_start * blck_size,
+        //     ggml_gemm_i2s_i8b_make_table_quant(params->ith, params->nth, (float *)src1->data + src1_start * blck_size,
         //                                        (float *)wdata + src1_start, ne11, ne10,
-        //                                        tables + ne10 / blck_size * table_entries_num * src1_start);
+        //                                        tables + table_num * table_entries_num * src1_start);
         // }
 
         // ggml_barrier(params->threadpool);
@@ -7182,8 +7186,8 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
         int64_t src0_end = ((ith + 1) * ne01) / nth;
 
         if (src0_start < src0_end) {
-            gemm(params->ith, ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + src0_start,
-                wdata, ne11, src0_end - src0_start);
+            gemm(params->ith, params->nth, ne00, ((float *)(dst->data)) + src0_start, ne01,
+                 (const char *)src0->data + src0_start, wdata, ne11, src0_end - src0_start);
         }
 #endif // BITNET_LUT2
         return;
