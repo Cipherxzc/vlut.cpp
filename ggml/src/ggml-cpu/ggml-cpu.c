@@ -6977,14 +6977,14 @@ void print_tensor(FILE *outfile, const struct ggml_tensor *tensor, int level) {
     if(tensor->type == GGML_TYPE_F32 || tensor->type == GGML_TYPE_F16)
     {
         const int64_t ne2 = verbose ? tensor->ne[2] : MIN(1, tensor->ne[2]);
-        const int64_t ne1 = verbose ? tensor->ne[1] : MIN(10, tensor->ne[1]);
-        const int64_t ne0 = verbose ? tensor->ne[0] : MIN(100, tensor->ne[0]);
+        const int64_t ne1 = verbose ? tensor->ne[1] : MIN(2, tensor->ne[1]);
+        const int64_t ne0 = verbose ? tensor->ne[0] : MIN(10, tensor->ne[0]);
         const float *data = (const float *)tensor->data;
         for (int i2 = 0; i2 < ne2; i2++) {
             for (int i1 = 0; i1 < ne1; i1++){
                 const float *d = data + i2 * tensor->nb[2] + i1 * tensor->nb[1];
                 for (int i0 = 0; i0 < ne0; i0++) {
-                    fprintf(outfile, "%f ", d[i0]);
+                    fprintf(outfile, "%.3f ", d[i0]);
                 }
                 fprintf(outfile, "\n");
             }
@@ -6995,9 +6995,9 @@ void print_tensor(FILE *outfile, const struct ggml_tensor *tensor, int level) {
     }
 
     const uint8_t *data = tensor->data;
-    const int64_t ne2 = verbose ? tensor->ne[2] : MIN(10, tensor->ne[2]);
-    const int64_t ne1 = verbose ? tensor->ne[1] : MIN(100, tensor->ne[1]);
-    const int64_t ne0 = verbose ? tensor->ne[0] : MIN(100, tensor->ne[0]);
+    const int64_t ne2 = verbose ? tensor->ne[2] : MIN(1, tensor->ne[2]);
+    const int64_t ne1 = verbose ? tensor->ne[1] : MIN(2, tensor->ne[1]);
+    const int64_t ne0 = verbose ? tensor->ne[0] : MIN(20, tensor->ne[0]);
     for (int i2 = 0; i2 < ne2; i2++) {
         for (int i1 = 0; i1 < ne1; i1++){
             const uint8_t *d = data + i2 * tensor->nb[2] + i1 * tensor->nb[1];
@@ -12381,6 +12381,23 @@ static void ggml_compute_forward(struct ggml_compute_params *params, struct ggml
             GGML_ABORT("fatal error");
         }
     }
+
+    // if (tensor->op == GGML_OP_MUL_MAT) {
+    //     ggml_barrier(params->threadpool);
+    //     if (params->ith == 0) {
+    //         printf("write tensors\n");
+    //         FILE *outfile = fopen("/home/cipherxzc/Projects/llama.cpp-bitnet/mytest/tensors", "a");
+    //         print_tensor(outfile, tensor->src[0], 0);
+    //         print_tensor(outfile, tensor->src[1], 0);
+    //         print_tensor(outfile, tensor, 1);
+    //         fclose(outfile);
+    //         static int cnt = 0;
+    //         cnt++;
+    //         if (cnt == 20) {
+    //             exit(0);
+    //         }
+    //     }
+    // }
 }
 
 // Android's libc implementation "bionic" does not support setting affinity
@@ -13153,8 +13170,6 @@ static thread_ret_t ggml_graph_compute_thread(void *data) {
 
     for (int node_n = 0; node_n < cgraph->n_nodes && !tp->abort; node_n++) {
         struct ggml_tensor *node = cgraph->nodes[node_n];
-
-        // print_tensor(stderr, node, 0);
 
         ggml_compute_forward(&params, node);
 

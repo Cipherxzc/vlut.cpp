@@ -1559,7 +1559,7 @@ struct llm_build_context {
                         model.layers[il].wo, model.layers[il].bo,
                         Kcur, Vcur, Qcur, KQ_mask, n_tokens, kv_head, n_kv, kq_scale, cb, il);
                 if (model.layers[il].wo_scale) {
-                    cur = ggml_mul(ctx0, Vcur, model.layers[il].wo_scale);
+                    cur = ggml_mul(ctx0, cur, model.layers[il].wo_scale);
                 }
             }
 

@@ -1767,10 +1767,10 @@ class LlamaModel(Model):
             # Check if this is a tensor that should be quantized
             if any(self.match_model_tensor_name(new_name, key, bid) for key in [
                 # Currently skip Attn to avoid conflicting with the permute logic for MQA
-                # gguf.MODEL_TENSOR.ATTN_Q,
-                # gguf.MODEL_TENSOR.ATTN_K,
-                # gguf.MODEL_TENSOR.ATTN_V,
-                # gguf.MODEL_TENSOR.ATTN_OUT,
+                gguf.MODEL_TENSOR.ATTN_Q,
+                gguf.MODEL_TENSOR.ATTN_K,
+                gguf.MODEL_TENSOR.ATTN_V,
+                gguf.MODEL_TENSOR.ATTN_OUT,
                 gguf.MODEL_TENSOR.FFN_UP,
                 gguf.MODEL_TENSOR.FFN_DOWN,
                 gguf.MODEL_TENSOR.FFN_GATE,

@@ -169,15 +169,6 @@ static ggml_type llama_tensor_get_type(quantize_state_impl & qs, ggml_type new_t
                 new_type = GGML_TYPE_Q6_K;
             }
         }
-    } else if ((arch == LLM_ARCH_LLAMA || arch == LLM_ARCH_REFACT || arch == LLM_ARCH_MINICPM || arch == LLM_ARCH_GRANITE || arch == LLM_ARCH_GRANITE_MOE)
-                &&
-                (qs.params->ftype == LLAMA_FTYPE_MOSTLY_I1_S || qs.params->ftype == LLAMA_FTYPE_MOSTLY_I2_S || qs.params->ftype == LLAMA_FTYPE_MOSTLY_I1_M)
-                &&
-                ((name.find("attn_q.weight") != std::string::npos) || (name.find("attn_k.weight") != std::string::npos) || (name.find("attn_v.weight") != std::string::npos) || (name.find("attn_output.weight") != std::string::npos))
-            ) {
-        // skip MQA with permuted weight, use fallback quantization type
-        new_type = GGML_TYPE_Q4_0;
-        fprintf(stderr, "Warning: quantizing %s with permuted MQA, fallback to %s\n", name.c_str(), ggml_type_name(new_type));
     } else if (name == "token_embd.weight") {
         // this is a special case for the BitNet token embedding matrix
         if (qs.params->ftype == LLAMA_FTYPE_MOSTLY_I2_S ||
