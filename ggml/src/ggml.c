@@ -1225,6 +1225,10 @@ int64_t ggml_nrows(const struct ggml_tensor * tensor) {
 }
 
 size_t ggml_nbytes(const struct ggml_tensor * tensor) {
+    if (tensor->type == GGML_TYPE_I1_M) {
+        return ggml_row_size(GGML_TYPE_I1_M, tensor->ne[0]) * tensor->ne[1];
+    }
+
     size_t nbytes;
     const size_t blck_size = ggml_blck_size(tensor->type);
     if (blck_size == 1) {

@@ -116,10 +116,11 @@ def main():
     combinations = [
         # ('pc1', 1),
         # ('pc1', 8),
-        # ('aws1', 1),
+        ('aws1', 1),
+        ('aws1', 4),
         # ('aws2', 1),
-        ('laptop1', 1),
-        ('laptop1', 4),
+        # ('laptop1', 1),
+        # ('laptop1', 4),
     ]
     
     for arch_val, threads_val in combinations:

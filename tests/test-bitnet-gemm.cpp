@@ -73,7 +73,9 @@ static void init_tensor_uniform(ggml_tensor * tensor, float min = -1.0f, float m
     if (tensor->type == GGML_TYPE_F32 || tensor->type == GGML_TYPE_I32) {
         ggml_backend_tensor_set(tensor, data.data(), 0, nels * sizeof(float));
     } else if (ggml_is_quantized(tensor->type) || tensor->type == GGML_TYPE_F16 || tensor->type == GGML_TYPE_BF16) {
-        GGML_ASSERT(nels % ggml_blck_size(tensor->type) == 0);
+        if (tensor->type != GGML_TYPE_I1_M){
+            GGML_ASSERT(nels % ggml_blck_size(tensor->type) == 0);
+        }
 
          // dummy importance matrix
         std::vector<float> imatrix(tensor->ne[0], 1.0f);
@@ -1152,10 +1154,10 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_perf(const char* 
     };
 
     std::vector<ModelConfig> models = {
-        {"bitnet_3b",  3200, 8640, {GGML_TYPE_Q4_0, GGML_TYPE_I2_S, GGML_TYPE_I1_S}},
-        {"llama3_8b",  4096, 14336, {GGML_TYPE_TQ2_0, GGML_TYPE_I2_S, GGML_TYPE_TQ1_0}},
-        {"falcon_1b",  2048, 8192, {GGML_TYPE_TQ2_0, GGML_TYPE_I2_S, GGML_TYPE_TQ1_0}},
-        {"trilm_1.5b", 2048, 6144, {GGML_TYPE_TQ2_0, GGML_TYPE_I2_S, GGML_TYPE_TQ1_0}},
+        {"bitnet_3b",  3200, 8640,  {GGML_TYPE_Q4_0, GGML_TYPE_I2_S, GGML_TYPE_I1_M}},
+        {"llama3_8b",  4096, 14336, {GGML_TYPE_TQ2_0, GGML_TYPE_I2_S, GGML_TYPE_TQ1_0, GGML_TYPE_I1_M}},
+        {"falcon_1b",  2048, 8192,  {GGML_TYPE_TQ2_0, GGML_TYPE_I2_S, GGML_TYPE_TQ1_0, GGML_TYPE_I1_M}},
+        {"trilm_1.5b", 2048, 6144,  {GGML_TYPE_TQ2_0, GGML_TYPE_I2_S, GGML_TYPE_TQ1_0, GGML_TYPE_I1_M}},
     };
 
     // Filter by model if specified

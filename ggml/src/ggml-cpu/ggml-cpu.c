@@ -6961,21 +6961,47 @@ static void ggml_compute_forward_mul_mat_one_chunk(const struct ggml_compute_par
     }
 }
 
-void print_tensor(FILE *outfile, const char *name, const struct ggml_tensor *tensor) {
-    fprintf(outfile, "%s: %s %s\n", name, tensor->name, ggml_type_name(tensor->type));
-    fprintf(outfile, "ne: ");
-    for (int i = 0; i < 4; i++) {
-        fprintf(outfile, "%d ", tensor->ne[i]);
+// level <= 0: basic info only; 1: part of data; >= 2: all data 
+void print_tensor(FILE *outfile, const struct ggml_tensor *tensor, int level) {
+    
+    // Always print basic info of the tensor
+    fprintf(outfile, "%s (%s): %s\n", tensor->name, ggml_type_name(tensor->type), ggml_op_name(tensor->op));
+    fprintf(outfile, "ne: %ld %ld %ld %ld\n", tensor->ne[0], tensor->ne[1], tensor->ne[2], tensor->ne[3]);
+
+    if (level <= 0) {
+        return;
     }
-    fprintf(outfile, "\n");
+
+    bool verbose = level >= 2;
+
+    if(tensor->type == GGML_TYPE_F32 || tensor->type == GGML_TYPE_F16)
+    {
+        const int64_t ne2 = verbose ? tensor->ne[2] : MIN(1, tensor->ne[2]);
+        const int64_t ne1 = verbose ? tensor->ne[1] : MIN(10, tensor->ne[1]);
+        const int64_t ne0 = verbose ? tensor->ne[0] : MIN(100, tensor->ne[0]);
+        const float *data = (const float *)tensor->data;
+        for (int i2 = 0; i2 < ne2; i2++) {
+            for (int i1 = 0; i1 < ne1; i1++){
+                const float *d = data + i2 * tensor->nb[2] + i1 * tensor->nb[1];
+                for (int i0 = 0; i0 < ne0; i0++) {
+                    fprintf(outfile, "%f ", d[i0]);
+                }
+                fprintf(outfile, "\n");
+            }
+            fprintf(outfile, "\n");
+        }
+
+        return;
+    }
 
     const uint8_t *data = tensor->data;
-    for (int i2 = 0; i2 < tensor->ne[2]; i2++) {
-        // for (int i1 = 0; i1 < tensor->ne[1]; i1++) {
-        for (int i1 = 0; i1 < tensor->ne[1] && i1 < 10; i1++){
+    const int64_t ne2 = verbose ? tensor->ne[2] : MIN(10, tensor->ne[2]);
+    const int64_t ne1 = verbose ? tensor->ne[1] : MIN(100, tensor->ne[1]);
+    const int64_t ne0 = verbose ? tensor->ne[0] : MIN(100, tensor->ne[0]);
+    for (int i2 = 0; i2 < ne2; i2++) {
+        for (int i1 = 0; i1 < ne1; i1++){
             const uint8_t *d = data + i2 * tensor->nb[2] + i1 * tensor->nb[1];
-            // for (int i0 = 0; i0 < tensor->ne[0] * ggml_type_size(tensor->type); i0++) {
-            for (int i0 = 0; i0 < tensor->ne[0] * ggml_type_size(tensor->type) && i0 < 100; i0++) {
+            for (int i0 = 0; i0 < ggml_row_size(tensor->type, ne0); i0++) {
                 fprintf(outfile, "%d ", d[i0]);
             }
             fprintf(outfile, "\n");
@@ -7122,9 +7148,8 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
                 for (int64_t i11 = ith; i11 < ne11; i11 += nth) {
                     int64_t i = i11 / TABLE_ENTRY_SIZE;
                     int64_t j = i11 % TABLE_ENTRY_SIZE;
-                    quantize_row_i8_b_tile(
-                        (float *)((char *) src1->data + i13*nb13 + i12*nb12 + i11*nb11),
-                        (void *) (wdata + i * TABLE_ENTRY_SIZE + j), ne10, scale + i11);
+                    quantize_row_i8_b_tile((float *)((char *)src1->data + i13 * nb13 + i12 * nb12 + i11 * nb11),
+                                           (void *)(wdata + i * TABLE_ENTRY_SIZE + j), ne10, scale + i11);
                 }
             }
         }
@@ -7137,10 +7162,10 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
         int64_t src0_end = ((ith + 1) * ne01) / nth;
 
         if (src0_start < src0_end) {
-            gemm(params->ith, params->nth, ne00, ((float *)(dst->data)) + src0_start, ne01, (const char *)src0->data + src0_start,
-                src1_wdata, ne11, src0_end - src0_start);
+            gemm(params->ith, params->nth, ne00, ((float *)(dst->data)) + src0_start, ne01,
+                 (const char *)src0->data + src0_start, src1_wdata, ne11, src0_end - src0_start);
         }
-        
+
 #elif defined(BITNET_LUT)
         for (int64_t i13 = 0; i13 < ne13; ++i13) {
             for (int64_t i12 = 0; i12 < ne12; ++i12) {
@@ -7161,8 +7186,8 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
         int64_t src1_end = ((ith + 1) * table_num) / nth;
 
         if (src1_start < src1_end) {
-            make_table(params->ith, params->nth, (const int8_t *)wdata + src1_start * blck_size, src1_end - src1_start, ne11, ne10,
-                       tables + src1_start * table_entries_num * TABLE_ENTRY_SIZE);
+            make_table(params->ith, params->nth, (const int8_t *)wdata + src1_start * blck_size, src1_end - src1_start,
+                       ne11, ne10, tables + src1_start * table_entries_num * TABLE_ENTRY_SIZE);
         }
 
         ggml_barrier(params->threadpool);
@@ -12356,23 +12381,6 @@ static void ggml_compute_forward(struct ggml_compute_params *params, struct ggml
             GGML_ABORT("fatal error");
         }
     }
-
-    // if (tensor->op == GGML_OP_MUL_MAT) {
-    //     ggml_barrier(params->threadpool);
-    //     if (params->ith == 0) {
-    //         printf("write tensors\n");
-    //         FILE *outfile = fopen("/home/cipherxzc/Projects/llama.cpp-bitnet/mytest/tensors", "a");
-    //         print_tensor(outfile, "weight", tensor->src[0]);
-    //         // print_tensor(outfile, "activation", tensor->src[1]);
-    //         // print_tensor(outfile, "result", tensor);
-    //         fclose(outfile);
-    //         static int cnt = 0;
-    //         cnt++;
-    //         if (cnt == 3) {
-    //             exit(0);
-    //         }
-    //     }
-    // }
 }
 
 // Android's libc implementation "bionic" does not support setting affinity
@@ -13145,6 +13153,8 @@ static thread_ret_t ggml_graph_compute_thread(void *data) {
 
     for (int node_n = 0; node_n < cgraph->n_nodes && !tp->abort; node_n++) {
         struct ggml_tensor *node = cgraph->nodes[node_n];
+
+        // print_tensor(stderr, node, 0);
 
         ggml_compute_forward(&params, node);
 

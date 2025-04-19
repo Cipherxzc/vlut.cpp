@@ -166,8 +166,25 @@ class Model:
                 for name in model_part.keys():
                     if self.is_safetensors:
                         if self.lazy:
+                            # Ad-hoc fix for Llama3-8B ternary model, ref: https://huggingface.co/HF1BitLLM/Llama3-8B-1.58-100B-tokens/discussions/3
+                            if (name.endswith("_scale") and name.removesuffix("_scale") in model_part.keys()):
+                                continue
                             data = model_part.get_slice(name)
                             data = LazyTorchTensor.from_safetensors_slice(data)
+                            if (name + "_scale" in model_part.keys()):
+                                
+                                # logger.error(f"{name}: {data.detach().cpu().numpy()}")
+
+                                orig_shape = data.shape
+                                scale = model_part.get_slice(name + "_scale")
+                                shift = torch.tensor([0, 2, 4, 6], dtype=torch.uint8).reshape((4, *(1 for _ in range(len(orig_shape)))))
+                                data = data.unsqueeze(0).expand((4, *orig_shape)) >> shift
+                                data = data & 3
+                                data = (data.float() - 1).reshape((orig_shape[0] * 4, *orig_shape[1:]))
+                                # The scale is inverted
+                                data = data / LazyTorchTensor.from_safetensors_slice(scale).float()
+                                
+                                # logger.error(f"{name}: {data.detach().cpu().numpy()}")
                         else:
                             data = model_part.get_tensor(name)
                     else:
@@ -1558,12 +1575,19 @@ class StableLMModel(Model):
             if len(norms) > 0:
                 raise ValueError(f"Unprocessed norms: {norms}")
 
-
 @Model.register("LLaMAForCausalLM", "LlamaForCausalLM", "MistralForCausalLM", "MixtralForCausalLM")
 class LlamaModel(Model):
     model_arch = gguf.MODEL_ARCH.LLAMA
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Add a flag to determine if this is a ternary model
+        # self.is_ternary = kwargs.get("is_ternary", False) or "TernaryLlamaForCausalLM" in self.__class__.__name__
+        # self.layout = kwargs.get("layout", "I2_S")  # Default layout for ternary models
+        self.is_ternary = True # hardcode for now
 
     def set_vocab(self):
+        # Existing code remains unchanged
         try:
             self._set_vocab_sentencepiece()
         except FileNotFoundError:
@@ -1611,6 +1635,103 @@ class LlamaModel(Model):
             if self.hparams["rope_scaling"].get("type") == "linear":
                 self.gguf_writer.add_rope_scaling_type(gguf.RopeScalingType.LINEAR)
                 self.gguf_writer.add_rope_scaling_factor(self.hparams["rope_scaling"]["factor"])
+        
+    def weight_quant(self, weight):
+        dtype = weight.dtype
+        weight = weight.float()
+        s = 1 / weight.abs().mean().clamp(min=1e-5)
+        nonzeros = weight.abs().nonzero()
+        if nonzeros.shape[0] != 0:
+            mean_abs = weight.abs().sum() / nonzeros.shape[0]
+            s = 1 / mean_abs.clamp(min=1e-5)
+            # this will result in a smaller s, and thus larger scale
+
+        weight = (weight * s).round().clamp(-1, 1) / s
+        scale = weight.abs().max().unsqueeze(0)
+        weight = torch.where(weight.abs().less(1e-6), 0, weight).type(dtype)
+        weight = torch.sign(weight).type(dtype)
+
+        # n, m = weight.shape
+        
+        # if self.layout == "I2_S" and m % 4 == 0:
+        #     # reshape to (n, m//4, 4), transpose to (m//4, n, 4), merge to (m//4, 4n)
+        #     weight = weight.view(n, m // 4, 4).transpose(0, 1).reshape(m // 4, -1)
+        # elif self.layout == "I1_58_T" and m % 5 == 0:
+        #     # reshape to (n, m//5, 5), transpose to (m//5, n, 5), merge to (m//5, 5n)
+        #     weight = weight.view(n, m // 5, 5).transpose(0, 1).reshape(m // 5, -1)
+        # else:
+        #     # report error
+        #     raise ValueError(f"Convert ternary model failed! layout: {self.layout}, m: {m}")
+        
+        # adapt to llama.cpp format
+        # weight = weight.reshape(n, m)
+    
+        return weight.type(dtype), scale.type(torch.float32)
+    
+    def permute_quant_debugger(self, weight: Tensor, name: str, n_head: int, n_head_kv: int | None):
+
+        # Step 0: check if weight is all zero
+        # print("Sum: ", weight.detach().cpu().numpy().sum())
+        print("Abs max:", weight.abs().max().detach().cpu().numpy())
+        print("Abs sum:", weight.abs().sum().detach().cpu().numpy())
+        print("Non zero count:", weight.nonzero().shape[0])
+
+        LlamaModel.print_tensor(weight, name)
+
+        # Step 1: Transform weight into 1/0/-1 (in fp32)
+        dtype = weight.dtype
+        weight = weight.float()
+        s = 1 / weight.abs().mean().clamp(min=1e-5)
+
+        print("Scale s: ", s.detach().cpu().numpy())
+
+        weight = (weight * s).round().clamp(-1, 1) / s
+
+        print("Abs max:", weight.abs().max().detach().cpu().numpy())
+        print("Abs sum:", weight.abs().sum().detach().cpu().numpy())
+
+        scale = weight.abs().max().unsqueeze(0)
+        weight = torch.where(weight.abs().less(1e-6), 0, weight).type(dtype)
+        weight = torch.sign(weight).type(dtype)
+
+        print("Abs max:", weight.abs().max().detach().cpu().numpy())
+        print("Abs sum:", weight.abs().sum().detach().cpu().numpy())
+        print("Non zero count:", weight.nonzero().shape[0])
+
+        LlamaModel.print_tensor(scale, name + ".scale")
+        LlamaModel.print_tensor(weight, name)
+
+        # Step 2: Permute
+        if n_head_kv is not None and n_head != n_head_kv:
+            n_head = n_head_kv
+        weight = (weight.reshape(n_head, 2, weight.shape[0] // n_head // 2, *weight.shape[1:])
+                .swapaxes(1, 2)
+                .reshape(weight.shape))
+        
+        LlamaModel.print_tensor(weight, name)
+
+        # Step 3: Relayout
+
+        n, m = weight.shape
+        
+        if self.layout == "I2_S" and m % 4 == 0:
+            # reshape to (n, m//4, 4), transpose to (m//4, n, 4), merge to (m//4, 4n)
+            weight = weight.view(n, m // 4, 4).transpose(0, 1).reshape(m // 4, -1)
+        elif self.layout == "I1_58_T" and m % 5 == 0:
+            # reshape to (n, m//5, 5), transpose to (m//5, n, 5), merge to (m//5, 5n)
+            weight = weight.view(n, m // 5, 5).transpose(0, 1).reshape(m // 5, -1)
+        else:
+            # report error
+            raise ValueError(f"Convert ternary model failed! layout: {self.layout}, m: {m}")
+        
+        LlamaModel.print_tensor(weight, name)
+        
+        # adapt to llama.cpp format
+        weight = weight.reshape(n, m)
+
+        LlamaModel.print_tensor(weight, name)
+
+        return
 
     @staticmethod
     def permute(weights: Tensor, n_head: int, n_head_kv: int | None):
@@ -1622,16 +1743,54 @@ class LlamaModel(Model):
 
     _experts: list[dict[str, Tensor]] | None = None
 
+    @staticmethod
+    def print_tensor(data_torch: Tensor, name: str):
+        # Print the tensor name and shape
+        logger.error(f"Tensor name: {name}, shape: {data_torch.shape}")
+        logger.error(f"Tensor data: {data_torch.detach().cpu().numpy()}")
+
     def modify_tensors(self, data_torch: Tensor, name: str, bid: int | None) -> Iterable[tuple[str, Tensor]]:
+        new_name = self.map_tensor_name(name)
         n_head = self.hparams["num_attention_heads"]
         n_kv_head = self.hparams.get("num_key_value_heads")
 
+        # First handle any permutation needed (keep the existing logic)
         if name.endswith(("q_proj.weight", "q_proj.bias")):
+            # self.permute_quant_debugger(data_torch, name, n_head, n_head)
             data_torch = LlamaModel.permute(data_torch, n_head, n_head)
         if name.endswith(("k_proj.weight", "k_proj.bias")):
+            # self.permute_quant_debugger(data_torch, name, n_head, n_kv_head)
             data_torch = LlamaModel.permute(data_torch, n_head, n_kv_head)
 
-        # process the experts separately
+        # If this is a ternary model, apply quantization to specific weight matrices
+        if self.is_ternary and name.endswith(".weight") and not name.endswith((".norm1.weight", ".norm2.weight", ".norm.weight")):
+            # Check if this is a tensor that should be quantized
+            if any(self.match_model_tensor_name(new_name, key, bid) for key in [
+                # Currently skip Attn to avoid conflicting with the permute logic for MQA
+                # gguf.MODEL_TENSOR.ATTN_Q,
+                # gguf.MODEL_TENSOR.ATTN_K,
+                # gguf.MODEL_TENSOR.ATTN_V,
+                # gguf.MODEL_TENSOR.ATTN_OUT,
+                gguf.MODEL_TENSOR.FFN_UP,
+                gguf.MODEL_TENSOR.FFN_DOWN,
+                gguf.MODEL_TENSOR.FFN_GATE,
+            ]):
+                # logger.error(f"{name}: {data_torch.detach().cpu().numpy()}")
+                # transform weight into 1/0/-1 (in fp32)
+                weight_torch, scale_torch = self.weight_quant(data_torch)
+
+                # Since data_torch is not required anymore, explicitly del it to avoid OOM
+                del data_torch
+                
+                # logger.error(f"weight: {weight_torch.detach().cpu().numpy()}")
+                # logger.error(f"scale: {scale_torch.detach().cpu().numpy()}")
+
+                return [
+                    (new_name, weight_torch),
+                    (new_name.removesuffix(".weight") + ".scale", scale_torch)
+                ]
+
+        # process the experts separately (keep existing logic)
         if name.find("block_sparse_moe.experts") != -1:
             n_experts = self.hparams["num_local_experts"]
 
@@ -1660,12 +1819,19 @@ class LlamaModel(Model):
 
                     new_name = self.map_tensor_name(merged_name)
 
-                    tensors.append((new_name, data_torch))
+                    # If this is a ternary model and these experts need to be quantized
+                    if self.is_ternary:
+                        weight_torch, scale_torch = self.weight_quant(data_torch)
+                        tensors.append((new_name, weight_torch))
+                        tensors.append((new_name.removesuffix(".weight") + ".scale", scale_torch))
+                    else:
+                        tensors.append((new_name, data_torch))
+
                 return tensors
             else:
                 return []
 
-        return [(self.map_tensor_name(name), data_torch)]
+        return [(new_name, data_torch)]
 
     def generate_extra_tensors(self) -> Iterable[tuple[str, Tensor]]:
         if rope_scaling := self.find_hparam(["rope_scaling"], optional=True):
@@ -1704,6 +1870,152 @@ class LlamaModel(Model):
             experts = [k for d in self._experts for k in d.keys()]
             if len(experts) > 0:
                 raise ValueError(f"Unprocessed experts: {experts}")
+
+# @Model.register("LLaMAForCausalLM", "LlamaForCausalLM", "MistralForCausalLM", "MixtralForCausalLM")
+# class LlamaModel(Model):
+#     model_arch = gguf.MODEL_ARCH.LLAMA
+
+#     def set_vocab(self):
+#         try:
+#             self._set_vocab_sentencepiece()
+#         except FileNotFoundError:
+#             try:
+#                 self._set_vocab_llama_hf()
+#             except (FileNotFoundError, TypeError):
+#                 # Llama 3
+#                 self._set_vocab_gpt2()
+
+#         # Apply to CodeLlama only (and ignore for Llama 3 with a vocab size of 128256)
+#         if self.hparams.get("vocab_size", 32000) == 32016:
+#             special_vocab = gguf.SpecialVocab(
+#                 self.dir_model, load_merges=False,
+#                 special_token_types = ['prefix', 'suffix', 'middle', 'eot']
+#             )
+#             special_vocab._set_special_token("prefix", 32007)
+#             special_vocab._set_special_token("suffix", 32008)
+#             special_vocab._set_special_token("middle", 32009)
+#             special_vocab._set_special_token("eot",    32010)
+#             special_vocab.add_to_gguf(self.gguf_writer)
+
+#         tokenizer_config_file = self.dir_model / 'tokenizer_config.json'
+#         if tokenizer_config_file.is_file():
+#             with open(tokenizer_config_file, "r", encoding="utf-8") as f:
+#                 tokenizer_config_json = json.load(f)
+#                 if "add_prefix_space" in tokenizer_config_json:
+#                     self.gguf_writer.add_add_space_prefix(tokenizer_config_json["add_prefix_space"])
+
+#         # Apply to granite small models only
+#         if self.hparams.get("vocab_size", 32000) == 49152:
+#             self.gguf_writer.add_add_bos_token(False)
+
+#     def set_gguf_parameters(self):
+#         super().set_gguf_parameters()
+#         hparams = self.hparams
+#         self.gguf_writer.add_vocab_size(hparams["vocab_size"])
+
+#         if "head_dim" in hparams:
+#             rope_dim = hparams["head_dim"]
+#         else:
+#             rope_dim = hparams["hidden_size"] // hparams["num_attention_heads"]
+#         self.gguf_writer.add_rope_dimension_count(rope_dim)
+
+#         if self.hparams.get("rope_scaling") is not None and "factor" in self.hparams["rope_scaling"]:
+#             if self.hparams["rope_scaling"].get("type") == "linear":
+#                 self.gguf_writer.add_rope_scaling_type(gguf.RopeScalingType.LINEAR)
+#                 self.gguf_writer.add_rope_scaling_factor(self.hparams["rope_scaling"]["factor"])
+
+#     @staticmethod
+#     def permute(weights: Tensor, n_head: int, n_head_kv: int | None):
+#         if n_head_kv is not None and n_head != n_head_kv:
+#             n_head = n_head_kv
+#         return (weights.reshape(n_head, 2, weights.shape[0] // n_head // 2, *weights.shape[1:])
+#                 .swapaxes(1, 2)
+#                 .reshape(weights.shape))
+
+#     _experts: list[dict[str, Tensor]] | None = None
+
+#     def modify_tensors(self, data_torch: Tensor, name: str, bid: int | None) -> Iterable[tuple[str, Tensor]]:
+#         n_head = self.hparams["num_attention_heads"]
+#         n_kv_head = self.hparams.get("num_key_value_heads")
+
+#         if name.endswith(("q_proj.weight", "q_proj.bias")):
+#             data_torch = LlamaModel.permute(data_torch, n_head, n_head)
+#         if name.endswith(("k_proj.weight", "k_proj.bias")):
+#             data_torch = LlamaModel.permute(data_torch, n_head, n_kv_head)
+
+#         # process the experts separately
+#         if name.find("block_sparse_moe.experts") != -1:
+#             n_experts = self.hparams["num_local_experts"]
+
+#             assert bid is not None
+
+#             if self._experts is None:
+#                 self._experts = [{} for _ in range(self.block_count)]
+
+#             self._experts[bid][name] = data_torch
+
+#             if len(self._experts[bid]) >= n_experts * 3:
+#                 tensors: list[tuple[str, Tensor]] = []
+
+#                 # merge the experts into a single 3d tensor
+#                 for wid in ["w1", "w2", "w3"]:
+#                     datas: list[Tensor] = []
+
+#                     for xid in range(n_experts):
+#                         ename = f"model.layers.{bid}.block_sparse_moe.experts.{xid}.{wid}.weight"
+#                         datas.append(self._experts[bid][ename])
+#                         del self._experts[bid][ename]
+
+#                     data_torch = torch.stack(datas, dim=0)
+
+#                     merged_name = f"layers.{bid}.feed_forward.experts.{wid}.weight"
+
+#                     new_name = self.map_tensor_name(merged_name)
+
+#                     tensors.append((new_name, data_torch))
+#                 return tensors
+#             else:
+#                 return []
+
+#         return [(self.map_tensor_name(name), data_torch)]
+
+#     def generate_extra_tensors(self) -> Iterable[tuple[str, Tensor]]:
+#         if rope_scaling := self.find_hparam(["rope_scaling"], optional=True):
+#             if rope_scaling.get("rope_type", '').lower() == "llama3":
+#                 base = self.hparams.get("rope_theta", 10000.0)
+#                 dim = self.hparams.get("head_dim", self.hparams["hidden_size"] // self.hparams["num_attention_heads"])
+#                 freqs = 1.0 / (base ** (torch.arange(0, dim, 2, dtype=torch.float32) / dim))
+
+#                 factor = rope_scaling.get("factor", 8.0)
+#                 low_freq_factor = rope_scaling.get("low_freq_factor", 1.0)
+#                 high_freq_factor = rope_scaling.get("high_freq_factor", 4.0)
+#                 old_context_len = self.hparams.get("original_max_position_embeddings", 8192)
+
+#                 low_freq_wavelen = old_context_len / low_freq_factor
+#                 high_freq_wavelen = old_context_len / high_freq_factor
+#                 assert low_freq_wavelen != high_freq_wavelen
+
+#                 rope_factors = []
+#                 for freq in freqs:
+#                     wavelen = 2 * math.pi / freq
+#                     if wavelen < high_freq_wavelen:
+#                         rope_factors.append(1)
+#                     elif wavelen > low_freq_wavelen:
+#                         rope_factors.append(factor)
+#                     else:
+#                         smooth = (old_context_len / wavelen - low_freq_factor) / (high_freq_factor - low_freq_factor)
+#                         rope_factors.append(1 / ((1 - smooth) / factor + smooth))
+
+#                 yield (self.format_tensor_name(gguf.MODEL_TENSOR.ROPE_FREQS), torch.tensor(rope_factors, dtype=torch.float32))
+
+#     def prepare_tensors(self):
+#         super().prepare_tensors()
+
+#         if self._experts is not None:
+#             # flatten `list[dict[str, Tensor]]` into `list[str]`
+#             experts = [k for d in self._experts for k in d.keys()]
+#             if len(experts) > 0:
+#                 raise ValueError(f"Unprocessed experts: {experts}")
 
 
 @Model.register("DeciLMForCausalLM")
@@ -1927,20 +2239,20 @@ class BitnetModel(Model):
         weight = torch.where(weight.abs().less(1e-6), 0, weight).type(dtype)
         weight = torch.sign(weight).type(dtype)
 
-        n, m = weight.shape
+        # n, m = weight.shape
         
-        if self.layout == "I2_S" and m % 4 == 0:
-            # reshape to (n, m//4, 4), transpose to (m//4, n, 4), merge to (m//4, 4n)
-            weight = weight.view(n, m // 4, 4).transpose(0, 1).reshape(m // 4, -1)
-        elif self.layout == "I1_S" and m % 5 == 0:
-            # reshape to (n, m//5, 5), transpose to (m//5, n, 5), merge to (m//5, 5n)
-            weight = weight.view(n, m // 5, 5).transpose(0, 1).reshape(m // 5, -1)
-        else:
-            # report error
-            raise ValueError(f"Conver bitnet failed! layout: {self.layout}, m: {m}")
+        # if self.layout == "I2_S" and m % 4 == 0:
+        #     # reshape to (n, m//4, 4), transpose to (m//4, n, 4), merge to (m//4, 4n)
+        #     weight = weight.view(n, m // 4, 4).transpose(0, 1).reshape(m // 4, -1)
+        # elif self.layout == "I1_S" and m % 5 == 0:
+        #     # reshape to (n, m//5, 5), transpose to (m//5, n, 5), merge to (m//5, 5n)
+        #     weight = weight.view(n, m // 5, 5).transpose(0, 1).reshape(m // 5, -1)
+        # else:
+        #     # report error
+        #     raise ValueError(f"Conver bitnet failed! layout: {self.layout}, m: {m}")
         
-        # adapt to llama.cpp format
-        weight = weight.reshape(n, m)
+        # # adapt to llama.cpp format
+        # weight = weight.reshape(n, m)
     
         return weight.type(dtype), scale.type(torch.float32)
 
@@ -4976,7 +5288,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--layout", type=str, choices=["I2_S", "I1_S", ""], default="",
-        help="weight layout for specific quantization types; default: "".",
+        help="[Deprecated] weight layout for specific quantization types; default: "".",
         # TODO: add this to the suffix of outfile if not specified.
     )
     parser.add_argument(
@@ -5032,8 +5344,8 @@ def parse_args() -> argparse.Namespace:
     args = parser.parse_args()
     if not args.print_supported_models and args.model is None:
         parser.error("the following arguments are required: model")
-    if args.layout == "":
-        parser.error("you must specify a layout for the output file when converting ternary models")
+    if args.layout != "":
+        parser.error("layout is deprecated in python, and moved to cpp!")
     return args
 
 

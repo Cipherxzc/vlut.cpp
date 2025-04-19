@@ -169,6 +169,15 @@ static ggml_type llama_tensor_get_type(quantize_state_impl & qs, ggml_type new_t
                 new_type = GGML_TYPE_Q6_K;
             }
         }
+    } else if ((arch == LLM_ARCH_LLAMA || arch == LLM_ARCH_REFACT || arch == LLM_ARCH_MINICPM || arch == LLM_ARCH_GRANITE || arch == LLM_ARCH_GRANITE_MOE)
+                &&
+                (qs.params->ftype == LLAMA_FTYPE_MOSTLY_I1_S || qs.params->ftype == LLAMA_FTYPE_MOSTLY_I2_S || qs.params->ftype == LLAMA_FTYPE_MOSTLY_I1_M)
+                &&
+                ((name.find("attn_q.weight") != std::string::npos) || (name.find("attn_k.weight") != std::string::npos) || (name.find("attn_v.weight") != std::string::npos) || (name.find("attn_output.weight") != std::string::npos))
+            ) {
+        // skip MQA with permuted weight, use fallback quantization type
+        new_type = GGML_TYPE_Q4_0;
+        fprintf(stderr, "Warning: quantizing %s with permuted MQA, fallback to %s\n", name.c_str(), ggml_type_name(new_type));
     } else if (name == "token_embd.weight") {
         // this is a special case for the BitNet token embedding matrix
         if (qs.params->ftype == LLAMA_FTYPE_MOSTLY_I2_S ||
@@ -379,7 +388,7 @@ static ggml_type llama_tensor_get_type(quantize_state_impl & qs, ggml_type new_t
         const int64_t ny = tensor->ne[1];
         const int64_t qk_k = ggml_blck_size(new_type);
 
-        if (nx % qk_k != 0) {
+        if (nx % qk_k != 0 && new_type != GGML_TYPE_I1_M) {
             LLAMA_LOG_WARN("\n\n%s : tensor cols %" PRId64 " x %" PRId64 " are not divisible by %" PRId64 ", required for %s", __func__, nx, ny, qk_k, ggml_type_name(new_type));
             convert_incompatible_tensor = true;
         } else {
@@ -893,7 +902,9 @@ static void llama_model_quantize_impl(const std::string & fname_inp, const std::
 
         // update the gguf meta data as we go
         gguf_set_tensor_type(ctx_outs[cur_split].get(), name.c_str(), new_type);
-        GGML_ASSERT(gguf_get_tensor_size(ctx_outs[cur_split].get(), gguf_find_tensor(ctx_outs[cur_split].get(), name.c_str())) == new_size);
+        if (new_type != GGML_TYPE_I1_M){
+            GGML_ASSERT(gguf_get_tensor_size(ctx_outs[cur_split].get(), gguf_find_tensor(ctx_outs[cur_split].get(), name.c_str())) == new_size);
+        }
         gguf_set_tensor_data(ctx_outs[cur_split].get(), name.c_str(), new_data);
 
         // write tensor data + padding
