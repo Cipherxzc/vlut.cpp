@@ -303,6 +303,7 @@ enum test_mode {
     MODE_TEST,
     MODE_PERF,
     MODE_GRAD,
+    MODE_SEARCH,
 };
 
 struct test_case {
@@ -380,7 +381,7 @@ struct test_case {
     std::vector<ggml_tensor *> sentinels;
 
     void add_sentinel(ggml_context * ctx) {
-        if (mode == MODE_PERF || mode == MODE_GRAD) {
+        if (mode == MODE_PERF || mode == MODE_SEARCH || mode == MODE_GRAD) {
             return;
         }
         ggml_tensor * sentinel = ::ggml_new_tensor_1d(ctx, GGML_TYPE_F32, sentinel_size);
@@ -581,7 +582,7 @@ struct test_case {
     }
 
     bool eval_perf(ggml_backend_t backend, const char * op_name) {
-        mode = MODE_PERF;
+        mode = mode == MODE_SEARCH ? MODE_SEARCH : MODE_PERF;
 
         static const size_t graph_nodes = 8192;
 
@@ -1189,6 +1190,55 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_perf(const char* 
     return test_cases;
 }
 
+
+// Test cases for configuration search
+static std::vector<std::unique_ptr<test_case>> make_test_cases_search(const char* model_filter = nullptr, const std::vector<int>& test_ns = {}) {
+    std::vector<std::unique_ptr<test_case>> test_cases;
+
+    // Define model configurations with explicit types to test
+    struct ModelConfig {
+        std::string name;
+        int d_model;
+        int d_ff;
+        std::vector<ggml_type> types_to_test;
+    };
+
+    std::vector<ModelConfig> models = {
+        {"bitnet_3b",  3200, 8640,  {GGML_TYPE_I2_S}},
+        {"llama3_8b",  4096, 14336, {GGML_TYPE_I2_S}},
+        {"falcon_1b",  2048, 8192,  {GGML_TYPE_I2_S}},
+        {"trilm_1.5b", 2048, 6144,  {GGML_TYPE_I2_S}},
+    };
+
+    // Filter by model if specified
+    for (const auto& model : models) {
+        if (model_filter != nullptr && model.name != model_filter) {
+            continue;
+        }
+
+        printf("-- Add tests for %s model --\n", model.name.c_str());
+        
+        for (int n : test_ns) {
+            for (ggml_type type_a : model.types_to_test) {
+                ggml_type type_b = GGML_TYPE_F32;
+                
+                printf("  Test %s with type %s, len %d\n", model.name.c_str(), ggml_type_name(type_a), n);
+                
+                // d_model × d_model
+                test_cases.emplace_back(new test_mul_mat(type_a, type_b, model.d_model, n, model.d_model, {1, 1}, {1, 1}));
+                
+                // d_model × d_ff
+                test_cases.emplace_back(new test_mul_mat(type_a, type_b, model.d_model, n, model.d_ff, {1, 1}, {1, 1}));
+                
+                // d_ff × d_model
+                test_cases.emplace_back(new test_mul_mat(type_a, type_b, model.d_ff, n, model.d_model, {1, 1}, {1, 1}));
+            }
+        }
+    }
+
+    return test_cases;
+}
+
 // Update the test_backend function to accept a model filter
 static bool test_backend(ggml_backend_t backend, test_mode mode, const char* op_name, const char* model_filter = nullptr, const std::vector<int>& test_ns = {}) {
     if (mode == MODE_TEST) {
@@ -1220,6 +1270,15 @@ static bool test_backend(ggml_backend_t backend, test_mode mode, const char* op_
         return true;
     }
 
+    if (mode == MODE_SEARCH) {
+        auto test_cases = make_test_cases_search(model_filter, test_ns);
+        for (auto & test : test_cases) {
+            test->eval_perf(backend, op_name);
+        }
+        return true;
+    }
+
+
     GGML_ABORT("fatal error");
 }
 
@@ -1246,6 +1305,8 @@ int main(int argc, char ** argv) {
             mode = MODE_TEST;
         } else if (strcmp(argv[i], "perf") == 0) {
             mode = MODE_PERF;
+        } else if (strcmp(argv[i], "search") == 0) {
+            mode = MODE_SEARCH;
         } else if (strcmp(argv[i], "-o") == 0) {
             if (i + 1 < argc) {
                 op_name_filter = argv[++i];
