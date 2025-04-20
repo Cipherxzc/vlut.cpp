@@ -56,7 +56,7 @@ BEGIN {
         processed_configs = processed_configs "|" config "|";
         
         # Print to output
-        printf "%s,%d,%d,%d,%.2f,%.2f\n", type_a, m, n, k, us_per_run, rps;
+        printf "%s,%d,%d,%d,%.2f,%f\n", type_a, m, n, k, us_per_run, rps;
     }
 }
 ' "$input_file" >> "$output_file"
