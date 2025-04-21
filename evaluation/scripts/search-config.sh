@@ -17,6 +17,7 @@ echo "lut2,entry_size,threads,score" > "$RESULTS_DIR/scores.csv"
 LUT2_OPTIONS=("on" "off")
 ENTRY_SIZES=(16 32 64)
 THREAD_COUNTS=(1 4 8)
+MODELS=("bitnet_3b" "llama3_8b" "falcon_1b" "trilm_1.5b")
 
 # Loop through all configurations
 for lut2 in "${LUT2_OPTIONS[@]}"; do
@@ -43,7 +44,12 @@ for lut2 in "${LUT2_OPTIONS[@]}"; do
             for threads in "${THREAD_COUNTS[@]}"; do
                 echo "Running benchmark with LUT2=$lut2, ENTRY_SIZE=$entry_size, THREADS=$threads..."
                 LOG_FILE="$RESULTS_DIR/l${lut2}_s${entry_size}_t${threads}.log"
-                "$BUILD_DIR/bin/test-bitnet-gemm" search -b CPU -t "$threads" -ns 128,512 > "$LOG_FILE" 2>&1
+
+                # Loop by models sequentially to avoid OOM
+                > "$LOG_FILE"
+                for model in "${MODELS[@]}"; do
+                    "$BUILD_DIR/bin/test-bitnet-gemm" search -b CPU -t "$threads" -m "$model" -ns 128,512 >> "$LOG_FILE" 2>&1
+                done
                 echo "Results saved to $LOG_FILE"
                 
                 # Process the log file to CSV
@@ -53,7 +59,7 @@ for lut2 in "${LUT2_OPTIONS[@]}"; do
                 CSV_FILE="${LOG_FILE%.*}.csv"
                 if [ -f "$CSV_FILE" ]; then
                     # Skip header and sum the uspr column (5th column)
-                    SCORE=$(awk -F, 'NR>1 {sum+=$5} END {printf "%.2f", sum}' "$CSV_FILE")
+                    SCORE=$(awk -F, 'NR>1 {sum+=$5; count++} END {printf "%.2f", sum/count}' "$CSV_FILE")
                     echo "$lut2,$entry_size,$threads,$SCORE" >> "$RESULTS_DIR/scores.csv"
                     echo "Configuration score: $SCORE (lower is better)"
                 else
