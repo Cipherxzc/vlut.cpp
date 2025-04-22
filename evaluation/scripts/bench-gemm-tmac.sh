@@ -2,8 +2,6 @@
 
 # Default values
 DEVICE_NAME="default_device"
-TUNE_FLAG=""
-N_FLAG=""
 
 # Get the directory where the script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -13,7 +11,7 @@ RESULTS_DIR="$PROJECT_ROOT/evaluation/results_tmac_${DEVICE_NAME}"
 # Work in script dir
 cd "$SCRIPT_DIR" || exit 1
 
-TMAC_PATH="$PROJECT_ROOT/.."
+TMAC_PATH="$PROJECT_ROOT/../T-MAC"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -25,14 +23,6 @@ while [[ $# -gt 0 ]]; do
         --tmac_path)
             TMAC_PATH="$2"
             shift 2
-            ;;
-        -n)
-            N_FLAG="-n $2"
-            shift 2
-            ;;
-        --tune)
-            TUNE_FLAG="-t"
-            shift
             ;;
         *)
             echo "Unknown argument: $1"
@@ -54,18 +44,24 @@ if [ ! -d "$TMAC_PATH" ]; then
     exit 1
 fi
 
-# Check if profile_tmac.py exists in current directory
-if [ ! -f "profile_tmac.py" ]; then
-    echo "Error: profile_tmac.py not found in current directory"
+# Check if tmac_model_utils.py exists in current directory
+if [ ! -f "tmac_model_utils.py" ]; then
+    echo "Error: tmac_model_utils.py not found in current directory"
     exit 1
 fi
 
-# Create tools directory if it doesn't exist
-mkdir -p "$TMAC_PATH/tools"
+# Backup original model_utils.py
+if [ -f "$TMAC_PATH/python/t_mac/model_utils.py" ]; then
+    mv "$TMAC_PATH/python/t_mac/model_utils.py" "$TMAC_PATH/python/t_mac/model_utils.py.bak"
+    echo "Backed up original model_utils.py to model_utils.py.bak"
+else
+    echo "Error: model_utils.py not found in T-MAC directory"
+    exit 1
+fi
 
-# Copy profile_tmac.py to T-MAC/tools directory
-cp profile_tmac.py "$TMAC_PATH/tools/"
-echo "Copied profile_tmac.py to $TMAC_PATH/tools/"
+# Copy py to T-MAC/python/t_mac directory
+cp tmac_model_utils.py "$TMAC_PATH/python/t_mac/model_utils.py"
+echo "tmac_model_utils.py to $TMAC_PATH/python/t_mac/model_utils.py"
 
 # Change to T-MAC directory
 cd "$TMAC_PATH" || exit 1
@@ -73,21 +69,34 @@ cd "$TMAC_PATH" || exit 1
 # Create evaluation directory if it doesn't exist
 mkdir -p $RESULTS_DIR
 
-# Run for bitnet_3b
-echo "Running profile_tmac.py with preset bitnet_3b..."
-> "out_bitnet_3b/results.csv"
-python tools/profile_tmac.py --preset bitnet_3b --out_path out_bitnet_3b $TUNE_FLAG $N_FLAG
+# Clean tune log
+rm "$TMAC_PATH/deploy/tuned/llama-3-8b-2bit_INT_N/qgemm_lut/tune.log"
+rm "$TMAC_PATH/deploy/tuned/hf-bitnet-3b_INT_N/qgemm_lut/tune.log"
+rm "$TMAC_PATH/deploy/tuned/llama-3-8b-2bit_INT_N/preprocessor/tune.log"
+rm "$TMAC_PATH/deploy/tuned/hf-bitnet-3b_INT_N/preprocessor/tune.log"
 
-# Run for llama3_8b
-echo "Running profile_tmac.py with preset llama3_8b..."
-> "out_llama3_8b/results.csv"
-python tools/profile_tmac.py --preset llama3_8b --out_path out_llama3_8b $TUNE_FLAG $N_FLAG
+# Run compiling (will overide exsiting tuned kernel!)
+source "$TMAC_PATH/build/t-mac-envs.sh"
+python tools/run_pipeline.py -o ~/models/Llama-3-8b-instruct-EfficientQAT-w2g128-GPTQ -m llama-3-8b-2bit -q int_n -nt 1 -s 0
+python tools/run_pipeline.py -o ~/models/Llama-3-8b-instruct-EfficientQAT-w2g128-GPTQ -m llama-3-8b-2bit -q int_n -nt 4 -s 0
+python tools/run_pipeline.py -o ~/models/Llama-3-8b-instruct-EfficientQAT-w2g128-GPTQ -m llama-3-8b-2bit -q int_n -nt 8 -s 0
+python tools/run_pipeline.py -o ~/models/bitnet_b1_58-3B -q int_n -nt 1 -s 0
+python tools/run_pipeline.py -o ~/models/bitnet_b1_58-3B -q int_n -nt 4 -s 0
+python tools/run_pipeline.py -o ~/models/bitnet_b1_58-3B -q int_n -nt 8 -s 0
 
-# Copy results to evaluation directory
-echo "Copying results to evaluation directory..."
-cp out_bitnet_3b/results.csv "${RESULTS_DIR}/bitnet_3b.csv"
-cp out_llama3_8b/results.csv "${RESULTS_DIR}/llama3_8b.csv"
+# Resume model_utils.py
+if [ -f "$TMAC_PATH/python/t_mac/model_utils.py.bak" ]; then
+    rm "$TMAC_PATH/python/t_mac/model_utils.py"
+    mv "$TMAC_PATH/python/t_mac/model_utils.py.bak" "$TMAC_PATH/python/t_mac/model_utils.py"
+    echo "Restored original model_utils.py from model_utils.py.bak"
+else
+    echo "Error: backup of model_utils.py not found"
+    exit 1
+fi
 
-echo "Done! Results have been saved to:"
-echo "  ${RESULTS_DIR}/bitnet_3b.csv"
-echo "  ${RESULTS_DIR}/llama3_8b.csv"
+cp "$TMAC_PATH/deploy/tuned/llama-3-8b-2bit_INT_N/qgemm_lut/tune.log" "${RESULTS_DIR}/llama3_8b_qgemm_lut.csv"
+cp "$TMAC_PATH/deploy/tuned/llama-3-8b-2bit_INT_N/preprocessor/tune.log" "${RESULTS_DIR}/llama3_8b_preprocessor.csv"
+cp "$TMAC_PATH/deploy/tuned/hf-bitnet-3b_INT_N/qgemm_lut/tune.log" "${RESULTS_DIR}/bitnet_3b_qgemm_lut.csv"
+cp "$TMAC_PATH/deploy/tuned/hf-bitnet-3b_INT_N/preprocessor/tune.log" "${RESULTS_DIR}/bitnet_3b_preprocessor.csv"
+
+echo "Done! Results have been saved to ${RESULTS_DIR}"
