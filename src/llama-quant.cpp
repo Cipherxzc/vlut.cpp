@@ -151,7 +151,12 @@ static ggml_type llama_tensor_get_type(quantize_state_impl & qs, ggml_type new_t
     // for arches that share the same tensor between the token embeddings and the output, we quantize the token embeddings
     // with the quantization of the output tensor
     if (name == tn(LLM_TENSOR_OUTPUT, "weight") || (!qs.has_output && name == tn(LLM_TENSOR_TOKEN_EMBD, "weight"))) {
-        if (qs.params->output_tensor_type < GGML_TYPE_COUNT) {
+        // Special case for bitnet, align with TQ2_0
+        if (qs.params->ftype == LLAMA_FTYPE_MOSTLY_I2_S ||
+            qs.params->ftype == LLAMA_FTYPE_MOSTLY_I1_S ||
+            qs.params->ftype == LLAMA_FTYPE_MOSTLY_I1_M){
+            new_type = GGML_TYPE_Q6_K;
+        } else if (qs.params->output_tensor_type < GGML_TYPE_COUNT) {
             new_type = qs.params->output_tensor_type;
         } else {
             const int64_t nx = tensor->ne[0];
@@ -170,11 +175,11 @@ static ggml_type llama_tensor_get_type(quantize_state_impl & qs, ggml_type new_t
             }
         }
     } else if (name == "token_embd.weight") {
-        // this is a special case for the BitNet token embedding matrix
+        // Special case for bitnet, align with TQ2_0
         if (qs.params->ftype == LLAMA_FTYPE_MOSTLY_I2_S ||
             qs.params->ftype == LLAMA_FTYPE_MOSTLY_I1_S ||
             qs.params->ftype == LLAMA_FTYPE_MOSTLY_I1_M){
-            new_type = GGML_TYPE_Q6_K;
+            new_type = GGML_TYPE_Q4_K;
         } else if (qs.params->token_embedding_type < GGML_TYPE_COUNT) {
             new_type = qs.params->token_embedding_type;
         } else {
