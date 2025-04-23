@@ -128,6 +128,7 @@
         } \
     } while(0)
 
+// Block 8 optimized to handle remainders as 8+4+1
 #define ADD_TABLE_ENTRIES_BLOCK_8(nc, this_x, this_table, sum_i16) \
     do { \
         for (int c = 0; c < (nc) / 8; c++) { \
@@ -174,14 +175,47 @@
             ADD_TABLE_ENTRIES(rs7, rt7, TABLE_ENTRY_SIZE); \
         } \
         \
-        for (int c = 0; c < (nc) % 8; c++) { \
-            uint8_t v = this_x[(nc) / 8 * 8 + c]; \
-            int16_t *restrict rs = sum_i16 + ((nc) / 8 * 8 + c) * TABLE_ENTRY_SIZE; \
+        /* Handle remainder in blocks of 4 */ \
+        int offset = ((nc) / 8) * 8; \
+        int remainder = (nc) % 8; \
+        \
+        /* Process blocks of 4 */ \
+        for (int c = 0; c < remainder / 4; c++) { \
+            uint8_t v0 = this_x[offset + c * 4]; \
+            uint8_t v1 = this_x[offset + c * 4 + 1]; \
+            uint8_t v2 = this_x[offset + c * 4 + 2]; \
+            uint8_t v3 = this_x[offset + c * 4 + 3]; \
+            \
+            const int16_t *restrict rt0 = this_table + v0 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt1 = this_table + v1 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt2 = this_table + v2 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt3 = this_table + v3 * TABLE_ENTRY_SIZE; \
+            \
+            int16_t *restrict rs0 = sum_i16 + (offset + c * 4) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs0, rt0, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs1 = sum_i16 + (offset + c * 4 + 1) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs1, rt1, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs2 = sum_i16 + (offset + c * 4 + 2) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs2, rt2, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs3 = sum_i16 + (offset + c * 4 + 3) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs3, rt3, TABLE_ENTRY_SIZE); \
+        } \
+        \
+        /* Process remaining 1-3 elements */ \
+        offset += (remainder / 4) * 4; \
+        remainder = remainder % 4; \
+        for (int c = 0; c < remainder; c++) { \
+            uint8_t v = this_x[offset + c]; \
+            int16_t *restrict rs = sum_i16 + (offset + c) * TABLE_ENTRY_SIZE; \
             const int16_t *restrict rt = this_table + v * TABLE_ENTRY_SIZE; \
             ADD_TABLE_ENTRIES(rs, rt, TABLE_ENTRY_SIZE); \
         } \
     } while(0)
 
+// Block 16 optimized to handle remainders as 16+8+4+1
 #define ADD_TABLE_ENTRIES_BLOCK_16(nc, this_x, this_table, sum_i16) \
     do { \
         for (int c = 0; c < (nc) / 16; c++) { \
@@ -268,13 +302,461 @@
             ADD_TABLE_ENTRIES(rs15, rt15, TABLE_ENTRY_SIZE); \
         } \
         \
-        for (int c = 0; c < (nc) % 16; c++) { \
-            uint8_t v = this_x[(nc) / 16 * 16 + c]; \
-            int16_t *restrict rs = sum_i16 + ((nc) / 16 * 16 + c) * TABLE_ENTRY_SIZE; \
+        /* Handle remainder in graduated steps: first process blocks of 8 */ \
+        int offset = ((nc) / 16) * 16; \
+        int remainder = (nc) % 16; \
+        \
+        /* Process blocks of 8 */ \
+        for (int c = 0; c < remainder / 8; c++) { \
+            uint8_t v0 = this_x[offset + c * 8]; \
+            uint8_t v1 = this_x[offset + c * 8 + 1]; \
+            uint8_t v2 = this_x[offset + c * 8 + 2]; \
+            uint8_t v3 = this_x[offset + c * 8 + 3]; \
+            uint8_t v4 = this_x[offset + c * 8 + 4]; \
+            uint8_t v5 = this_x[offset + c * 8 + 5]; \
+            uint8_t v6 = this_x[offset + c * 8 + 6]; \
+            uint8_t v7 = this_x[offset + c * 8 + 7]; \
+            \
+            const int16_t *restrict rt0 = this_table + v0 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt1 = this_table + v1 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt2 = this_table + v2 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt3 = this_table + v3 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt4 = this_table + v4 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt5 = this_table + v5 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt6 = this_table + v6 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt7 = this_table + v7 * TABLE_ENTRY_SIZE; \
+            \
+            int16_t *restrict rs0 = sum_i16 + (offset + c * 8) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs0, rt0, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs1 = sum_i16 + (offset + c * 8 + 1) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs1, rt1, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs2 = sum_i16 + (offset + c * 8 + 2) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs2, rt2, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs3 = sum_i16 + (offset + c * 8 + 3) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs3, rt3, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs4 = sum_i16 + (offset + c * 8 + 4) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs4, rt4, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs5 = sum_i16 + (offset + c * 8 + 5) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs5, rt5, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs6 = sum_i16 + (offset + c * 8 + 6) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs6, rt6, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs7 = sum_i16 + (offset + c * 8 + 7) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs7, rt7, TABLE_ENTRY_SIZE); \
+        } \
+        \
+        /* Then process blocks of 4 */ \
+        offset += (remainder / 8) * 8; \
+        remainder = remainder % 8; \
+        \
+        for (int c = 0; c < remainder / 4; c++) { \
+            uint8_t v0 = this_x[offset + c * 4]; \
+            uint8_t v1 = this_x[offset + c * 4 + 1]; \
+            uint8_t v2 = this_x[offset + c * 4 + 2]; \
+            uint8_t v3 = this_x[offset + c * 4 + 3]; \
+            \
+            const int16_t *restrict rt0 = this_table + v0 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt1 = this_table + v1 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt2 = this_table + v2 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt3 = this_table + v3 * TABLE_ENTRY_SIZE; \
+            \
+            int16_t *restrict rs0 = sum_i16 + (offset + c * 4) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs0, rt0, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs1 = sum_i16 + (offset + c * 4 + 1) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs1, rt1, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs2 = sum_i16 + (offset + c * 4 + 2) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs2, rt2, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs3 = sum_i16 + (offset + c * 4 + 3) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs3, rt3, TABLE_ENTRY_SIZE); \
+        } \
+        \
+        /* Finally process remaining 1-3 elements */ \
+        offset += (remainder / 4) * 4; \
+        remainder = remainder % 4; \
+        for (int c = 0; c < remainder; c++) { \
+            uint8_t v = this_x[offset + c]; \
+            int16_t *restrict rs = sum_i16 + (offset + c) * TABLE_ENTRY_SIZE; \
             const int16_t *restrict rt = this_table + v * TABLE_ENTRY_SIZE; \
             ADD_TABLE_ENTRIES(rs, rt, TABLE_ENTRY_SIZE); \
         } \
     } while(0)
+
+// Block 32 with full manual unrolling and graduated remainders (32+16+8+4+1)
+#define ADD_TABLE_ENTRIES_BLOCK_32(nc, this_x, this_table, sum_i16) \
+    do { \
+        for (int c = 0; c < (nc) / 32; c++) { \
+            uint8_t v0 = this_x[c * 32]; \
+            uint8_t v1 = this_x[c * 32 + 1]; \
+            uint8_t v2 = this_x[c * 32 + 2]; \
+            uint8_t v3 = this_x[c * 32 + 3]; \
+            uint8_t v4 = this_x[c * 32 + 4]; \
+            uint8_t v5 = this_x[c * 32 + 5]; \
+            uint8_t v6 = this_x[c * 32 + 6]; \
+            uint8_t v7 = this_x[c * 32 + 7]; \
+            uint8_t v8 = this_x[c * 32 + 8]; \
+            uint8_t v9 = this_x[c * 32 + 9]; \
+            uint8_t v10 = this_x[c * 32 + 10]; \
+            uint8_t v11 = this_x[c * 32 + 11]; \
+            uint8_t v12 = this_x[c * 32 + 12]; \
+            uint8_t v13 = this_x[c * 32 + 13]; \
+            uint8_t v14 = this_x[c * 32 + 14]; \
+            uint8_t v15 = this_x[c * 32 + 15]; \
+            uint8_t v16 = this_x[c * 32 + 16]; \
+            uint8_t v17 = this_x[c * 32 + 17]; \
+            uint8_t v18 = this_x[c * 32 + 18]; \
+            uint8_t v19 = this_x[c * 32 + 19]; \
+            uint8_t v20 = this_x[c * 32 + 20]; \
+            uint8_t v21 = this_x[c * 32 + 21]; \
+            uint8_t v22 = this_x[c * 32 + 22]; \
+            uint8_t v23 = this_x[c * 32 + 23]; \
+            uint8_t v24 = this_x[c * 32 + 24]; \
+            uint8_t v25 = this_x[c * 32 + 25]; \
+            uint8_t v26 = this_x[c * 32 + 26]; \
+            uint8_t v27 = this_x[c * 32 + 27]; \
+            uint8_t v28 = this_x[c * 32 + 28]; \
+            uint8_t v29 = this_x[c * 32 + 29]; \
+            uint8_t v30 = this_x[c * 32 + 30]; \
+            uint8_t v31 = this_x[c * 32 + 31]; \
+            \
+            const int16_t *restrict rt0 = this_table + v0 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt1 = this_table + v1 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt2 = this_table + v2 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt3 = this_table + v3 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt4 = this_table + v4 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt5 = this_table + v5 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt6 = this_table + v6 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt7 = this_table + v7 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt8 = this_table + v8 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt9 = this_table + v9 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt10 = this_table + v10 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt11 = this_table + v11 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt12 = this_table + v12 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt13 = this_table + v13 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt14 = this_table + v14 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt15 = this_table + v15 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt16 = this_table + v16 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt17 = this_table + v17 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt18 = this_table + v18 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt19 = this_table + v19 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt20 = this_table + v20 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt21 = this_table + v21 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt22 = this_table + v22 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt23 = this_table + v23 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt24 = this_table + v24 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt25 = this_table + v25 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt26 = this_table + v26 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt27 = this_table + v27 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt28 = this_table + v28 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt29 = this_table + v29 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt30 = this_table + v30 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt31 = this_table + v31 * TABLE_ENTRY_SIZE; \
+            \
+            int16_t *restrict rs0 = sum_i16 + (c * 32) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs0, rt0, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs1 = sum_i16 + (c * 32 + 1) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs1, rt1, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs2 = sum_i16 + (c * 32 + 2) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs2, rt2, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs3 = sum_i16 + (c * 32 + 3) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs3, rt3, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs4 = sum_i16 + (c * 32 + 4) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs4, rt4, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs5 = sum_i16 + (c * 32 + 5) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs5, rt5, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs6 = sum_i16 + (c * 32 + 6) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs6, rt6, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs7 = sum_i16 + (c * 32 + 7) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs7, rt7, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs8 = sum_i16 + (c * 32 + 8) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs8, rt8, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs9 = sum_i16 + (c * 32 + 9) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs9, rt9, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs10 = sum_i16 + (c * 32 + 10) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs10, rt10, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs11 = sum_i16 + (c * 32 + 11) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs11, rt11, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs12 = sum_i16 + (c * 32 + 12) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs12, rt12, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs13 = sum_i16 + (c * 32 + 13) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs13, rt13, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs14 = sum_i16 + (c * 32 + 14) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs14, rt14, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs15 = sum_i16 + (c * 32 + 15) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs15, rt15, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs16 = sum_i16 + (c * 32 + 16) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs16, rt16, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs17 = sum_i16 + (c * 32 + 17) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs17, rt17, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs18 = sum_i16 + (c * 32 + 18) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs18, rt18, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs19 = sum_i16 + (c * 32 + 19) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs19, rt19, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs20 = sum_i16 + (c * 32 + 20) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs20, rt20, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs21 = sum_i16 + (c * 32 + 21) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs21, rt21, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs22 = sum_i16 + (c * 32 + 22) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs22, rt22, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs23 = sum_i16 + (c * 32 + 23) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs23, rt23, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs24 = sum_i16 + (c * 32 + 24) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs24, rt24, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs25 = sum_i16 + (c * 32 + 25) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs25, rt25, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs26 = sum_i16 + (c * 32 + 26) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs26, rt26, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs27 = sum_i16 + (c * 32 + 27) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs27, rt27, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs28 = sum_i16 + (c * 32 + 28) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs28, rt28, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs29 = sum_i16 + (c * 32 + 29) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs29, rt29, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs30 = sum_i16 + (c * 32 + 30) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs30, rt30, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs31 = sum_i16 + (c * 32 + 31) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs31, rt31, TABLE_ENTRY_SIZE); \
+        } \
+        \
+        /* Handle remainder in graduated steps */ \
+        int offset = ((nc) / 32) * 32; \
+        int remainder = (nc) % 32; \
+        \
+        /* Process blocks of 16 */ \
+        if (remainder >= 16) { \
+            uint8_t v0 = this_x[offset]; \
+            uint8_t v1 = this_x[offset + 1]; \
+            uint8_t v2 = this_x[offset + 2]; \
+            uint8_t v3 = this_x[offset + 3]; \
+            uint8_t v4 = this_x[offset + 4]; \
+            uint8_t v5 = this_x[offset + 5]; \
+            uint8_t v6 = this_x[offset + 6]; \
+            uint8_t v7 = this_x[offset + 7]; \
+            uint8_t v8 = this_x[offset + 8]; \
+            uint8_t v9 = this_x[offset + 9]; \
+            uint8_t v10 = this_x[offset + 10]; \
+            uint8_t v11 = this_x[offset + 11]; \
+            uint8_t v12 = this_x[offset + 12]; \
+            uint8_t v13 = this_x[offset + 13]; \
+            uint8_t v14 = this_x[offset + 14]; \
+            uint8_t v15 = this_x[offset + 15]; \
+            \
+            const int16_t *restrict rt0 = this_table + v0 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt1 = this_table + v1 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt2 = this_table + v2 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt3 = this_table + v3 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt4 = this_table + v4 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt5 = this_table + v5 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt6 = this_table + v6 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt7 = this_table + v7 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt8 = this_table + v8 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt9 = this_table + v9 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt10 = this_table + v10 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt11 = this_table + v11 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt12 = this_table + v12 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt13 = this_table + v13 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt14 = this_table + v14 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt15 = this_table + v15 * TABLE_ENTRY_SIZE; \
+            \
+            int16_t *restrict rs0 = sum_i16 + offset * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs0, rt0, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs1 = sum_i16 + (offset + 1) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs1, rt1, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs2 = sum_i16 + (offset + 2) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs2, rt2, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs3 = sum_i16 + (offset + 3) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs3, rt3, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs4 = sum_i16 + (offset + 4) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs4, rt4, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs5 = sum_i16 + (offset + 5) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs5, rt5, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs6 = sum_i16 + (offset + 6) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs6, rt6, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs7 = sum_i16 + (offset + 7) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs7, rt7, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs8 = sum_i16 + (offset + 8) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs8, rt8, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs9 = sum_i16 + (offset + 9) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs9, rt9, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs10 = sum_i16 + (offset + 10) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs10, rt10, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs11 = sum_i16 + (offset + 11) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs11, rt11, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs12 = sum_i16 + (offset + 12) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs12, rt12, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs13 = sum_i16 + (offset + 13) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs13, rt13, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs14 = sum_i16 + (offset + 14) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs14, rt14, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs15 = sum_i16 + (offset + 15) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs15, rt15, TABLE_ENTRY_SIZE); \
+            \
+            offset += 16; \
+            remainder -= 16; \
+        } \
+        \
+        /* Process blocks of 8 */ \
+        if (remainder >= 8) { \
+            uint8_t v0 = this_x[offset]; \
+            uint8_t v1 = this_x[offset + 1]; \
+            uint8_t v2 = this_x[offset + 2]; \
+            uint8_t v3 = this_x[offset + 3]; \
+            uint8_t v4 = this_x[offset + 4]; \
+            uint8_t v5 = this_x[offset + 5]; \
+            uint8_t v6 = this_x[offset + 6]; \
+            uint8_t v7 = this_x[offset + 7]; \
+            \
+            const int16_t *restrict rt0 = this_table + v0 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt1 = this_table + v1 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt2 = this_table + v2 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt3 = this_table + v3 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt4 = this_table + v4 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt5 = this_table + v5 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt6 = this_table + v6 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt7 = this_table + v7 * TABLE_ENTRY_SIZE; \
+            \
+            int16_t *restrict rs0 = sum_i16 + offset * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs0, rt0, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs1 = sum_i16 + (offset + 1) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs1, rt1, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs2 = sum_i16 + (offset + 2) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs2, rt2, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs3 = sum_i16 + (offset + 3) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs3, rt3, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs4 = sum_i16 + (offset + 4) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs4, rt4, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs5 = sum_i16 + (offset + 5) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs5, rt5, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs6 = sum_i16 + (offset + 6) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs6, rt6, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs7 = sum_i16 + (offset + 7) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs7, rt7, TABLE_ENTRY_SIZE); \
+            \
+            offset += 8; \
+            remainder -= 8; \
+        } \
+        \
+        /* Process blocks of 4 */ \
+        if (remainder >= 4) { \
+            uint8_t v0 = this_x[offset]; \
+            uint8_t v1 = this_x[offset + 1]; \
+            uint8_t v2 = this_x[offset + 2]; \
+            uint8_t v3 = this_x[offset + 3]; \
+            \
+            const int16_t *restrict rt0 = this_table + v0 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt1 = this_table + v1 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt2 = this_table + v2 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt3 = this_table + v3 * TABLE_ENTRY_SIZE; \
+            \
+            int16_t *restrict rs0 = sum_i16 + offset * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs0, rt0, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs1 = sum_i16 + (offset + 1) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs1, rt1, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs2 = sum_i16 + (offset + 2) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs2, rt2, TABLE_ENTRY_SIZE); \
+            \
+            int16_t *restrict rs3 = sum_i16 + (offset + 3) * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs3, rt3, TABLE_ENTRY_SIZE); \
+            \
+            offset += 4; \
+            remainder -= 4; \
+        } \
+        \
+        /* Process remaining 1-3 elements */ \
+        for (int i = 0; i < remainder; i++) { \
+            uint8_t v = this_x[offset + i]; \
+            int16_t *restrict rs = sum_i16 + (offset + i) * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt = this_table + v * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs, rt, TABLE_ENTRY_SIZE); \
+        } \
+    } while(0)
+
+#if WEIGHT_UNROLL_BLOCK == 4
+#define ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16) \
+    ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16)
+#elif WEIGHT_UNROLL_BLOCK == 8
+#define ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16) \
+    ADD_TABLE_ENTRIES_BLOCK_8(nc, this_x, this_table, sum_i16)
+#elif WEIGHT_UNROLL_BLOCK == 16
+#define ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16) \
+    ADD_TABLE_ENTRIES_BLOCK_16(nc, this_x, this_table, sum_i16)
+#elif WEIGHT_UNROLL_BLOCK == 32
+#define ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16) \
+    ADD_TABLE_ENTRIES_BLOCK_32(nc, this_x, this_table, sum_i16)
+#else
+#define ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16) \
+    do { \
+        for (int c = 0; c < (nc); c++) { \
+            uint8_t v = this_x[c]; \
+            int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt = this_table + v * TABLE_ENTRY_SIZE; \
+            ADD_TABLE_ENTRIES(rs, rt, TABLE_ENTRY_SIZE); \
+        } \
+    } while(0)
+#endif
 
 #ifdef BITNET_AVX2
 #include <immintrin.h>
@@ -760,7 +1242,7 @@ void ggml_gemm_i2s_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t b
             for (int i = 0; i < group_size / 4; i++) {
                 gemm_make_table_i2s(this_table, local_y + (g * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 4 + i) * bs;
-                ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -770,7 +1252,7 @@ void ggml_gemm_i2s_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t b
             for (int i = 0; i < group_size_remain / 4; i++) {
                 gemm_make_table_i2s(this_table, local_y + (group_count * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 4 + i) * bs;
-                ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -785,7 +1267,7 @@ void ggml_gemm_i2s_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t b
             for (int i = 0; i < group_size / 4; i++) {
                 gemm_make_table_i2s(this_table, local_y + (g * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 4 + i) * bs;
-                ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -795,7 +1277,7 @@ void ggml_gemm_i2s_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t b
             for (int i = 0; i < group_size_remain / 4; i++) {
                 gemm_make_table_i2s(this_table, local_y + (group_count * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 4 + i) * bs;
-                ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -849,7 +1331,7 @@ void ggml_gemm_i1s_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t b
             for (int i = 0; i < group_size / 5; i++) {
                 gemm_make_table_i1_58s(this_table, local_y + (g * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 5 + i) * bs;
-                ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -859,7 +1341,7 @@ void ggml_gemm_i1s_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t b
             for (int i = 0; i < group_size_remain / 5; i++) {
                 gemm_make_table_i1_58s(this_table, local_y + (group_count * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 5 + i) * bs;
-                ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -874,7 +1356,7 @@ void ggml_gemm_i1s_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t b
             for (int i = 0; i < group_size / 5; i++) {
                 gemm_make_table_i1_58s(this_table, local_y + (g * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 5 + i) * bs;
-                ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -884,7 +1366,7 @@ void ggml_gemm_i1s_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t b
             for (int i = 0; i < group_size_remain / 5; i++) {
                 gemm_make_table_i1_58s(this_table, local_y + (group_count * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 5 + i) * bs;
-                ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -940,7 +1422,7 @@ void ggml_gemm_i1m_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t b
             for (int i = 0; i < group_size / 5; i++) {
                 gemm_make_table_i1_58s(this_table, local_y + (g * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 5 + i) * bs;
-                ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -950,12 +1432,12 @@ void ggml_gemm_i1m_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t b
         for (int i = 0; i < blck_num; i++) {
             gemm_make_table_i1_58s(this_table, local_y + (group_count * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
             const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 5 + i) * bs;
-            ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+            ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
         }
         for (int i = 0; i < blck_remain; i++) {
             gemm_make_table_i2s(this_table, local_y + ((group_count * group_size / 5 + blck_num) * 5 + i * 4) * TABLE_ENTRY_SIZE);
             const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 5 + blck_num + i) * bs;
-            ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+            ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
         }
         ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
         memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -969,7 +1451,7 @@ void ggml_gemm_i1m_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t b
             for (int i = 0; i < group_size / 5; i++) {
                 gemm_make_table_i1_58s(this_table, local_y + (g * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 5 + i) * bs;
-                ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -979,12 +1461,12 @@ void ggml_gemm_i1m_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t b
         for (int i = 0; i < blck_num; i++) {
             gemm_make_table_i1_58s(this_table, local_y + (group_count * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
             const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 5 + i) * bs;
-            ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+            ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
         }
         for (int i = 0; i < blck_remain; i++) {
             gemm_make_table_i2s(this_table, local_y + ((group_count * group_size / 5 + blck_num) * 5 + i * 4) * TABLE_ENTRY_SIZE);
             const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 5 + blck_num + i) * bs;
-            ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+            ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
         }
         ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
         memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1047,7 +1529,7 @@ void ggml_gemm_i2s_i8b_LUT(int ith, int nth, int n, float *restrict s, size_t bs
                 for (int v = 0; v < 81; v++) {
                     __builtin_prefetch(this_table + v * TABLE_ENTRY_SIZE, 0, 3); // read-only(0), temporal locality(3=high)
                 }
-                ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1062,7 +1544,7 @@ void ggml_gemm_i2s_i8b_LUT(int ith, int nth, int n, float *restrict s, size_t bs
                 for (int v = 0; v < 81; v++) {
                     __builtin_prefetch(this_table + v * TABLE_ENTRY_SIZE, 0, 3); // read-only(0), temporal locality(3=high)
                 }
-                ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1081,7 +1563,7 @@ void ggml_gemm_i2s_i8b_LUT(int ith, int nth, int n, float *restrict s, size_t bs
                 for (int v = 0; v < 81; v++) {
                     __builtin_prefetch(this_table + v * TABLE_ENTRY_SIZE, 0, 3); // read-only(0), temporal locality(3=high)
                 }
-                ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1096,7 +1578,7 @@ void ggml_gemm_i2s_i8b_LUT(int ith, int nth, int n, float *restrict s, size_t bs
                 for (int v = 0; v < 81; v++) {
                     __builtin_prefetch(this_table + v * TABLE_ENTRY_SIZE, 0, 3); // read-only(0), temporal locality(3=high)
                 }
-                ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1161,7 +1643,7 @@ void ggml_gemm_i1s_i8b_LUT(int ith, int nth, int n, float *restrict s, size_t bs
                 for (int v = 0; v < 243; v++) {
                     __builtin_prefetch(this_table + v * TABLE_ENTRY_SIZE, 0, 3); // read-only(0), temporal locality(3=high)
                 }
-                ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1176,7 +1658,7 @@ void ggml_gemm_i1s_i8b_LUT(int ith, int nth, int n, float *restrict s, size_t bs
                 for (int v = 0; v < 243; v++) {
                     __builtin_prefetch(this_table + v * TABLE_ENTRY_SIZE, 0, 3); // read-only(0), temporal locality(3=high)
                 }
-                ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1196,7 +1678,7 @@ void ggml_gemm_i1s_i8b_LUT(int ith, int nth, int n, float *restrict s, size_t bs
                 for (int v = 0; v < 243; v++) {
                     __builtin_prefetch(this_table + v * TABLE_ENTRY_SIZE, 0, 3); // read-only(0), temporal locality(3=high)
                 }
-                ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1212,7 +1694,7 @@ void ggml_gemm_i1s_i8b_LUT(int ith, int nth, int n, float *restrict s, size_t bs
                 for (int v = 0; v < 243; v++) {
                     __builtin_prefetch(this_table + v * TABLE_ENTRY_SIZE, 0, 3); // read-only(0), temporal locality(3=high)
                 }
-                ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1279,7 +1761,7 @@ void ggml_gemm_i1m_i8b_LUT(int ith, int nth, int n, float *restrict s, size_t bs
                 for (int v = 0; v < 243; v++) {
                     __builtin_prefetch(this_table + v * TABLE_ENTRY_SIZE, 0, 3);  // read-only(0), temporal locality(3=high)
                 }
-                ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1294,7 +1776,7 @@ void ggml_gemm_i1m_i8b_LUT(int ith, int nth, int n, float *restrict s, size_t bs
             for (int v = 0; v < 243; v++) {
                 __builtin_prefetch(this_table + v * TABLE_ENTRY_SIZE, 0, 3);  // read-only(0), temporal locality(3=high)
             }
-            ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+            ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
         }
         for (int i = 0; i < blck_remain; i++) {
             const int16_t *restrict this_table = local_table + (blck_num * 243 + i * 81) * TABLE_ENTRY_SIZE;
@@ -1302,7 +1784,7 @@ void ggml_gemm_i1m_i8b_LUT(int ith, int nth, int n, float *restrict s, size_t bs
             for (int v = 0; v < 243; v++) {
                 __builtin_prefetch(this_table + v * TABLE_ENTRY_SIZE, 0, 3);  // read-only(0), temporal locality(3=high)
             }
-            ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+            ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
         }
         ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
         memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1320,7 +1802,7 @@ void ggml_gemm_i1m_i8b_LUT(int ith, int nth, int n, float *restrict s, size_t bs
                 for (int v = 0; v < 243; v++) {
                     __builtin_prefetch(this_table + v * TABLE_ENTRY_SIZE, 0, 3);  // read-only(0), temporal locality(3=high)
                 }
-                ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1335,7 +1817,7 @@ void ggml_gemm_i1m_i8b_LUT(int ith, int nth, int n, float *restrict s, size_t bs
             for (int v = 0; v < 243; v++) {
                 __builtin_prefetch(this_table + v * TABLE_ENTRY_SIZE, 0, 3);  // read-only(0), temporal locality(3=high)
             }
-            ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+            ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
         }
         for (int i = 0; i < blck_remain; i++) {
             const int16_t *restrict this_table = local_table + (blck_num * 243 + i * 81) * TABLE_ENTRY_SIZE;
@@ -1343,7 +1825,7 @@ void ggml_gemm_i1m_i8b_LUT(int ith, int nth, int n, float *restrict s, size_t bs
             for (int v = 0; v < 243; v++) {
                 __builtin_prefetch(this_table + v * TABLE_ENTRY_SIZE, 0, 3);  // read-only(0), temporal locality(3=high)
             }
-            ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16);
+            ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
         }
         ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
         memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
