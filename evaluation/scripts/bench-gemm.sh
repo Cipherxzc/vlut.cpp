@@ -10,7 +10,7 @@ ENTRY_SIZE=$5
 # Check if required arguments are provided
 if [ -z "$DEVICE_NAME" ] || [ -z "$THREADS" ] || [ -z "$NS" ]; then
     echo "Usage: $0 <device_name> <threads> <ns> [lut2(on/off)] [entry_size]"
-    echo "Example: $0 mydevice 4 \"128,512,1024\" on 32"
+    echo "Example: $0 mydevice 4 \"128,256\" on 32"
     exit 1
 fi
 

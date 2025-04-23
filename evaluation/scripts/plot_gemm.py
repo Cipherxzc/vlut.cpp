@@ -29,7 +29,8 @@ TYPE_ORDER_MAP = {
 ARCH_MAP = {
     'aws_arm': 'ARM Neoverse-V1 (SVE)',
     'aws2': 'Intel Xeon Platinum 8375C (AVX512)',
-    'pc1': 'Intel Core i9-12900k (AVX2)',
+    'pc_intel': 'Intel Core i7-13700k (AVX2)',
+    # 'pc_intel': 'Intel Core i9-12900k (AVX2)',
     'laptop1': 'Intel Core Ultra 7 258V (AVX2)',
 }
 
@@ -50,10 +51,11 @@ combinations_to_plot = [
     (14336, 4096, 256),
 ]
 
-arch = 'aws_arm'
+# arch = 'aws_arm'
+arch = 'pc_intel'
 
-def load_adapt_tmac(arch: str):
-    df_tmac = load_tmac.load_and_process_results(arch)
+def load_adapt_tmac(tmac_arch: str):
+    df_tmac = load_tmac.load_and_process_results(tmac_arch)
     # calculate rps with latency_s
     df_tmac['runs_per_sec'] = 1 / df_tmac['latency_s']
     # add a type_a column
@@ -311,14 +313,20 @@ def plot_performance_comparison(df, arch_val, threads_val, mkn_to_plot=None, lut
 
 def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    results_dir = os.path.join(os.path.dirname(script_dir), 'results_gemm_aws_arm')
+    results_dir = os.path.join(os.path.dirname(script_dir), f'results_gemm_{arch}')
     
     # Load all results
     df = load_all_results(results_dir)
 
     # append tmac results
-    df_tmac = load_adapt_tmac(arch)
-    df = pd.concat([df, df_tmac], ignore_index=True)
+    try:
+        df_tmac = load_adapt_tmac(arch)
+        df = pd.concat([df, df_tmac], ignore_index=True)
+    except Exception as e:
+        print(f"Error loading T-MAC results: {e}")
+        print(f"Skip T-MAC results.")
+    # df_tmac = load_adapt_tmac(arch)
+    # df = pd.concat([df, df_tmac], ignore_index=True)
     
     if df.empty:
         print("No results found in the specified directory.")
