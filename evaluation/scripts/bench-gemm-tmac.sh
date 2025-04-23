@@ -94,9 +94,9 @@ else
     exit 1
 fi
 
-cp "$TMAC_PATH/deploy/tuned/llama-3-8b-2bit_INT_N/qgemm_lut/tune.log" "${RESULTS_DIR}/llama3_8b_qgemm_lut.csv"
-cp "$TMAC_PATH/deploy/tuned/llama-3-8b-2bit_INT_N/preprocessor/tune.log" "${RESULTS_DIR}/llama3_8b_preprocessor.csv"
-cp "$TMAC_PATH/deploy/tuned/hf-bitnet-3b_INT_N/qgemm_lut/tune.log" "${RESULTS_DIR}/bitnet_3b_qgemm_lut.csv"
-cp "$TMAC_PATH/deploy/tuned/hf-bitnet-3b_INT_N/preprocessor/tune.log" "${RESULTS_DIR}/bitnet_3b_preprocessor.csv"
+cp "$TMAC_PATH/deploy/tuned/llama-3-8b-2bit_INT_N/qgemm_lut/tune.log" "${RESULTS_DIR}/llama3_8b_qgemm_lut.jsonl"
+cp "$TMAC_PATH/deploy/tuned/llama-3-8b-2bit_INT_N/preprocessor/tune.log" "${RESULTS_DIR}/llama3_8b_preprocessor.jsonl"
+cp "$TMAC_PATH/deploy/tuned/hf-bitnet-3b_INT_N/qgemm_lut/tune.log" "${RESULTS_DIR}/bitnet_3b_qgemm_lut.jsonl"
+cp "$TMAC_PATH/deploy/tuned/hf-bitnet-3b_INT_N/preprocessor/tune.log" "${RESULTS_DIR}/bitnet_3b_preprocessor.jsonl"
 
 echo "Done! Results have been saved to ${RESULTS_DIR}"
