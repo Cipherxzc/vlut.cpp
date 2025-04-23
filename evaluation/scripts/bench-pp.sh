@@ -150,7 +150,8 @@ if [ ! -f "$MODEL_PATH" ]; then
 fi
 
 # Create results directory if it doesn't exist
-RESULTS_DIR="evaluation/results"
+RESULTS_DIR="${RESULTS_DIR:-"evaluation/results"}"
+
 mkdir -p "$RESULTS_DIR"
 
 # Get model name from path
