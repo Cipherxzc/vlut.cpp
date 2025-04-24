@@ -17,7 +17,7 @@ echo "lut2,entry_size,threads,score" > "$RESULTS_DIR/scores.csv"
 LUT2_OPTIONS=("on" "off")
 ENTRY_SIZES=(16 32 64)
 THREAD_COUNTS=(1 4 8)
-MODELS=("bitnet_3b" "llama3_8b" "falcon_1b" "trilm_1.5b")
+MODELS=("bitnet_3b" "llama3_8b" "falcon_1b")
 
 # Loop through all configurations
 for lut2 in "${LUT2_OPTIONS[@]}"; do

@@ -52,7 +52,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Models to benchmark
-MODELS=("bitnet_3b" "llama3_8b" "falcon_1b" "trilm_1.5b")
+MODELS=("bitnet_3b" "llama3_8b")
 
 # Run benchmark for each model
 for model in "${MODELS[@]}"; do
