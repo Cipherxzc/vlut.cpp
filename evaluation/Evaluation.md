@@ -44,6 +44,7 @@
 - `bench-gemm-tmac.sh`: T-MAC GeMM (T-MAC is tuned for n=256, will overide previous kernels).
     - Will copy `tmac_model_utils.py` and `tmac_platform.py` to target directory.
         - Increased tuning timeout in `platform.py` to avoid tuning failure.
+    - **Note:** Make sure to activate T-MAC's `virtualenv` and `source build/t-mac-envs.sh` first, since we need compilation.
 
 #### Usage
 
@@ -109,6 +110,10 @@ REPEAT_COUNT="${REPEAT_COUNT:-3}"
 
 ## E2E Batched Decoding
 
-TODO, use `llama-batched-bench`, similar to prefill.
+Use `llama-batched-bench`, similar to prefill.
 
-TODO: check T-MAC and bitnet.cpp batch build.
+```
+DEVICE_NAME=custom_device MODEL_DIR=~/models/Falcon3-1B-Instruct-1.58bit ./evaluation/scripts/bench-e2e-batch.sh
+```
+
+**Note:** T-MAC doesn't build `llama-batched-bench` by default. Manually build in `3rdparty/llama.cpp` after each compilation.

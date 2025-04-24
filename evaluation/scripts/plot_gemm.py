@@ -28,10 +28,11 @@ TYPE_ORDER_MAP = {
 
 ARCH_MAP = {
     'aws_arm': 'ARM Neoverse-V1 (SVE)',
-    'aws2': 'Intel Xeon Platinum 8375C (AVX512)',
+    # 'aws2': 'Intel Xeon Platinum 8375C (AVX512)',
     'pc_intel': 'Intel Core i7-13700k (AVX2)',
-    # 'pc_intel': 'Intel Core i9-12900k (AVX2)',
-    'laptop1': 'Intel Core Ultra 7 258V (AVX2)',
+    'laptop_amd': 'AMD Ryzen 7 5800H (AVX2)',
+    # 'laptop1': 'Intel Core Ultra 7 258V (AVX2)',
+    'smartphone': 'Qualcomm Snapdragon 8 Elite (NEON)'
 }
 
 MODEL_MAP = {
