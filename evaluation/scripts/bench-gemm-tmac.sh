@@ -24,11 +24,11 @@ cleanup() {
         echo "Restored original model_utils.py from backup"
     fi
     
-    # Restore platforms.py if backup exists
-    if [ -f "$TMAC_PATH/python/t_mac/platforms.py.bak" ]; then
-        rm -f "$TMAC_PATH/python/t_mac/platforms.py"
-        mv "$TMAC_PATH/python/t_mac/platforms.py.bak" "$TMAC_PATH/python/t_mac/platforms.py"
-        echo "Restored original platforms.py from backup"
+    # Restore platform.py if backup exists
+    if [ -f "$TMAC_PATH/python/t_mac/platform.py.bak" ]; then
+        rm -f "$TMAC_PATH/python/t_mac/platform.py"
+        mv "$TMAC_PATH/python/t_mac/platform.py.bak" "$TMAC_PATH/python/t_mac/platform.py"
+        echo "Restored original platform.py from backup"
     fi
     
     echo "Cleanup completed"
@@ -57,7 +57,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Update results directory with current device name
-RESULTS_DIR="$PROJECT_ROOT/evaluation/results_tmac_${DEVICE_NAME}"
+RESULTS_DIR="$PROJECT_ROOT/evaluation/results_gemm_tmac_${DEVICE_NAME}"
 
 echo "Using device: $DEVICE_NAME"
 echo "Using T-MAC path: $TMAC_PATH"
@@ -85,18 +85,18 @@ fi
 cp tmac_model_utils.py "$TMAC_PATH/python/t_mac/model_utils.py"
 echo "Copied tmac_model_utils.py to $TMAC_PATH/python/t_mac/model_utils.py"
 
-# Backup original platforms.py
-if [ -f "$TMAC_PATH/python/t_mac/platforms.py" ]; then
-    cp "$TMAC_PATH/python/t_mac/platforms.py" "$TMAC_PATH/python/t_mac/platforms.py.bak"
-    echo "Backed up original platforms.py to platforms.py.bak"
+# Backup original platform.py
+if [ -f "$TMAC_PATH/python/t_mac/platform.py" ]; then
+    cp "$TMAC_PATH/python/t_mac/platform.py" "$TMAC_PATH/python/t_mac/platform.py.bak"
+    echo "Backed up original platform.py to platform.py.bak"
 else
-    echo "Error: platforms.py not found in T-MAC directory"
+    echo "Error: platform.py not found in T-MAC directory"
     exit 1
 fi
 
 # Copy py to T-MAC/python/t_mac directory
-cp tmac_platforms.py "$TMAC_PATH/python/t_mac/platforms.py"
-echo "Copied tmac_platforms.py to $TMAC_PATH/python/t_mac/platforms.py"
+cp tmac_platform.py "$TMAC_PATH/python/t_mac/platform.py"
+echo "Copied tmac_platform.py to $TMAC_PATH/python/t_mac/platform.py"
 
 # Change to T-MAC directory
 cd "$TMAC_PATH" || exit 1
