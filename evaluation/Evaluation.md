@@ -40,20 +40,28 @@
 
 #### Scripts
 
-- `bench-gemm.sh`: Ours & llama.cpp GeMM (with `test-bitnet-gemm.cpp`).
+- `bench-gemm.sh`: Ours & llama.cpp GeMM (with `test-bitnet-gemm`).
 - `bench-gemm-tmac.sh`: T-MAC GeMM (T-MAC is tuned for n=256, will overide previous kernels).
-    - Will copy `tmac_model_utils.py` to target directory.
+    - Will copy `tmac_model_utils.py` and `tmac_platform.py` to target directory.
+        - Increased tuning timeout in `platform.py` to avoid tuning failure.
 
 #### Usage
 
 ```bash
 ./evaluation/scripts/bench-gemm.sh -h
 Usage: ./evaluation/scripts/bench-gemm.sh <device_name> <threads> <ns> [lut2(on/off)] [entry_size]
-Example: ./evaluation/scripts/bench-gemm.sh mydevice 4 "128,512,1024" on 32
+Example: ./evaluation/scripts/bench-gemm.sh mydevice 4 256 on 32
 
 ./evaluation/scripts/bench-gemm-tmac.sh -h
 Unknown argument: -h
 Usage: ./evaluation/scripts/bench-gemm-tmac.sh [--device DEVICE_NAME] [--tmac_path TMAC_PATH]
+```
+
+#### Example
+
+```bash
+./evaluation/scripts/bench-gemm.sh pc_intel 1 256 on 32
+./evaluation/scripts/bench-gemm-tmac.sh pc_intel
 ```
 
 #### Note
@@ -69,9 +77,9 @@ Usage: ./evaluation/scripts/bench-gemm-tmac.sh [--device DEVICE_NAME] [--tmac_pa
     - Denpends on `bench-pp.sh`: use `llama-bench` to evaluate one framework.
     - **Note:** Ensure T-MAC's model uses the folder name as model name (by default). For example: `~/models/bitnet_b1_58-3B/bitnet_b1_58-3B.INT_N.gguf`, so the script can correctly find T-MAC's model.
     - **Note:** Ensure all other models are named `ggml-model-{quant}.gguf` (by default), so the script can correctly find them.
-    - **Note:** Re-compile T-MAC and re-convert T-MAC models for n=1 before evaluation (we compiled for n=256 in GeMM benchmark, and it doesn't directly work for E2E evaluation).
+    - **Note:** Re-compile T-MAC and re-convert T-MAC models for n=1 before **each evaluation** (not just for model changes: we compiled for n=256 in GeMM benchmark, and it doesn't directly work for E2E evaluation).
     - **Note:** Re-compile bitnet.cpp **each time before evaluating a new model** since the kernels are always overided by last model's compilation.
-
+    - **Note:** the script might `rm` the results directory in the beginning! Make backups.
 
 #### Example
 
@@ -102,3 +110,5 @@ REPEAT_COUNT="${REPEAT_COUNT:-3}"
 ## E2E Batched Decoding
 
 TODO, use `llama-batched-bench`, similar to prefill.
+
+TODO: check T-MAC and bitnet.cpp batch build.

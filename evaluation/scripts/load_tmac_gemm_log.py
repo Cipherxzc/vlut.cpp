@@ -5,9 +5,9 @@ import re
 import numpy as np
 from typing import Dict, List, Tuple
 
-def load_and_process_results(device_name: str) -> pd.DataFrame:
+def load_and_process_qgemm_lut(device_name: str) -> pd.DataFrame:
     """
-    Load and process the JSONL result files for a specific device.
+    Load and process the JSONL result files for qgemm_lut operations on a specific device.
     
     Args:
         device_name: Name of the device for which to load results
@@ -16,7 +16,7 @@ def load_and_process_results(device_name: str) -> pd.DataFrame:
         DataFrame with optimal configurations for each (device, model, threads, m, k, n) combination
     """
     # Define the base directory where the files are stored
-    base_dir = f"evaluation/results_tmac_{device_name}"
+    base_dir = f"evaluation/results_gemm_tmac_{device_name}"
     
     # Dictionary to store DataFrames for each file
     dfs = {}
@@ -117,6 +117,117 @@ def load_and_process_results(device_name: str) -> pd.DataFrame:
         result_df = result_df.drop('row_idx', axis=1)
     
     return result_df
+
+def load_and_process_preprocessor(device_name: str) -> pd.DataFrame:
+    """
+    Load and process the JSONL result files for preprocessor operations on a specific device.
+    
+    Args:
+        device_name: Name of the device for which to load results
+        
+    Returns:
+        DataFrame with preprocessor latencies for each (device, model, m, k, n) combination
+    """
+    # Define the base directory where the files are stored
+    base_dir = f"evaluation/results_gemm_tmac_{device_name}"
+    
+    # List to store preprocessor data
+    preprocessor_data = []
+    
+    # Regular expression to extract m, k, n values from the function name
+    func_pattern = re.compile(r'preprocessor_t1_int8_m(\d+)_k(\d+)_n(\d+)')
+    
+    # Iterate through the files in the directory
+    for filename in os.listdir(base_dir):
+        if not filename.endswith('.jsonl') or 'preprocessor' not in filename:
+            continue
+            
+        # Extract model from the filename
+        model = filename.replace('_preprocessor.jsonl', '')
+        
+        # Read and process each line in the file
+        with open(os.path.join(base_dir, filename), 'r') as f:
+            for idx, line in enumerate(f):
+                try:
+                    # Parse the JSON
+                    record = json.loads(line)
+                    
+                    # Extract the function name
+                    func_name = record["input"][1]
+                    
+                    # Extract m, k, n values using regex
+                    match = func_pattern.match(func_name)
+                    if match:
+                        m, k, n = map(int, match.groups())
+                    else:
+                        continue
+                    
+                    # Extract latency (average of results[0] list)
+                    if isinstance(record["result"][0], list):
+                        latency = np.mean(record["result"][0])
+                    else:
+                        # For some records, result[0] might be a placeholder
+                        latency = None
+                    
+                    # Add the data to our list
+                    preprocessor_data.append({
+                        'device': device_name,
+                        'model': model,
+                        'm': m / 2,  # T-MAC's M is doubled for 2-bit quant
+                        'k': k,
+                        'n': n,
+                        'preprocessor_latency_s': latency
+                    })
+                except (json.JSONDecodeError, KeyError, IndexError) as e:
+                    print(f"Error processing line in {filename}: {e}")
+                    continue
+    
+    # Convert to DataFrame
+    preprocessor_df = pd.DataFrame(preprocessor_data)
+    
+    # Filter out rows with invalid latency
+    preprocessor_df = preprocessor_df[preprocessor_df['preprocessor_latency_s'].notna()]
+    
+    # Find the minimum latency for each (device, model, m, k, n) combination
+    grouped = preprocessor_df.groupby(['device', 'model', 'm', 'k', 'n'])
+    
+    # Get the minimum latency for each group
+    min_latency_df = grouped['preprocessor_latency_s'].min().reset_index()
+    
+    return min_latency_df
+
+def load_and_process_results(device_name: str) -> pd.DataFrame:
+    """
+    Load both qgemm_lut and preprocessor results and merge them to get combined latencies.
+    
+    Args:
+        device_name: Name of the device for which to load results
+        
+    Returns:
+        DataFrame with combined latencies for each configuration
+    """
+    # Load and process qgemm_lut results
+    qgemm_lut_df = load_and_process_qgemm_lut(device_name)
+    
+    # Load and process preprocessor results
+    preprocessor_df = load_and_process_preprocessor(device_name)
+    
+    # Merge the dataframes on device, model, m, k, n
+    # Note: preprocessor is always thread 1, so we're broadcasting to all thread configurations
+    merged_df = pd.merge(
+        qgemm_lut_df,
+        preprocessor_df,
+        on=['device', 'model', 'm', 'k', 'n'],
+        how='left'
+    )
+    
+    # Calculate total latency (qgemm_lut + preprocessor)
+    merged_df['total_latency_s'] = merged_df['latency_s'] + merged_df['preprocessor_latency_s']
+    
+    # Rename the qgemm_lut latency column for clarity
+    merged_df = merged_df.rename(columns={'latency_s': 'qgemm_lut_latency_s'})
+    
+    return merged_df
 
 if __name__ == "__main__":
     # Example usage

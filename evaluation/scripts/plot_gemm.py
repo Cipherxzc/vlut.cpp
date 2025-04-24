@@ -51,17 +51,17 @@ combinations_to_plot = [
     (14336, 4096, 256),
 ]
 
-# arch = 'aws_arm'
-arch = 'pc_intel'
+arch = 'aws_arm'
+# arch = 'pc_intel'
 
 def load_adapt_tmac(tmac_arch: str):
     df_tmac = load_tmac.load_and_process_results(tmac_arch)
     # calculate rps with latency_s
-    df_tmac['runs_per_sec'] = 1 / df_tmac['latency_s']
+    df_tmac['runs_per_sec'] = 1 / df_tmac['total_latency_s']
     # add a type_a column
     df_tmac['type_a'] = TYPE_MAP['tmac']
     # remove cols
-    df_tmac = df_tmac.drop(columns=['device', 'latency_s'])
+    # df_tmac = df_tmac.drop(columns=['device', 'latency_s'])
 
     return df_tmac
 

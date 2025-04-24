@@ -21,7 +21,7 @@ ENTRY_SIZE=${ENTRY_SIZE:-32}
 # Get the directory where the script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$SCRIPT_DIR/../.."
-RESULTS_DIR="$PROJECT_ROOT/evaluation/results_${DEVICE_NAME}"
+RESULTS_DIR="$PROJECT_ROOT/evaluation/results_gemm_${DEVICE_NAME}"
 
 # Create results directory if it doesn't exist
 mkdir -p "$RESULTS_DIR"
