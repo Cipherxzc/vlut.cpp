@@ -15,6 +15,12 @@ set(WEIGHT_UNROLL_BLOCK 16 CACHE STRING "Weight unroll block size")
 
 # Auto-detect SVE support
 include(CheckCSourceCompiles)
+
+# Save original flags to restore later
+set(CMAKE_REQUIRED_FLAGS_ORIG ${CMAKE_REQUIRED_FLAGS})
+
+# Temporarily set SVE architecture flags ONLY for detection
+set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS_ORIG} -march=armv8.2-a+sve")
 check_c_source_compiles("
 #include <arm_sve.h>
 int main() {
@@ -23,8 +29,11 @@ int main() {
 }
 " HAVE_SVE)
 
+# Immediately restore original flags to avoid affecting other code
+set(CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS_ORIG})
+
 if(HAVE_SVE)
-    message(STATUS "SVE support detected, automatically enabling BITNET_SVE")
+    message(STATUS "SVE support detected, enabling BITNET_SVE")
     set(BITNET_SVE ON)
 endif()
 

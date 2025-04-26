@@ -7,7 +7,8 @@ import glob
 from matplotlib.ticker import MaxNLocator
 from plot_utils import *
 
-arch = "aws_arm"
+# arch = "aws_arm"
+arch = "pc_intel"
 
 def read_csv_files(directory):
     """Read all CSV files in directory and subdirectories into a single DataFrame."""
