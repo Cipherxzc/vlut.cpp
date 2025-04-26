@@ -40,24 +40,22 @@
             _mm512_storeu_si512((__m512i*)((rs) + i), rs_vec); \
         } \
     } while(0)
-#elif defined(BITNET_SVE) // SVE
+#elif defined(BITNET_SVE) // SVE auto-vectorization is not well-supported by compilers, so we explicitly do it
     #include <arm_sve.h>
     #define ADD_TABLE_ENTRIES(rs, rt, size) \
     do { \
-        for (int i = 0; i < (size); i += svcntw()) { \
-            /* Create a predicate for the current chunk */ \
-            svbool_t pg = svwhilelt_b16(i, (size)); \
-            \
-            /* Load vectors */ \
-            svint16_t acc = svld1_s16(pg, (rs) + i); \
-            svint16_t tab = svld1_s16(pg, (rt) + i); \
-            \
-            /* Add vectors */ \
-            acc = svadd_s16_z(pg, acc, tab); \
-            \
-            /* Store result */ \
-            svst1_s16(pg, (rs) + i, acc); \
-        } \
+        /* Create a predicate for the current chunk */ \
+        svbool_t pg = svwhilelt_b16(0, (size)); \
+        \
+        /* Load vectors */ \
+        svint16_t acc = svld1_s16(pg, (rs)); \
+        svint16_t tab = svld1_s16(pg, (rt)); \
+        \
+        /* Add vectors */ \
+        acc = svadd_s16_z(pg, acc, tab); \
+        \
+        /* Store result */ \
+        svst1_s16(pg, (rs), acc); \
     } while(0)
 #elif defined(BITNET_ACCELERATE) // Accelerate framework of Apple
     #include <Accelerate/Accelerate.h>
