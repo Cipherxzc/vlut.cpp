@@ -6,42 +6,7 @@ import numpy as np
 import glob
 from matplotlib.ticker import MaxNLocator
 import load_tmac_gemm_log as load_tmac
-
-TYPE_MAP = {
-    'i2_s': 'ours 2-bit',
-    'i1_58_m': 'ours 1.58-bit',
-    'tmac': 'T-MAC 2-bit',
-    'q4_0': 'llama.cpp 4-bit',
-    'tq1_0': 'llama.cpp 1.58-bit',
-    'tq2_0': 'llama.cpp 2-bit',
-}
-
-# Create a mapping dictionary where keys are characters and values are their positions
-TYPE_ORDER_MAP = {
-    TYPE_MAP['i2_s']: 0,
-    TYPE_MAP['i1_58_m']: 1,
-    TYPE_MAP['tmac']: 2,
-    TYPE_MAP['q4_0']: 3,
-    TYPE_MAP['tq1_0']: 4,
-    TYPE_MAP['tq2_0']: 5,
-}
-
-ARCH_MAP = {
-    'aws_arm': 'ARM Neoverse-V1 (SVE)',
-    # 'aws2': 'Intel Xeon Platinum 8375C (AVX512)',
-    'pc_intel': 'Intel Core i7-13700k (AVX2)',
-    'laptop_amd': 'AMD Ryzen 7 5800H (AVX2)',
-    # 'laptop1': 'Intel Core Ultra 7 258V (AVX2)',
-    'smartphone': 'Qualcomm Snapdragon 8 Elite (NEON)'
-}
-
-MODEL_MAP = {
-    'bitnet_3b': 'BitNet 3B',
-    'falcon_1b': 'Falcon 1B',
-    'trilm_1.5b': 'TriLM 1.5B',
-    'llama3_8b': 'LLaMA 3 8B',
-    # Add more models as needed
-}
+from plot_utils import *
 
 combinations_to_plot = [
     (3200, 3200, 256),
@@ -53,6 +18,7 @@ combinations_to_plot = [
 ]
 
 arch = 'aws_arm'
+arch = 'smartphone'
 # arch = 'pc_intel'
 
 def load_adapt_tmac(tmac_arch: str):
@@ -60,7 +26,7 @@ def load_adapt_tmac(tmac_arch: str):
     # calculate rps with latency_s
     df_tmac['runs_per_sec'] = 1 / df_tmac['total_latency_s']
     # add a type_a column
-    df_tmac['type_a'] = TYPE_MAP['tmac']
+    df_tmac['type_a'] = GEMM_TYPE_MAP['tmac']
     # remove cols
     # df_tmac = df_tmac.drop(columns=['device', 'latency_s'])
 
@@ -92,7 +58,7 @@ def parse_gemm_results(filepath):
         df['ms_per_run'] = df['us_per_run'] / 1000  # Convert to milliseconds
         
         # Map type_a to friendly names if available
-        df['type_a'] = df['type_a'].apply(lambda x: TYPE_MAP.get(x, x))
+        df['type_a'] = df['type_a'].apply(lambda x: GEMM_TYPE_MAP.get(x, x))
         
         return df
         
@@ -141,7 +107,7 @@ def extract_file_metadata(filename):
     entry_size = int(size_pattern.group(1))
     
     return {
-        'model': MODEL_MAP.get(model, model),
+        'model': GEMM_MODEL_MAP.get(model, model),
         'threads': threads,
         'n_values': n_values,
         'lut2_on': lut2_on,
