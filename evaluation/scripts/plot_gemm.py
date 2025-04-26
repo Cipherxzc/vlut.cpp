@@ -17,9 +17,9 @@ combinations_to_plot = [
     (14336, 4096, 256),
 ]
 
-# arch = 'aws_arm'
+arch = 'aws_arm'
 # arch = 'smartphone'
-arch = 'pc_intel'
+# arch = 'pc_intel'
 
 def load_adapt_tmac(tmac_arch: str):
     df_tmac = load_tmac.load_and_process_results(tmac_arch)

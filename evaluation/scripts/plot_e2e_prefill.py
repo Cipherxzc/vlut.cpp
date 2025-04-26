@@ -7,8 +7,8 @@ import glob
 from matplotlib.ticker import MaxNLocator
 from plot_utils import *
 
-# arch = "aws_arm"
-arch = "pc_intel"
+arch = "aws_arm"
+# arch = "pc_intel"
 
 def read_csv_files(directory):
     """Read all CSV files in directory and subdirectories into a single DataFrame."""
@@ -33,6 +33,9 @@ def read_csv_files(directory):
                 model_quant = basename.split('_p')[0]
                 if model_quant.startswith('ggml-model'):
                     model_quant = model_quant.split('-')[-1] # others
+                    if model_quant == "TQ2_0" or model_quant == "TQ1_0":
+                        if E2E_MODEL_MAP[model_name] == "BitNet 3B":
+                            model_quant = "Q4_0"
                 else:
                     model_quant = model_quant.split('.')[-1] # T-MAC
             else:
@@ -143,14 +146,12 @@ def plot_latency_curves(df, t_values=None, model_names=None):
                 if not quant_data.empty:
                     # Sort by p to ensure correct line
                     quant_data = quant_data.sort_values('p')
-                    ax.errorbar(
+                    ax.plot(
                         quant_data['p'], 
                         quant_data['avg_ts'],
-                        yerr=quant_data['stdev_ts'],
-                        fmt='o-', 
+                        'o-',
                         linewidth=2,
                         color=quant_color_map[quant],
-                        capsize=4,
                         label=quant
                     )
             
@@ -177,12 +178,12 @@ def plot_latency_curves(df, t_values=None, model_names=None):
             ax.set_xticklabels([str(val) for val in xticks])
 
     # Add a single legend for the entire figure at the bottom
-    fig.subplots_adjust(bottom=0.15, right=0.9, top=0.92, left=0.1, wspace=0.3, hspace=0.3)
+    fig.subplots_adjust(bottom=0.18, right=0.9, top=0.92, left=0.1, wspace=0.3, hspace=0.3)
     fig.legend(
         handles=legend_handles, 
         labels=legend_labels, 
         loc='lower center', 
-        ncol=min(len(legend_labels), 5),  # Adjust columns based on number of items
+        ncol=min((len(legend_labels) + 1) / 2, 3),  # Adjust columns based on number of items
         fontsize=18, 
         frameon=True, 
         bbox_to_anchor=(0.5, 0.02),

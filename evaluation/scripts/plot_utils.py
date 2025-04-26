@@ -31,6 +31,7 @@ E2E_TYPE_MAP = {
     'I2_S': 'Ours 2-bit',
     'I1_M': 'Ours 1.58-bit',
     'INT_N': 'T-MAC 2-bit',
+    'Q4_0': 'llama.cpp 4-bit',
     'TQ2_0': 'llama.cpp 2-bit',
     'TQ1_0': 'llama.cpp 1.58-bit', 
     'i2_s': 'bitnet.cpp 2-bit',

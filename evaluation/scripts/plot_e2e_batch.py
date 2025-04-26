@@ -7,8 +7,8 @@ import glob
 from matplotlib.ticker import MaxNLocator
 from plot_utils import *
 
-# arch = "aws_arm"
-arch = "pc_intel"
+arch = "aws_arm"
+# arch = "pc_intel"
 
 def read_batch_csv_files(directory):
     """Read all batch CSV files in directory and subdirectories into a single DataFrame."""
@@ -33,6 +33,9 @@ def read_batch_csv_files(directory):
                 model_quant = basename.split('_npp')[0]
                 if model_quant.startswith('ggml-model'):
                     model_quant = model_quant.split('-')[-1] # others
+                    if model_quant == "TQ2_0" or model_quant == "TQ1_0":
+                        if E2E_MODEL_MAP[model_name] == "BitNet 3B":
+                            model_quant = "Q4_0"
                 else:
                     model_quant = model_quant.split('.')[-1] # T-MAC
             else:
