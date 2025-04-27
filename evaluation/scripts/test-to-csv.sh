@@ -20,43 +20,59 @@ fi
 # Create CSV with header
 echo "name,m,n,k,uspr,rps" > "$output_file"
 
-# Use awk to process the file
+# Use awk to process the file - compatible with older awk versions
 awk '
 BEGIN {
     processed_configs = "";
 }
 
 # Match the MUL_MAT line
-/MUL_MAT\(type_a=([^,]+),.*,m=([0-9]+),n=([0-9]+),k=([0-9]+).*\):[ ]+[0-9]+ runs -[ ]+([0-9.]+) us\/run/ {
-    # Extract type_a, m, n, k, us/run
-    match($0, /type_a=([^,]+),/, type_match);
-    type_a = type_match[1];
+/MUL_MAT.*type_a=.*,m=[0-9]+,n=[0-9]+,k=[0-9]+.*\):[ ]+[0-9]+ runs -[ ]+[0-9.]+ us\/run/ {
+    # Extract type_a using simpler pattern matching
+    type_str = $0;
+    gsub(/.*type_a=/, "", type_str);
+    gsub(/,.*/, "", type_str);
+    type_a = type_str;
     
-    match($0, /m=([0-9]+),/, m_match);
-    m = m_match[1];
+    # Extract m
+    m_str = $0;
+    gsub(/.*m=/, "", m_str);
+    gsub(/,.*/, "", m_str);
+    m = m_str;
     
-    match($0, /n=([0-9]+),/, n_match);
-    n = n_match[1];
+    # Extract n
+    n_str = $0;
+    gsub(/.*n=/, "", n_str);
+    gsub(/,.*/, "", n_str);
+    n = n_str;
     
-    match($0, /k=([0-9]+),/, k_match);
-    k = k_match[1];
+    # Extract k
+    k_str = $0;
+    gsub(/.*k=/, "", k_str);
+    gsub(/[,)].*/, "", k_str);
+    k = k_str;
     
-    match($0, /([0-9.]+) us\/run/, us_match);
-    us_per_run = us_match[1];
-    
-    # Calculate rps (runs per second)
-    rps = 1000000 / us_per_run;
-    
-    # Create a unique identifier for this configuration
-    config = type_a "_" m "_" n "_" k;
-    
-    # Check if we already processed this configuration
-    if (index(processed_configs, "|" config "|") == 0) {
-        # Add to processed configs
-        processed_configs = processed_configs "|" config "|";
+    # Extract us/run - specifically looking for the pattern "runs - NUMBER us/run"
+    us_str = $0;
+    if (match(us_str, /[0-9]+ runs - [0-9.]+/)) {
+        us_str = substr(us_str, RSTART, RLENGTH);
+        gsub(/[0-9]+ runs - /, "", us_str);
+        us_per_run = us_str;
         
-        # Print to output
-        printf "%s,%d,%d,%d,%.2f,%f\n", type_a, m, n, k, us_per_run, rps;
+        # Calculate rps (runs per second)
+        rps = 1000000 / us_per_run;
+        
+        # Create a unique identifier for this configuration
+        config = type_a "_" m "_" n "_" k;
+        
+        # Check if we already processed this configuration
+        if (index(processed_configs, "|" config "|") == 0) {
+            # Add to processed configs
+            processed_configs = processed_configs "|" config "|";
+            
+            # Print to output
+            printf "%s,%d,%d,%d,%.2f,%f\n", type_a, m, n, k, us_per_run, rps;
+        }
     }
 }
 ' "$input_file" >> "$output_file"
