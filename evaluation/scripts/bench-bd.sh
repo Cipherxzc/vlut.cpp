@@ -74,7 +74,7 @@ PREFILL_LEN="32"
 TOKEN_GEN_LENS="16,32,64"
 PARALLEL_SEQS="32,64"
 THREADS="4"
-ADDITIONAL_ARGS=""
+ADDITIONAL_ARGS="-pps" # share prompt to reduce benchmark time
 CTX_SIZE=""
 
 # Parse command line arguments

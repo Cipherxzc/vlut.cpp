@@ -10,10 +10,10 @@ MODEL_DIR="${MODEL_DIR:-$HOME/models/bitnet_b1_58-3B}"
 # Extract model name from model dir to separate results folder
 MODEL_NAME=$(basename "$MODEL_DIR")
 RESULTS_DIR="${RESULTS_DIR:-"${WORKSPACE_DIR}/llama.cpp-bitnet/evaluation/results_e2e_batch_${DEVICE_NAME}/${MODEL_NAME}"}"
-PREFILL_LEN="${PREFILL_LEN:-32}"
-TOKEN_GEN_LENS="${TOKEN_GEN_LENS:-32,64}"
-PARALLEL_SEQS="${PARALLEL_SEQS:-32,64}"
-THREAD_COUNT="${THREAD_COUNT:-8}" # use 2 on snapdragon 8 elite
+PREFILL_LEN="${PREFILL_LEN:-16}"
+TOKEN_GEN_LENS="${TOKEN_GEN_LENS:-16}"
+PARALLEL_SEQS="${PARALLEL_SEQS:-64,128,256}"
+THREAD_COUNT="${THREAD_COUNT:-4}" # use 2 on snapdragon 8 elite
 
 # Benchmark the bitnet inference speed of different frameworks with `bench-bd.sh`
 echo "Starting batched decoding benchmarks with parameters:"
