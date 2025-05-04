@@ -1209,6 +1209,95 @@ void ggml_gemm_i2s_i8b_make_table_quant2(int ith, int nth, const float *restrict
     free(src);
 }
 
+// void ggml_gemm_i2s_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
+//                             const void *restrict vy, int nr, int nc) {
+//     UNUSED(ith);
+//     UNUSED(nth);
+
+//     // nr: src1->ne[1], nc: src0->ne[1]
+//     assert(n % 4 == 0);
+
+//     int16_t *restrict sum_i16 = (int16_t *)malloc(sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+//     int *restrict sum_i32 = (int *)malloc(sizeof(int) * nr * nc);
+//     int16_t *restrict this_table = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
+
+//     memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+//     memset(sum_i32, 0, sizeof(int) * nr * nc);
+//     memset(this_table + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
+
+//     static const int group_size = 512;
+
+//     const int group_count = n / group_size; // not including remains
+//     const int group_size_remain = n % group_size;
+//     const int entry_tile_count = nr / TABLE_ENTRY_SIZE; // not including remains
+//     const int entry_tile_remain = nr % TABLE_ENTRY_SIZE;
+
+//     // tiles
+//     for (int t = 0; t < entry_tile_count; t++) {
+//         const int8_t *restrict local_y = (const int8_t *)vy + t * n * TABLE_ENTRY_SIZE;
+//         // groups
+//         for (int g = 0; g < group_count; g++) {
+//             for (int i = 0; i < group_size / 4; i++) {
+//                 gemm_make_table_i2s(this_table, local_y + (g * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
+//                 const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 4 + i) * bs;
+//                 ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
+//             }
+//             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
+//             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+//         }
+//         // group remain
+//         if (group_size_remain > 0) {
+//             for (int i = 0; i < group_size_remain / 4; i++) {
+//                 gemm_make_table_i2s(this_table, local_y + (group_count * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
+//                 const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 4 + i) * bs;
+//                 ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
+//             }
+//             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
+//             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+//         }
+//     }
+
+//     // tile remain
+//     if (entry_tile_remain > 0) {
+//         const int8_t *restrict local_y = (const int8_t *)vy + entry_tile_count * n * TABLE_ENTRY_SIZE;
+//         // groups
+//         for (int g = 0; g < group_count; g++) {
+//             for (int i = 0; i < group_size / 4; i++) {
+//                 gemm_make_table_i2s(this_table, local_y + (g * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
+//                 const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 4 + i) * bs;
+//                 ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
+//             }
+//             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
+//             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+//         }
+//         // group remain
+//         if (group_size_remain > 0) {
+//             for (int i = 0; i < group_size_remain / 4; i++) {
+//                 gemm_make_table_i2s(this_table, local_y + (group_count * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
+//                 const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 4 + i) * bs;
+//                 ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
+//             }
+//             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
+//             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
+//         }
+//     }
+    
+//     const size_t y_size = ((nr % TABLE_ENTRY_SIZE) ? nr + TABLE_ENTRY_SIZE - (nr % TABLE_ENTRY_SIZE) : nr) * n;
+//     const float *sc = (const float *)((const int8_t *)vy + y_size);
+//     for (int r = 0; r < nr; r++) {
+//         const float scale = sc[r];
+//         float* restrict sr = s + r * bs;
+//         const int32_t *restrict ss2r = sum_i32 + r * nc;
+//         for (int c = 0; c < nc; c++) {
+//             sr[c] = ss2r[c] * scale;
+//         }
+//     }
+
+//     free(this_table);
+//     free(sum_i16);
+//     free(sum_i32);
+// }
+
 void ggml_gemm_i2s_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
                             const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
@@ -1219,17 +1308,19 @@ void ggml_gemm_i2s_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t b
 
     int16_t *restrict sum_i16 = (int16_t *)malloc(sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
     int *restrict sum_i32 = (int *)malloc(sizeof(int) * nr * nc);
-    int16_t *restrict this_table = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
+    int16_t *restrict this_table0 = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
+    int16_t *restrict this_table1 = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
 
     memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
     memset(sum_i32, 0, sizeof(int) * nr * nc);
-    memset(this_table + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
+    memset(this_table0 + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
+    memset(this_table1 + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
 
     static const int group_size = 512;
 
-    const int group_count = n / group_size; // not including remains
+    const int group_count = n / group_size;  // not including remains
     const int group_size_remain = n % group_size;
-    const int entry_tile_count = nr / TABLE_ENTRY_SIZE; // not including remains
+    const int entry_tile_count = nr / TABLE_ENTRY_SIZE;  // not including remains
     const int entry_tile_remain = nr % TABLE_ENTRY_SIZE;
 
     // tiles
@@ -1237,20 +1328,40 @@ void ggml_gemm_i2s_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t b
         const int8_t *restrict local_y = (const int8_t *)vy + t * n * TABLE_ENTRY_SIZE;
         // groups
         for (int g = 0; g < group_count; g++) {
-            for (int i = 0; i < group_size / 4; i++) {
-                gemm_make_table_i2s(this_table, local_y + (g * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
-                const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 4 + i) * bs;
-                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
+            for (int i = 0; i < group_size / 4 / 2; i++) {
+                gemm_make_table_i2s(this_table0, local_y + (g * group_size / 4 + i * 2) * 4 * TABLE_ENTRY_SIZE);
+                gemm_make_table_i2s(this_table1, local_y + (g * group_size / 4 + i * 2 + 1) * 4 * TABLE_ENTRY_SIZE);
+                const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 4 + i * 2) * bs;
+                for (int c = 0; c < nc; c++) {
+                    uint8_t v0 = this_x[c * 2];
+                    uint8_t v1 = this_x[c * 2 + 1];
+                    const int16_t *restrict rt0 = this_table0 + v0 * TABLE_ENTRY_SIZE;
+                    const int16_t *restrict rt1 = this_table1 + v1 * TABLE_ENTRY_SIZE;
+                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
+                    for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
+                        rs[r] += rt0[r] + rt1[r];
+                    }
+                }
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
         }
         // group remain
         if (group_size_remain > 0) {
-            for (int i = 0; i < group_size_remain / 4; i++) {
-                gemm_make_table_i2s(this_table, local_y + (group_count * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
-                const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 4 + i) * bs;
-                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
+            for (int i = 0; i < group_size_remain / 4 / 2; i++) {
+                gemm_make_table_i2s(this_table0, local_y + (group_count * group_size / 4 + i * 2) * 4 * TABLE_ENTRY_SIZE);
+                gemm_make_table_i2s(this_table1, local_y + (group_count * group_size / 4 + i * 2 + 1) * 4 * TABLE_ENTRY_SIZE);
+                const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 4 + i * 2) * bs;
+                for (int c = 0; c < nc; c++) {
+                    uint8_t v0 = this_x[c * 2];
+                    uint8_t v1 = this_x[c * 2 + 1];
+                    const int16_t *restrict rt0 = this_table0 + v0 * TABLE_ENTRY_SIZE;
+                    const int16_t *restrict rt1 = this_table1 + v1 * TABLE_ENTRY_SIZE;
+                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
+                    for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
+                        rs[r] += rt0[r] + rt1[r];
+                    }
+                }
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1262,38 +1373,59 @@ void ggml_gemm_i2s_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t b
         const int8_t *restrict local_y = (const int8_t *)vy + entry_tile_count * n * TABLE_ENTRY_SIZE;
         // groups
         for (int g = 0; g < group_count; g++) {
-            for (int i = 0; i < group_size / 4; i++) {
-                gemm_make_table_i2s(this_table, local_y + (g * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
-                const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 4 + i) * bs;
-                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
+            for (int i = 0; i < group_size / 4 / 2; i++) {
+                gemm_make_table_i2s(this_table0, local_y + (g * group_size / 4 + i * 2) * 4 * TABLE_ENTRY_SIZE);
+                gemm_make_table_i2s(this_table1, local_y + (g * group_size / 4 + i * 2 + 1) * 4 * TABLE_ENTRY_SIZE);
+                const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 4 + i * 2) * bs;
+                for (int c = 0; c < nc; c++) {
+                    uint8_t v0 = this_x[c * 2];
+                    uint8_t v1 = this_x[c * 2 + 1];
+                    const int16_t *restrict rt0 = this_table0 + v0 * TABLE_ENTRY_SIZE;
+                    const int16_t *restrict rt1 = this_table1 + v1 * TABLE_ENTRY_SIZE;
+                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
+                    for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
+                        rs[r] += rt0[r] + rt1[r];
+                    }
+                }
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
         }
         // group remain
         if (group_size_remain > 0) {
-            for (int i = 0; i < group_size_remain / 4; i++) {
-                gemm_make_table_i2s(this_table, local_y + (group_count * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
-                const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 4 + i) * bs;
-                ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16);
+            for (int i = 0; i < group_size_remain / 4 / 2; i++) {
+                gemm_make_table_i2s(this_table0, local_y + (group_count * group_size / 4 + i * 2) * 4 * TABLE_ENTRY_SIZE);
+                gemm_make_table_i2s(this_table1, local_y + (group_count * group_size / 4 + i * 2 + 1) * 4 * TABLE_ENTRY_SIZE);
+                const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 4 + i * 2) * bs;
+                for (int c = 0; c < nc; c++) {
+                    uint8_t v0 = this_x[c * 2];
+                    uint8_t v1 = this_x[c * 2 + 1];
+                    const int16_t *restrict rt0 = this_table0 + v0 * TABLE_ENTRY_SIZE;
+                    const int16_t *restrict rt1 = this_table1 + v1 * TABLE_ENTRY_SIZE;
+                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
+                    for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
+                        rs[r] += rt0[r] + rt1[r];
+                    }
+                }
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
         }
     }
-    
+
     const size_t y_size = ((nr % TABLE_ENTRY_SIZE) ? nr + TABLE_ENTRY_SIZE - (nr % TABLE_ENTRY_SIZE) : nr) * n;
     const float *sc = (const float *)((const int8_t *)vy + y_size);
     for (int r = 0; r < nr; r++) {
         const float scale = sc[r];
-        float* restrict sr = s + r * bs;
+        float *restrict sr = s + r * bs;
         const int32_t *restrict ss2r = sum_i32 + r * nc;
         for (int c = 0; c < nc; c++) {
             sr[c] = ss2r[c] * scale;
         }
     }
 
-    free(this_table);
+    free(this_table0);
+    free(this_table1);
     free(sum_i16);
     free(sum_i32);
 }
