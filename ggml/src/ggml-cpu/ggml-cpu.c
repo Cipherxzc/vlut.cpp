@@ -461,6 +461,12 @@ static const struct ggml_type_traits_cpu type_traits_cpu[GGML_TYPE_COUNT] = {
             .vec_dot_type = GGML_TYPE_I8_B,
             .nrows = 1,
         },
+    [GGML_TYPE_I2_S_4] =
+        {
+            // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
+            .vec_dot_type = GGML_TYPE_I8_B,
+            .nrows = 1,
+        },
 };
 
 const struct ggml_type_traits_cpu *ggml_get_type_traits_cpu(enum ggml_type type) { return &type_traits_cpu[type]; }
@@ -7019,6 +7025,7 @@ typedef void (*bitnet_make_table)(int ith, int nth, const int8_t *GGML_RESTRICT 
 struct ggml_type_traits_bitnet {
     bool is_bitnet_type;
     int64_t table_entries_num;
+    int64_t tile_size;
     bitnet_make_table make_table;
     bitnet_gemm gemm;
     bitnet_gemm gemm2;
@@ -7029,6 +7036,7 @@ static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] 
         {
             .is_bitnet_type = true,
             .table_entries_num = 81,
+            .tile_size = 1,
             .make_table = ggml_gemm_i2s_i8b_make_table,
             .gemm = ggml_gemm_i2s_i8b_LUT,
             .gemm2 = ggml_gemm_i2s_i8b_LUT2,
@@ -7037,6 +7045,7 @@ static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] 
         {
             .is_bitnet_type = true,
             .table_entries_num = 243,
+            .tile_size = 1,
             .make_table = ggml_gemm_i1s_i8b_make_table,
             .gemm = ggml_gemm_i1s_i8b_LUT,
             .gemm2 = ggml_gemm_i1s_i8b_LUT2,
@@ -7045,9 +7054,19 @@ static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] 
         {
             .is_bitnet_type = true,
             .table_entries_num = 243,
+            .tile_size = 1,
             .make_table = ggml_gemm_i1m_i8b_make_table,
             .gemm = ggml_gemm_i1m_i8b_LUT,
             .gemm2 = ggml_gemm_i1m_i8b_LUT2,
+        },
+    [GGML_TYPE_I2_S_4] =
+        {
+            .is_bitnet_type = true,
+            .table_entries_num = 81,
+            .tile_size = 4,
+            // .make_table = ggml_gemm_i2s_i8b_make_table,
+            // .gemm = ggml_gemm_i2s_i8b_LUT,
+            .gemm2 = ggml_gemm_i2s4_i8b_LUT2,
         },
 };
 
@@ -7127,6 +7146,7 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
         bitnet_gemm gemm = type_traits_bitnet[type].gemm2;
         assert(gemm);
 #endif // BITNET_LUT
+        int64_t tile_size = type_traits_bitnet[type].tile_size;
 
         // Quantize activation (src1)
         GGML_ASSERT(src1->type == GGML_TYPE_F32);
@@ -7163,7 +7183,7 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
 
         if (src0_start < src0_end) {
             gemm(params->ith, params->nth, ne00, ((float *)(dst->data)) + src0_start, ne01,
-                 (const char *)src0->data + src0_start, src1_wdata, ne11, src0_end - src0_start);
+                 (const char *)src0->data + src0_start * tile_size, src1_wdata, ne11, src0_end - src0_start);
         }
 
 #elif defined(BITNET_LUT)
@@ -8752,6 +8772,7 @@ static void ggml_compute_forward_clamp(const struct ggml_compute_params *params,
         case GGML_TYPE_I2_S:
         case GGML_TYPE_I1_S:
         case GGML_TYPE_I1_M:
+        case GGML_TYPE_I2_S_4:
         case GGML_TYPE_COUNT: {
             GGML_ABORT("fatal error");
         }

@@ -10,3 +10,4 @@ size_t quantize_i2_t(const float *GGML_RESTRICT src, void *GGML_RESTRICT dst, in
 size_t quantize_i2_s(const float* GGML_RESTRICT src, void* GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float* imatrix);
 size_t quantize_i1_s(const float* GGML_RESTRICT src, void* GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float* imatrix);
 size_t quantize_i1_m(const float* GGML_RESTRICT src, void* GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float* imatrix);
+size_t quantize_i2_s_4(const float* GGML_RESTRICT src, void* GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float* imatrix);
