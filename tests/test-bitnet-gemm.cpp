@@ -1155,10 +1155,11 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_perf(const char* 
     };
 
     std::vector<ModelConfig> models = {
-        {"bitnet_3b",  3200, 8640,  {GGML_TYPE_Q4_0, GGML_TYPE_I2_S, GGML_TYPE_I1_M}},
-        {"llama3_8b",  4096, 14336, {GGML_TYPE_TQ2_0, GGML_TYPE_I2_S, GGML_TYPE_TQ1_0, GGML_TYPE_I1_M}},
-        {"falcon_1b",  2048, 8192,  {GGML_TYPE_TQ2_0, GGML_TYPE_I2_S, GGML_TYPE_TQ1_0, GGML_TYPE_I1_M}},
-        {"trilm_1.5b", 2048, 6144,  {GGML_TYPE_TQ2_0, GGML_TYPE_I2_S, GGML_TYPE_TQ1_0, GGML_TYPE_I1_M}},
+        // {"bitnet_3b",  3200, 8640,  {GGML_TYPE_Q4_0, GGML_TYPE_I2_S, GGML_TYPE_I1_M}},
+        // {"llama3_8b",  4096, 14336, {GGML_TYPE_TQ2_0, GGML_TYPE_I2_S, GGML_TYPE_TQ1_0, GGML_TYPE_I1_M}},
+        // {"falcon_1b",  2048, 8192,  {GGML_TYPE_TQ2_0, GGML_TYPE_I2_S, GGML_TYPE_TQ1_0, GGML_TYPE_I1_M}},
+        // {"trilm_1.5b", 2048, 6144,  {GGML_TYPE_TQ2_0, GGML_TYPE_I2_S, GGML_TYPE_TQ1_0, GGML_TYPE_I1_M}},
+        {"llama3_8b", 4096, 14336, {GGML_TYPE_Q8_0, GGML_TYPE_Q6_K, GGML_TYPE_Q5_K, GGML_TYPE_Q4_K, GGML_TYPE_Q4_0, GGML_TYPE_Q3_K, GGML_TYPE_Q2_K, GGML_TYPE_TQ2_0, GGML_TYPE_TQ1_0, GGML_TYPE_I2_S, GGML_TYPE_I1_M}},
     };
 
     // Filter by model if specified
