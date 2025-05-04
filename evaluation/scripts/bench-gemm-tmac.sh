@@ -117,11 +117,17 @@ source "$TMAC_PATH/build/t-mac-envs.sh"
 echo "Running pipeline for Llama-3-8b-2bit with 1 thread..."
 python tools/run_pipeline.py -o ~/models/Llama-3-8b-instruct-EfficientQAT-w2g128-GPTQ -m llama-3-8b-2bit -q int_n -nt 1 -s 0
 
+echo "Running pipeline for Llama-3-8b-2bit with 4 threads..."
+python tools/run_pipeline.py -o ~/models/Llama-3-8b-instruct-EfficientQAT-w2g128-GPTQ -m llama-3-8b-2bit -q int_n -nt 4 -s 0
+
 echo "Running pipeline for Llama-3-8b-2bit with 8 threads..."
 python tools/run_pipeline.py -o ~/models/Llama-3-8b-instruct-EfficientQAT-w2g128-GPTQ -m llama-3-8b-2bit -q int_n -nt 8 -s 0
 
 echo "Running pipeline for BitNet with 1 thread..."
 python tools/run_pipeline.py -o ~/models/bitnet_b1_58-3B -q int_n -nt 1 -s 0
+
+echo "Running pipeline for BitNet with 4 thread..."
+python tools/run_pipeline.py -o ~/models/bitnet_b1_58-3B -q int_n -nt 4 -s 0
 
 echo "Running pipeline for BitNet with 8 threads..."
 python tools/run_pipeline.py -o ~/models/bitnet_b1_58-3B -q int_n -nt 8 -s 0
