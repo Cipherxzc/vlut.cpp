@@ -27,9 +27,6 @@ echo "  Parallel sequences: $PARALLEL_SEQS"
 echo "  Thread count: $THREAD_COUNT"
 echo "  Results will be saved to: $RESULTS_DIR"
 
-# Clean up old results
-rm -rf "$RESULTS_DIR"
-
 # Create results directory if it doesn't exist
 mkdir -p "$RESULTS_DIR"
 
@@ -37,10 +34,10 @@ mkdir -p "$RESULTS_DIR"
 export RESULTS_DIR="$RESULTS_DIR"
 
 # Benchmark I2_S and I1_M
-echo "Benchmarking I2_S_2 model..."
-"$SCRIPT_DIR/bench-bd.sh" -m "$MODEL_DIR/ggml-model-I2_S_2.gguf" -p "$PREFILL_LEN" -g "$TOKEN_GEN_LENS" -n "$PARALLEL_SEQS" -t "$THREAD_COUNT" --csv
 echo "Benchmarking I2_S_4 model..."
 "$SCRIPT_DIR/bench-bd.sh" -m "$MODEL_DIR/ggml-model-I2_S_4.gguf" -p "$PREFILL_LEN" -g "$TOKEN_GEN_LENS" -n "$PARALLEL_SEQS" -t "$THREAD_COUNT" --csv
+echo "Benchmarking I2_S_8 model..."
+"$SCRIPT_DIR/bench-bd.sh" -m "$MODEL_DIR/ggml-model-I2_S_8.gguf" -p "$PREFILL_LEN" -g "$TOKEN_GEN_LENS" -n "$PARALLEL_SEQS" -t "$THREAD_COUNT" --csv
 echo "Benchmarking I1_M_2 model..."
 "$SCRIPT_DIR/bench-bd.sh" -m "$MODEL_DIR/ggml-model-I1_M_2.gguf" -p "$PREFILL_LEN" -g "$TOKEN_GEN_LENS" -n "$PARALLEL_SEQS" -t "$THREAD_COUNT" --csv
 
