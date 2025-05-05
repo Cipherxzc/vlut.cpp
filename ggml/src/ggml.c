@@ -921,9 +921,30 @@ static const struct ggml_type_traits type_traits[GGML_TYPE_COUNT] =
                 .type_size = sizeof(uint8_t),
                 .is_quantized = true,
             },
+        [GGML_TYPE_I2_S_2] =
+            {
+                .type_name = "i2_s_2",
+                .blck_size = 4,
+                .type_size = sizeof(uint8_t),
+                .is_quantized = true,
+            },
         [GGML_TYPE_I2_S_4] =
             {
                 .type_name = "i2_s_4",
+                .blck_size = 4,
+                .type_size = sizeof(uint8_t),
+                .is_quantized = true,
+            },
+        [GGML_TYPE_I2_S_8] =
+            {
+                .type_name = "i2_s_8",
+                .blck_size = 4,
+                .type_size = sizeof(uint8_t),
+                .is_quantized = true,
+            },
+        [GGML_TYPE_I2_S_16] =
+            {
+                .type_name = "i2_s_16",
                 .blck_size = 4,
                 .type_size = sizeof(uint8_t),
                 .is_quantized = true,
@@ -6553,8 +6574,17 @@ size_t ggml_quantize_chunk(
         case GGML_TYPE_I1_M:
             result = quantize_i1_m(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
+        case GGML_TYPE_I2_S_2:
+            result = quantize_i2_s(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);  // Cipherxzc: TODO
+            break;
         case GGML_TYPE_I2_S_4:
             result = quantize_i2_s_4(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
+            break;
+        case GGML_TYPE_I2_S_8:
+            result = quantize_i2_s_8(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
+            break;
+        case GGML_TYPE_I2_S_16:
+            result = quantize_i2_s(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);  // Cipherxzc: TODO
             break;
         default:
             assert(false);

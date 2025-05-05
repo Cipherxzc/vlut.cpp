@@ -461,7 +461,25 @@ static const struct ggml_type_traits_cpu type_traits_cpu[GGML_TYPE_COUNT] = {
             .vec_dot_type = GGML_TYPE_I8_B,
             .nrows = 1,
         },
+    [GGML_TYPE_I2_S_2] =
+        {
+            // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
+            .vec_dot_type = GGML_TYPE_I8_B,
+            .nrows = 1,
+        },
     [GGML_TYPE_I2_S_4] =
+        {
+            // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
+            .vec_dot_type = GGML_TYPE_I8_B,
+            .nrows = 1,
+        },
+    [GGML_TYPE_I2_S_8] =
+        {
+            // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
+            .vec_dot_type = GGML_TYPE_I8_B,
+            .nrows = 1,
+        },
+    [GGML_TYPE_I2_S_16] =
         {
             // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
             .vec_dot_type = GGML_TYPE_I8_B,
@@ -7059,14 +7077,33 @@ static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] 
             .gemm = ggml_gemm_i1m_i8b_LUT,
             .gemm2 = ggml_gemm_i1m_i8b_LUT2,
         },
+    [GGML_TYPE_I2_S_2] =
+        {
+            .is_bitnet_type = true,
+            .table_entries_num = 81,
+            .tile_size = 2,
+            .gemm2 = ggml_gemm_i2s2_i8b_LUT2,
+        },
     [GGML_TYPE_I2_S_4] =
         {
             .is_bitnet_type = true,
             .table_entries_num = 81,
             .tile_size = 4,
-            // .make_table = ggml_gemm_i2s_i8b_make_table,
-            // .gemm = ggml_gemm_i2s_i8b_LUT,
             .gemm2 = ggml_gemm_i2s4_i8b_LUT2,
+        },
+    [GGML_TYPE_I2_S_8] =
+        {
+            .is_bitnet_type = true,
+            .table_entries_num = 81,
+            .tile_size = 8,
+            .gemm2 = ggml_gemm_i2s8_i8b_LUT2,
+        },
+    [GGML_TYPE_I2_S_16] =
+        {
+            .is_bitnet_type = true,
+            .table_entries_num = 81,
+            .tile_size = 16,
+            .gemm2 = ggml_gemm_i2s16_i8b_LUT2,
         },
 };
 
@@ -7211,21 +7248,6 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
         }
 
         ggml_barrier(params->threadpool);
-
-        // fuse from_float and make_table
-        // int64_t src1_start = (ith * ne11) / nth;
-        // int64_t src1_end = ((ith + 1) * ne11) / nth;
-        // src1_start = (src1_start % TABLE_ENTRY_SIZE) ? src1_start + TABLE_ENTRY_SIZE - (src1_start %
-        // TABLE_ENTRY_SIZE): src1_start; src1_end   = (src1_end   % TABLE_ENTRY_SIZE) ? src1_end   + TABLE_ENTRY_SIZE -
-        // (src1_end   % TABLE_ENTRY_SIZE): src1_end; src1_end = MIN(src1_end, ne11);
-
-        // if (src1_start < src1_end) {
-        //     ggml_gemm_i2s_i8b_make_table_quant(params->ith, params->nth, (float *)src1->data + src1_start * blck_size,
-        //                                        (float *)wdata + src1_start, ne11, ne10,
-        //                                        tables + table_num * table_entries_num * src1_start);
-        // }
-
-        // ggml_barrier(params->threadpool);
 
         int64_t src0_start = (ith * ne01) / nth;
         int64_t src0_end = ((ith + 1) * ne01) / nth;
@@ -8772,7 +8794,10 @@ static void ggml_compute_forward_clamp(const struct ggml_compute_params *params,
         case GGML_TYPE_I2_S:
         case GGML_TYPE_I1_S:
         case GGML_TYPE_I1_M:
+        case GGML_TYPE_I2_S_2:
         case GGML_TYPE_I2_S_4:
+        case GGML_TYPE_I2_S_8:
+        case GGML_TYPE_I2_S_16:
         case GGML_TYPE_COUNT: {
             GGML_ABORT("fatal error");
         }

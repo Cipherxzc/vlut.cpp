@@ -732,6 +732,165 @@
         } \
     } while(0)
 
+#define MAKE_TABLES_I2S_BLOCK2(g)                                                                                    \
+    do {                                                                                                             \
+        gemm_make_table_i2s(this_table0, local_y + (((g)*group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2s(this_table1, local_y + (((g)*group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE)); \
+    } while (0)
+
+#define MAKE_TABLES_I2S_BLOCK4(g)                                                                                    \
+    do {                                                                                                             \
+        gemm_make_table_i2s(this_table0, local_y + (((g)*group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2s(this_table1, local_y + (((g)*group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2s(this_table2, local_y + (((g)*group_size + (i * tile_size + 2) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2s(this_table3, local_y + (((g)*group_size + (i * tile_size + 3) * 4) * TABLE_ENTRY_SIZE)); \
+    } while (0)
+
+#define MAKE_TABLES_I2S_BLOCK8(g)                                                                                    \
+    do {                                                                                                             \
+        gemm_make_table_i2s(this_table0, local_y + (((g)*group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2s(this_table1, local_y + (((g)*group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2s(this_table2, local_y + (((g)*group_size + (i * tile_size + 2) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2s(this_table3, local_y + (((g)*group_size + (i * tile_size + 3) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2s(this_table4, local_y + (((g)*group_size + (i * tile_size + 4) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2s(this_table5, local_y + (((g)*group_size + (i * tile_size + 5) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2s(this_table6, local_y + (((g)*group_size + (i * tile_size + 6) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2s(this_table7, local_y + (((g)*group_size + (i * tile_size + 7) * 4) * TABLE_ENTRY_SIZE)); \
+    } while (0)
+
+#define MAKE_TABLES_I2S_BLOCK16(g)                                                                                    \
+    do {                                                                                                              \
+        gemm_make_table_i2s(this_table0, local_y + (((g)*group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE));  \
+        gemm_make_table_i2s(this_table1, local_y + (((g)*group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE));  \
+        gemm_make_table_i2s(this_table2, local_y + (((g)*group_size + (i * tile_size + 2) * 4) * TABLE_ENTRY_SIZE));  \
+        gemm_make_table_i2s(this_table3, local_y + (((g)*group_size + (i * tile_size + 3) * 4) * TABLE_ENTRY_SIZE));  \
+        gemm_make_table_i2s(this_table4, local_y + (((g)*group_size + (i * tile_size + 4) * 4) * TABLE_ENTRY_SIZE));  \
+        gemm_make_table_i2s(this_table5, local_y + (((g)*group_size + (i * tile_size + 5) * 4) * TABLE_ENTRY_SIZE));  \
+        gemm_make_table_i2s(this_table6, local_y + (((g)*group_size + (i * tile_size + 6) * 4) * TABLE_ENTRY_SIZE));  \
+        gemm_make_table_i2s(this_table7, local_y + (((g)*group_size + (i * tile_size + 7) * 4) * TABLE_ENTRY_SIZE));  \
+        gemm_make_table_i2s(this_table0, local_y + (((g)*group_size + (i * tile_size + 8) * 4) * TABLE_ENTRY_SIZE));  \
+        gemm_make_table_i2s(this_table1, local_y + (((g)*group_size + (i * tile_size + 9) * 4) * TABLE_ENTRY_SIZE));  \
+        gemm_make_table_i2s(this_table2, local_y + (((g)*group_size + (i * tile_size + 10) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2s(this_table3, local_y + (((g)*group_size + (i * tile_size + 11) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2s(this_table4, local_y + (((g)*group_size + (i * tile_size + 12) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2s(this_table5, local_y + (((g)*group_size + (i * tile_size + 13) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2s(this_table6, local_y + (((g)*group_size + (i * tile_size + 14) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2s(this_table7, local_y + (((g)*group_size + (i * tile_size + 15) * 4) * TABLE_ENTRY_SIZE)); \
+    } while (0)
+
+#define ADD_TABLE_ENTRIES_BLOCK2(nc)                                           \
+    do {                                                                       \
+        for (int c = 0; c < (nc); c++) {                                       \
+            uint8_t v0 = this_x[c * tile_size + 0];                            \
+            uint8_t v1 = this_x[c * tile_size + 1];                            \
+                                                                               \
+            const int16_t *restrict rt0 = this_table0 + v0 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt1 = this_table1 + v1 * TABLE_ENTRY_SIZE; \
+                                                                               \
+            int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;             \
+                                                                               \
+            for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {                       \
+                rs[r] += rt0[r] + rt1[r];                                      \
+            }                                                                  \
+        }                                                                      \
+    } while (0)
+
+#define ADD_TABLE_ENTRIES_BLOCK4(nc)                                           \
+    do {                                                                       \
+        for (int c = 0; c < (nc); c++) {                                       \
+            uint8_t v0 = this_x[c * tile_size + 0];                            \
+            uint8_t v1 = this_x[c * tile_size + 1];                            \
+            uint8_t v2 = this_x[c * tile_size + 2];                            \
+            uint8_t v3 = this_x[c * tile_size + 3];                            \
+                                                                               \
+            const int16_t *restrict rt0 = this_table0 + v0 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt1 = this_table1 + v1 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt2 = this_table2 + v2 * TABLE_ENTRY_SIZE; \
+            const int16_t *restrict rt3 = this_table3 + v3 * TABLE_ENTRY_SIZE; \
+                                                                               \
+            int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;             \
+                                                                               \
+            for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {                       \
+                rs[r] += rt0[r] + rt1[r] + rt2[r] + rt3[r];                    \
+            }                                                                  \
+        }                                                                      \
+    } while (0)
+
+#define ADD_TABLE_ENTRIES_BLOCK8(nc)                                                            \
+    do {                                                                                        \
+        for (int c = 0; c < (nc); c++) {                                                        \
+            uint8_t v0 = this_x[c * tile_size + 0];                                             \
+            uint8_t v1 = this_x[c * tile_size + 1];                                             \
+            uint8_t v2 = this_x[c * tile_size + 2];                                             \
+            uint8_t v3 = this_x[c * tile_size + 3];                                             \
+            uint8_t v4 = this_x[c * tile_size + 4];                                             \
+            uint8_t v5 = this_x[c * tile_size + 5];                                             \
+            uint8_t v6 = this_x[c * tile_size + 6];                                             \
+            uint8_t v7 = this_x[c * tile_size + 7];                                             \
+                                                                                                \
+            const int16_t *restrict rt0 = this_table0 + v0 * TABLE_ENTRY_SIZE;                  \
+            const int16_t *restrict rt1 = this_table1 + v1 * TABLE_ENTRY_SIZE;                  \
+            const int16_t *restrict rt2 = this_table2 + v2 * TABLE_ENTRY_SIZE;                  \
+            const int16_t *restrict rt3 = this_table3 + v3 * TABLE_ENTRY_SIZE;                  \
+            const int16_t *restrict rt4 = this_table4 + v4 * TABLE_ENTRY_SIZE;                  \
+            const int16_t *restrict rt5 = this_table5 + v5 * TABLE_ENTRY_SIZE;                  \
+            const int16_t *restrict rt6 = this_table6 + v6 * TABLE_ENTRY_SIZE;                  \
+            const int16_t *restrict rt7 = this_table7 + v7 * TABLE_ENTRY_SIZE;                  \
+                                                                                                \
+            int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;                              \
+                                                                                                \
+            for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {                                        \
+                rs[r] += rt0[r] + rt1[r] + rt2[r] + rt3[r] + rt4[r] + rt5[r] + rt6[r] + rt7[r]; \
+            }                                                                                   \
+        }                                                                                       \
+    } while (0)
+
+#define ADD_TABLE_ENTRIES_BLOCK16(nc)                                                                              \
+    do {                                                                                                           \
+        for (int c = 0; c < (nc); c++) {                                                                           \
+            uint8_t v0 = this_x[c * tile_size + 0];                                                                \
+            uint8_t v1 = this_x[c * tile_size + 1];                                                                \
+            uint8_t v2 = this_x[c * tile_size + 2];                                                                \
+            uint8_t v3 = this_x[c * tile_size + 3];                                                                \
+            uint8_t v4 = this_x[c * tile_size + 4];                                                                \
+            uint8_t v5 = this_x[c * tile_size + 5];                                                                \
+            uint8_t v6 = this_x[c * tile_size + 6];                                                                \
+            uint8_t v7 = this_x[c * tile_size + 7];                                                                \
+            uint8_t v8 = this_x[c * tile_size + 8];                                                                \
+            uint8_t v9 = this_x[c * tile_size + 9];                                                                \
+            uint8_t v10 = this_x[c * tile_size + 10];                                                              \
+            uint8_t v11 = this_x[c * tile_size + 11];                                                              \
+            uint8_t v12 = this_x[c * tile_size + 12];                                                              \
+            uint8_t v13 = this_x[c * tile_size + 13];                                                              \
+            uint8_t v14 = this_x[c * tile_size + 14];                                                              \
+            uint8_t v15 = this_x[c * tile_size + 15];                                                              \
+                                                                                                                   \
+            const int16_t *restrict rt0 = this_table0 + v0 * TABLE_ENTRY_SIZE;                                     \
+            const int16_t *restrict rt1 = this_table1 + v1 * TABLE_ENTRY_SIZE;                                     \
+            const int16_t *restrict rt2 = this_table2 + v2 * TABLE_ENTRY_SIZE;                                     \
+            const int16_t *restrict rt3 = this_table3 + v3 * TABLE_ENTRY_SIZE;                                     \
+            const int16_t *restrict rt4 = this_table4 + v4 * TABLE_ENTRY_SIZE;                                     \
+            const int16_t *restrict rt5 = this_table5 + v5 * TABLE_ENTRY_SIZE;                                     \
+            const int16_t *restrict rt6 = this_table6 + v6 * TABLE_ENTRY_SIZE;                                     \
+            const int16_t *restrict rt7 = this_table7 + v7 * TABLE_ENTRY_SIZE;                                     \
+            const int16_t *restrict rt8 = this_table8 + v8 * TABLE_ENTRY_SIZE;                                     \
+            const int16_t *restrict rt9 = this_table9 + v9 * TABLE_ENTRY_SIZE;                                     \
+            const int16_t *restrict rt10 = this_table10 + v10 * TABLE_ENTRY_SIZE;                                  \
+            const int16_t *restrict rt11 = this_table11 + v11 * TABLE_ENTRY_SIZE;                                  \
+            const int16_t *restrict rt12 = this_table12 + v12 * TABLE_ENTRY_SIZE;                                  \
+            const int16_t *restrict rt13 = this_table13 + v13 * TABLE_ENTRY_SIZE;                                  \
+            const int16_t *restrict rt14 = this_table14 + v14 * TABLE_ENTRY_SIZE;                                  \
+            const int16_t *restrict rt15 = this_table15 + v15 * TABLE_ENTRY_SIZE;                                  \
+                                                                                                                   \
+            int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;                                                 \
+                                                                                                                   \
+            for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {                                                           \
+                rs[r] += rt0[r] + rt1[r] + rt2[r] + rt3[r] + rt4[r] + rt5[r] + rt6[r] + rt7[r] + rt8[r] + rt9[r] + \
+                         rt10[r] + rt11[r] + rt12[r] + rt13[r] + rt14[r] + rt15[r];                                \
+            }                                                                                                      \
+        }                                                                                                          \
+    } while (0)
+
 #if WEIGHT_UNROLL_BLOCK == 4
 #define ADD_TABLE_ENTRIES_BLOCK(nc, this_x, this_table, sum_i16) \
     ADD_TABLE_ENTRIES_BLOCK_4(nc, this_x, this_table, sum_i16)
@@ -1027,188 +1186,6 @@ void ggml_gemm_i1m_i8b_make_table(int ith, int nth, const int8_t *restrict y, in
     free(src);
 }
 
-void ggml_gemm_i2s_i8b_make_table_quant(int ith, int nth, const float *restrict y, float *restrict scale, int nr, int n,
-                                        int16_t *restrict table) {
-    UNUSED(ith);
-    UNUSED(nth);
-
-    int8_t *restrict src = (int8_t *)malloc(sizeof(int8_t) * n * TABLE_ENTRY_SIZE);
-    int8_t *restrict src2 = (int8_t *)malloc(sizeof(int8_t) * 4 * TABLE_ENTRY_SIZE);
-
-    const int table_count = n / 4;
-    const int table_stride = n / 4 * 81;
-    const int entry_tile_count = nr / TABLE_ENTRY_SIZE;  // not including remains
-    const int entry_tile_remain = nr % TABLE_ENTRY_SIZE;
-
-    // tiles
-    for (int i = 0; i < entry_tile_count; i++) {
-        const float *restrict local_y = y + i * n * TABLE_ENTRY_SIZE;
-
-        for (int j = 0; j < TABLE_ENTRY_SIZE; j++){
-            const float *restrict y_row = local_y + j * n;
-
-            double max = eps;
-            for (int k = 0; k < n; k++) {
-                max = MAX(max, (double)y_row[k]);
-            }
-            const double s = max / 127;
-            const double is = 1e0 / MAX(s, eps);
-            scale[i * TABLE_ENTRY_SIZE + j] = s;
-
-            for (int k = 0; k < n; k++) {
-                float v = round((double)y_row[k] * is);
-                if (v > 127) {
-                    v = 127;
-                } else if (v < -128) {
-                    v = -128;
-                }
-                src[j * n + k] = (int8_t)v;
-            }
-        }
-
-        int16_t *restrict local_table = table + i * table_stride * TABLE_ENTRY_SIZE;
-
-        for (int j = 0; j < table_count; j++) {
-            const int8_t *restrict src_local = src + j * 4;
-            for (int k = 0; k < TABLE_ENTRY_SIZE; k++) {
-                src2[k] = src_local[k * n];
-                src2[k + TABLE_ENTRY_SIZE] = src_local[k * n + 1];
-                src2[k + TABLE_ENTRY_SIZE * 2] = src_local[k * n + 2];
-                src2[k + TABLE_ENTRY_SIZE * 3] = src_local[k * n + 3];
-            }
-            gemm_make_table_i2s(local_table + j * 81 * TABLE_ENTRY_SIZE, src2);
-        }
-    }
-
-    // remains
-    if (entry_tile_remain > 0) {
-        memset(src2, 0, sizeof(int8_t) * 4 * TABLE_ENTRY_SIZE);
-
-        const float *restrict local_y = y + entry_tile_count * n * TABLE_ENTRY_SIZE;
-
-        for (int j = 0; j < entry_tile_remain; j++) {
-            const float *restrict y_row = local_y + j * n;
-
-            double max = eps;
-            for (int k = 0; k < n; k++) {
-                max = MAX(max, (double)y_row[k]);
-            }
-            const double s = max / 127;
-            const double is = 1e0 / MAX(s, eps);
-            scale[entry_tile_count * TABLE_ENTRY_SIZE + j] = s;
-
-            for (int k = 0; k < n; k++) {
-                float v = round((double)y_row[k] * is);
-                if (v > 127) {
-                    v = 127;
-                } else if (v < -128) {
-                    v = -128;
-                }
-                src[j * n + k] = (int8_t)v;
-            }
-        }
-
-        int16_t *restrict local_table = table + entry_tile_count * table_stride * TABLE_ENTRY_SIZE;
-
-        for (int j = 0; j < table_count; j++) {
-            const int8_t *restrict src_local = src + j * 4;
-            for (int k = 0; k < entry_tile_remain; k++) {
-                src2[k] = src_local[k * n];
-                src2[k + TABLE_ENTRY_SIZE] = src_local[k * n + 1];
-                src2[k + TABLE_ENTRY_SIZE * 2] = src_local[k * n + 2];
-                src2[k + TABLE_ENTRY_SIZE * 3] = src_local[k * n + 3];
-            }
-            gemm_make_table_i2s(local_table + j * 81 * TABLE_ENTRY_SIZE, src2);
-        }
-    }
-
-    free(src);
-    free(src2);
-}
-
-void ggml_gemm_i2s_i8b_make_table_quant2(int ith, int nth, const float *restrict y, float *restrict scale, int nr, int n,
-                                         int16_t *restrict table) {
-    UNUSED(ith);
-    UNUSED(nth);
-
-    int8_t *restrict src = (int8_t *)malloc(sizeof(int8_t) * n * TABLE_ENTRY_SIZE);
-
-    const int table_count = n / 4;
-    const int table_stride = n / 4 * 81;
-    const int entry_tile_count = nr / TABLE_ENTRY_SIZE;  // not including remains
-    const int entry_tile_remain = nr % TABLE_ENTRY_SIZE;
-
-    // tiles
-    for (int i = 0; i < entry_tile_count; i++) {
-        const float *restrict local_y = y + i * n * TABLE_ENTRY_SIZE;
-
-        for (int j = 0; j < TABLE_ENTRY_SIZE; j++) {
-            const float *restrict y_row = local_y + j * n;
-
-            double max = eps;
-            for (int k = 0; k < n; k++) {
-                max = MAX(max, (double)y_row[k]);
-            }
-            const double s = max / 127;
-            const double is = 1e0 / MAX(s, eps);
-            scale[i * TABLE_ENTRY_SIZE + j] = s;
-
-            for (int k = 0; k < n; k++) {
-                float v = round((double)y_row[k] * is);
-                if (v > 127) {
-                    v = 127;
-                } else if (v < -128) {
-                    v = -128;
-                }
-                src[k * TABLE_ENTRY_SIZE + j] = (int8_t)v;
-            }
-        }
-
-        int16_t *restrict local_table = table + i * table_stride * TABLE_ENTRY_SIZE;
-
-        for (int j = 0; j < table_count; j++) {
-            gemm_make_table_i2s(local_table + j * 81 * TABLE_ENTRY_SIZE, src + j * 4 * TABLE_ENTRY_SIZE);
-        }
-    }
-
-    // remains
-    if (entry_tile_remain > 0) {
-        memset(src, 0, sizeof(int8_t) * n * TABLE_ENTRY_SIZE);
-
-        const float *restrict local_y = y + entry_tile_count * n * TABLE_ENTRY_SIZE;
-
-        for (int j = 0; j < entry_tile_remain; j++) {
-            const float *restrict y_row = local_y + j * n;
-
-            double max = eps;
-            for (int k = 0; k < n; k++) {
-                max = MAX(max, (double)y_row[k]);
-            }
-            const double s = max / 127;
-            const double is = 1e0 / MAX(s, eps);
-            scale[entry_tile_count * TABLE_ENTRY_SIZE + j] = s;
-
-            for (int k = 0; k < n; k++) {
-                float v = round((double)y_row[k] * is);
-                if (v > 127) {
-                    v = 127;
-                } else if (v < -128) {
-                    v = -128;
-                }
-                src[k * TABLE_ENTRY_SIZE + j] = (int8_t)v;
-            }
-        }
-
-        int16_t *restrict local_table = table + entry_tile_count * table_stride * TABLE_ENTRY_SIZE;
-
-        for (int j = 0; j < table_count; j++) {
-            gemm_make_table_i2s(local_table + j * 81 * TABLE_ENTRY_SIZE, src + j * 4 * TABLE_ENTRY_SIZE);
-        }
-    }
-
-    free(src);
-}
-
 void ggml_gemm_i2s_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
                             const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
@@ -1332,19 +1309,9 @@ void ggml_gemm_i2s2_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t 
         for (int g = 0; g < group_count; g++) {
             int pack_cnt = group_size / 4 / tile_size;
             for (int i = 0; i < pack_cnt; i++) {
-                gemm_make_table_i2s(this_table0, local_y + (g * group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table1, local_y + (g * group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE);
+                MAKE_TABLES_I2S_BLOCK2(g);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 4 + i * tile_size) * bs;
-                for (int c = 0; c < nc; c++) {
-                    uint8_t v0 = this_x[c * tile_size + 0];
-                    uint8_t v1 = this_x[c * tile_size + 1];
-                    const int16_t *restrict rt0 = this_table0 + v0 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt1 = this_table1 + v1 * TABLE_ENTRY_SIZE;
-                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
-                    for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
-                        rs[r] += rt0[r] + rt1[r];
-                    }
-                }
+                ADD_TABLE_ENTRIES_BLOCK2(nc);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1353,19 +1320,9 @@ void ggml_gemm_i2s2_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t 
         if (group_size_remain > 0) {
             int pack_cnt = group_size_remain / 4 / tile_size;
             for (int i = 0; i < pack_cnt; i++) {
-                gemm_make_table_i2s(this_table0, local_y + (group_count * group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table1, local_y + (group_count * group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE);
+                MAKE_TABLES_I2S_BLOCK2(group_count);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 4 + i * tile_size) * bs;
-                for (int c = 0; c < nc; c++) {
-                    uint8_t v0 = this_x[c * tile_size + 0];
-                    uint8_t v1 = this_x[c * tile_size + 1];
-                    const int16_t *restrict rt0 = this_table0 + v0 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt1 = this_table1 + v1 * TABLE_ENTRY_SIZE;
-                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
-                    for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
-                        rs[r] += rt0[r] + rt1[r];
-                    }
-                }
+                ADD_TABLE_ENTRIES_BLOCK2(nc);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1379,19 +1336,9 @@ void ggml_gemm_i2s2_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t 
         for (int g = 0; g < group_count; g++) {
             int pack_cnt = group_size / 4 / tile_size;
             for (int i = 0; i < pack_cnt; i++) {
-                gemm_make_table_i2s(this_table0, local_y + (g * group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table1, local_y + (g * group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE);
+                MAKE_TABLES_I2S_BLOCK2(g);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 4 + i * tile_size) * bs;
-                for (int c = 0; c < nc; c++) {
-                    uint8_t v0 = this_x[c * tile_size + 0];
-                    uint8_t v1 = this_x[c * tile_size + 1];
-                    const int16_t *restrict rt0 = this_table0 + v0 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt1 = this_table1 + v1 * TABLE_ENTRY_SIZE;
-                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
-                    for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
-                        rs[r] += rt0[r] + rt1[r];
-                    }
-                }
+                ADD_TABLE_ENTRIES_BLOCK2(nc);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1400,19 +1347,9 @@ void ggml_gemm_i2s2_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t 
         if (group_size_remain > 0) {
             int pack_cnt = group_size_remain / 4 / tile_size;
             for (int i = 0; i < pack_cnt; i++) {
-                gemm_make_table_i2s(this_table0, local_y + (group_count * group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table1, local_y + (group_count * group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE);
+                MAKE_TABLES_I2S_BLOCK2(group_count);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 4 + i * tile_size) * bs;
-                for (int c = 0; c < nc; c++) {
-                    uint8_t v0 = this_x[c * tile_size + 0];
-                    uint8_t v1 = this_x[c * tile_size + 1];
-                    const int16_t *restrict rt0 = this_table0 + v0 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt1 = this_table1 + v1 * TABLE_ENTRY_SIZE;
-                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
-                    for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
-                        rs[r] += rt0[r] + rt1[r];
-                    }
-                }
+                ADD_TABLE_ENTRIES_BLOCK2(nc);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1474,25 +1411,9 @@ void ggml_gemm_i2s4_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t 
         for (int g = 0; g < group_count; g++) {
             int pack_cnt = group_size / 4 / tile_size;
             for (int i = 0; i < pack_cnt; i++) {
-                gemm_make_table_i2s(this_table0, local_y + (g * group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table1, local_y + (g * group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table2, local_y + (g * group_size + (i * tile_size + 2) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table3, local_y + (g * group_size + (i * tile_size + 3) * 4) * TABLE_ENTRY_SIZE);
+                MAKE_TABLES_I2S_BLOCK4(g);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 4 + i * tile_size) * bs;
-                for (int c = 0; c < nc; c++) {
-                    uint8_t v0 = this_x[c * tile_size + 0];
-                    uint8_t v1 = this_x[c * tile_size + 1];
-                    uint8_t v2 = this_x[c * tile_size + 2];
-                    uint8_t v3 = this_x[c * tile_size + 3];
-                    const int16_t *restrict rt0 = this_table0 + v0 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt1 = this_table1 + v1 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt2 = this_table2 + v2 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt3 = this_table3 + v3 * TABLE_ENTRY_SIZE;
-                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
-                    for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
-                        rs[r] += rt0[r] + rt1[r] + rt2[r] + rt3[r];
-                    }
-                }
+                ADD_TABLE_ENTRIES_BLOCK4(nc);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1501,25 +1422,9 @@ void ggml_gemm_i2s4_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t 
         if (group_size_remain > 0) {
             int pack_cnt = group_size_remain / 4 / tile_size;
             for (int i = 0; i < pack_cnt; i++) {
-                gemm_make_table_i2s(this_table0, local_y + (group_count * group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table1, local_y + (group_count * group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table2, local_y + (group_count * group_size + (i * tile_size + 2) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table3, local_y + (group_count * group_size + (i * tile_size + 3) * 4) * TABLE_ENTRY_SIZE);
+                MAKE_TABLES_I2S_BLOCK4(group_count);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 4 + i * tile_size) * bs;
-                for (int c = 0; c < nc; c++) {
-                    uint8_t v0 = this_x[c * tile_size + 0];
-                    uint8_t v1 = this_x[c * tile_size + 1];
-                    uint8_t v2 = this_x[c * tile_size + 2];
-                    uint8_t v3 = this_x[c * tile_size + 3];
-                    const int16_t *restrict rt0 = this_table0 + v0 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt1 = this_table1 + v1 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt2 = this_table2 + v2 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt3 = this_table3 + v3 * TABLE_ENTRY_SIZE;
-                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
-                    for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
-                        rs[r] += rt0[r] + rt1[r] + rt2[r] + rt3[r];
-                    }
-                }
+                ADD_TABLE_ENTRIES_BLOCK4(nc);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1533,25 +1438,9 @@ void ggml_gemm_i2s4_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t 
         for (int g = 0; g < group_count; g++) {
             int pack_cnt = group_size / 4 / tile_size;
             for (int i = 0; i < pack_cnt; i++) {
-                gemm_make_table_i2s(this_table0, local_y + (g * group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table1, local_y + (g * group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table2, local_y + (g * group_size + (i * tile_size + 2) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table3, local_y + (g * group_size + (i * tile_size + 3) * 4) * TABLE_ENTRY_SIZE);
+                MAKE_TABLES_I2S_BLOCK4(g);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 4 + i * tile_size) * bs;
-                for (int c = 0; c < nc; c++) {
-                    uint8_t v0 = this_x[c * tile_size + 0];
-                    uint8_t v1 = this_x[c * tile_size + 1];
-                    uint8_t v2 = this_x[c * tile_size + 2];
-                    uint8_t v3 = this_x[c * tile_size + 3];
-                    const int16_t *restrict rt0 = this_table0 + v0 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt1 = this_table1 + v1 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt2 = this_table2 + v2 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt3 = this_table3 + v3 * TABLE_ENTRY_SIZE;
-                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
-                    for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
-                        rs[r] += rt0[r] + rt1[r] + rt2[r] + rt3[r];
-                    }
-                }
+                ADD_TABLE_ENTRIES_BLOCK4(nc);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1560,25 +1449,9 @@ void ggml_gemm_i2s4_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t 
         if (group_size_remain > 0) {
             int pack_cnt = group_size_remain / 4 / tile_size;
             for (int i = 0; i < pack_cnt; i++) {
-                gemm_make_table_i2s(this_table0, local_y + (group_count * group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table1, local_y + (group_count * group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table2, local_y + (group_count * group_size + (i * tile_size + 2) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table3, local_y + (group_count * group_size + (i * tile_size + 3) * 4) * TABLE_ENTRY_SIZE);
+                MAKE_TABLES_I2S_BLOCK4(group_count);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 4 + i * tile_size) * bs;
-                for (int c = 0; c < nc; c++) {
-                    uint8_t v0 = this_x[c * tile_size + 0];
-                    uint8_t v1 = this_x[c * tile_size + 1];
-                    uint8_t v2 = this_x[c * tile_size + 2];
-                    uint8_t v3 = this_x[c * tile_size + 3];
-                    const int16_t *restrict rt0 = this_table0 + v0 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt1 = this_table1 + v1 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt2 = this_table2 + v2 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt3 = this_table3 + v3 * TABLE_ENTRY_SIZE;
-                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
-                    for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
-                        rs[r] += rt0[r] + rt1[r] + rt2[r] + rt3[r];
-                    }
-                }
+                ADD_TABLE_ENTRIES_BLOCK4(nc);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1650,37 +1523,9 @@ void ggml_gemm_i2s8_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t 
         for (int g = 0; g < group_count; g++) {
             int pack_cnt = group_size / 4 / tile_size;
             for (int i = 0; i < pack_cnt; i++) {
-                gemm_make_table_i2s(this_table0, local_y + (g * group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table1, local_y + (g * group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table2, local_y + (g * group_size + (i * tile_size + 2) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table3, local_y + (g * group_size + (i * tile_size + 3) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table4, local_y + (g * group_size + (i * tile_size + 4) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table5, local_y + (g * group_size + (i * tile_size + 5) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table6, local_y + (g * group_size + (i * tile_size + 6) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table7, local_y + (g * group_size + (i * tile_size + 7) * 4) * TABLE_ENTRY_SIZE);
+                MAKE_TABLES_I2S_BLOCK8(g);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 4 + i * tile_size) * bs;
-                for (int c = 0; c < nc; c++) {
-                    uint8_t v0 = this_x[c * tile_size + 0];
-                    uint8_t v1 = this_x[c * tile_size + 1];
-                    uint8_t v2 = this_x[c * tile_size + 2];
-                    uint8_t v3 = this_x[c * tile_size + 3];
-                    uint8_t v4 = this_x[c * tile_size + 4];
-                    uint8_t v5 = this_x[c * tile_size + 5];
-                    uint8_t v6 = this_x[c * tile_size + 6];
-                    uint8_t v7 = this_x[c * tile_size + 7];
-                    const int16_t *restrict rt0 = this_table0 + v0 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt1 = this_table1 + v1 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt2 = this_table2 + v2 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt3 = this_table3 + v3 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt4 = this_table4 + v4 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt5 = this_table5 + v5 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt6 = this_table6 + v6 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt7 = this_table7 + v7 * TABLE_ENTRY_SIZE;
-                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
-                    for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
-                        rs[r] += rt0[r] + rt1[r] + rt2[r] + rt3[r] + rt4[r] + rt5[r] + rt6[r] + rt7[r];
-                    }
-                }
+                ADD_TABLE_ENTRIES_BLOCK8(nc);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1689,37 +1534,9 @@ void ggml_gemm_i2s8_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t 
         if (group_size_remain > 0) {
             int pack_cnt = group_size_remain / 4 / tile_size;
             for (int i = 0; i < pack_cnt; i++) {
-                gemm_make_table_i2s(this_table0, local_y + (group_count * group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table1, local_y + (group_count * group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table2, local_y + (group_count * group_size + (i * tile_size + 2) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table3, local_y + (group_count * group_size + (i * tile_size + 3) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table4, local_y + (group_count * group_size + (i * tile_size + 4) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table5, local_y + (group_count * group_size + (i * tile_size + 5) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table6, local_y + (group_count * group_size + (i * tile_size + 6) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table7, local_y + (group_count * group_size + (i * tile_size + 7) * 4) * TABLE_ENTRY_SIZE);
+                MAKE_TABLES_I2S_BLOCK8(group_count);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 4 + i * tile_size) * bs;
-                for (int c = 0; c < nc; c++) {
-                    uint8_t v0 = this_x[c * tile_size + 0];
-                    uint8_t v1 = this_x[c * tile_size + 1];
-                    uint8_t v2 = this_x[c * tile_size + 2];
-                    uint8_t v3 = this_x[c * tile_size + 3];
-                    uint8_t v4 = this_x[c * tile_size + 4];
-                    uint8_t v5 = this_x[c * tile_size + 5];
-                    uint8_t v6 = this_x[c * tile_size + 6];
-                    uint8_t v7 = this_x[c * tile_size + 7];
-                    const int16_t *restrict rt0 = this_table0 + v0 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt1 = this_table1 + v1 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt2 = this_table2 + v2 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt3 = this_table3 + v3 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt4 = this_table4 + v4 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt5 = this_table5 + v5 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt6 = this_table6 + v6 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt7 = this_table7 + v7 * TABLE_ENTRY_SIZE;
-                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
-                    for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
-                        rs[r] += rt0[r] + rt1[r] + rt2[r] + rt3[r] + rt4[r] + rt5[r] + rt6[r] + rt7[r];
-                    }
-                }
+                ADD_TABLE_ENTRIES_BLOCK8(nc);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1732,37 +1549,9 @@ void ggml_gemm_i2s8_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t 
         for (int g = 0; g < group_count; g++) {
             int pack_cnt = group_size / 4 / tile_size;
             for (int i = 0; i < pack_cnt; i++) {
-                gemm_make_table_i2s(this_table0, local_y + (g * group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table1, local_y + (g * group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table2, local_y + (g * group_size + (i * tile_size + 2) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table3, local_y + (g * group_size + (i * tile_size + 3) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table4, local_y + (g * group_size + (i * tile_size + 4) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table5, local_y + (g * group_size + (i * tile_size + 5) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table6, local_y + (g * group_size + (i * tile_size + 6) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table7, local_y + (g * group_size + (i * tile_size + 7) * 4) * TABLE_ENTRY_SIZE);
+                MAKE_TABLES_I2S_BLOCK8(g);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 4 + i * tile_size) * bs;
-                for (int c = 0; c < nc; c++) {
-                    uint8_t v0 = this_x[c * tile_size + 0];
-                    uint8_t v1 = this_x[c * tile_size + 1];
-                    uint8_t v2 = this_x[c * tile_size + 2];
-                    uint8_t v3 = this_x[c * tile_size + 3];
-                    uint8_t v4 = this_x[c * tile_size + 4];
-                    uint8_t v5 = this_x[c * tile_size + 5];
-                    uint8_t v6 = this_x[c * tile_size + 6];
-                    uint8_t v7 = this_x[c * tile_size + 7];
-                    const int16_t *restrict rt0 = this_table0 + v0 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt1 = this_table1 + v1 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt2 = this_table2 + v2 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt3 = this_table3 + v3 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt4 = this_table4 + v4 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt5 = this_table5 + v5 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt6 = this_table6 + v6 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt7 = this_table7 + v7 * TABLE_ENTRY_SIZE;
-                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
-                    for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
-                        rs[r] += rt0[r] + rt1[r] + rt2[r] + rt3[r] + rt4[r] + rt5[r] + rt6[r] + rt7[r];
-                    }
-                }
+                ADD_TABLE_ENTRIES_BLOCK8(nc);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1771,37 +1560,9 @@ void ggml_gemm_i2s8_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t 
         if (group_size_remain > 0) {
             int pack_cnt = group_size_remain / 4 / tile_size;
             for (int i = 0; i < pack_cnt; i++) {
-                gemm_make_table_i2s(this_table0, local_y + (group_count * group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table1, local_y + (group_count * group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table2, local_y + (group_count * group_size + (i * tile_size + 2) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table3, local_y + (group_count * group_size + (i * tile_size + 3) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table4, local_y + (group_count * group_size + (i * tile_size + 4) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table5, local_y + (group_count * group_size + (i * tile_size + 5) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table6, local_y + (group_count * group_size + (i * tile_size + 6) * 4) * TABLE_ENTRY_SIZE);
-                gemm_make_table_i2s(this_table7, local_y + (group_count * group_size + (i * tile_size + 7) * 4) * TABLE_ENTRY_SIZE);
+                MAKE_TABLES_I2S_BLOCK8(group_count);
                 const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 4 + i * tile_size) * bs;
-                for (int c = 0; c < nc; c++) {
-                    uint8_t v0 = this_x[c * tile_size + 0];
-                    uint8_t v1 = this_x[c * tile_size + 1];
-                    uint8_t v2 = this_x[c * tile_size + 2];
-                    uint8_t v3 = this_x[c * tile_size + 3];
-                    uint8_t v4 = this_x[c * tile_size + 4];
-                    uint8_t v5 = this_x[c * tile_size + 5];
-                    uint8_t v6 = this_x[c * tile_size + 6];
-                    uint8_t v7 = this_x[c * tile_size + 7];
-                    const int16_t *restrict rt0 = this_table0 + v0 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt1 = this_table1 + v1 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt2 = this_table2 + v2 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt3 = this_table3 + v3 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt4 = this_table4 + v4 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt5 = this_table5 + v5 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt6 = this_table6 + v6 * TABLE_ENTRY_SIZE;
-                    const int16_t *restrict rt7 = this_table7 + v7 * TABLE_ENTRY_SIZE;
-                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
-                    for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
-                        rs[r] += rt0[r] + rt1[r] + rt2[r] + rt3[r] + rt4[r] + rt5[r] + rt6[r] + rt7[r];
-                    }
-                }
+                ADD_TABLE_ENTRIES_BLOCK8(nc);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1823,30 +1584,61 @@ void ggml_gemm_i2s8_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t 
     free(this_table1);
     free(this_table2);
     free(this_table3);
+    free(this_table4);
+    free(this_table5);
+    free(this_table6);
+    free(this_table7);
     free(sum_i16);
     free(sum_i32);
 }
 
-#define TILE_SIZE 4
-#define LUT_PLANE_SIZE (81 * TABLE_ENTRY_SIZE)
-
-void ggml_gemm_i2st_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
-                             const void *restrict vy, int nr, int nc) {
+void ggml_gemm_i2s16_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
+                            const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
     UNUSED(nth);
 
     // nr: src1->ne[1], nc: src0->ne[1]
-    assert(n % 4 == 0);
+    assert(n % 8 == 0);
+
+    static const int tile_size = 16;
 
     int16_t *restrict sum_i16 = (int16_t *)malloc(sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
     int32_t *restrict sum_i32 = (int32_t *)malloc(sizeof(int32_t) * nr * nc);
-    int16_t *restrict this_table = (int16_t *)malloc(sizeof(int16_t) * LUT_PLANE_SIZE * TILE_SIZE);
+    int16_t *restrict this_table0 = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
+    int16_t *restrict this_table1 = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
+    int16_t *restrict this_table2 = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
+    int16_t *restrict this_table3 = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
+    int16_t *restrict this_table4 = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
+    int16_t *restrict this_table5 = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
+    int16_t *restrict this_table6 = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
+    int16_t *restrict this_table7 = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
+    int16_t *restrict this_table8 = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
+    int16_t *restrict this_table9 = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
+    int16_t *restrict this_table10 = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
+    int16_t *restrict this_table11 = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
+    int16_t *restrict this_table12 = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
+    int16_t *restrict this_table13 = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
+    int16_t *restrict this_table14 = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
+    int16_t *restrict this_table15 = (int16_t *)malloc((sizeof(int16_t) * TABLE_ENTRY_SIZE) * 81);
 
     memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
     memset(sum_i32, 0, sizeof(int32_t) * nr * nc);
-    for (int t = 0; t < TILE_SIZE; ++t) {
-        memset(this_table + t * LUT_PLANE_SIZE + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
-    }
+    memset(this_table0 + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
+    memset(this_table1 + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
+    memset(this_table2 + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
+    memset(this_table3 + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
+    memset(this_table4 + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
+    memset(this_table5 + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
+    memset(this_table6 + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
+    memset(this_table7 + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
+    memset(this_table8 + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
+    memset(this_table9 + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
+    memset(this_table10 + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
+    memset(this_table11 + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
+    memset(this_table12 + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
+    memset(this_table13 + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
+    memset(this_table14 + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
+    memset(this_table15 + 40 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
 
     static const int group_size = 512;
 
@@ -1860,105 +1652,48 @@ void ggml_gemm_i2st_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t 
         const int8_t *restrict local_y = (const int8_t *)vy + t * n * TABLE_ENTRY_SIZE;
         // groups
         for (int g = 0; g < group_count; g++) {
-            const int pack_cnt = group_size / 4 / TILE_SIZE;
+            int pack_cnt = group_size / 4 / tile_size;
             for (int i = 0; i < pack_cnt; i++) {
-                for (int ts = 0; ts < TILE_SIZE; ++ts) {
-                    const int8_t *src_y = local_y + (g * group_size + (i * TILE_SIZE + ts) * 4) * TABLE_ENTRY_SIZE;
-                    gemm_make_table_i2s(this_table + ts * LUT_PLANE_SIZE, src_y);
-                }
-                
-                const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 4 + i * TILE_SIZE) * bs;
-                for (int c = 0; c < nc; c++) {
-                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
-
-                    for (int ts = 0; ts < TILE_SIZE; ++ts) {
-                        uint8_t v = this_x[c * TILE_SIZE + ts];
-                        const int16_t *restrict rt = this_table + ts * LUT_PLANE_SIZE + v * TABLE_ENTRY_SIZE;
-                        for (int r = 0; r < TABLE_ENTRY_SIZE; r++){
-                            rs[r] += rt[r];
-                        }
-                    }
-                }
+                MAKE_TABLES_I2S_BLOCK16(g);
+                const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 4 + i * tile_size) * bs;
+                ADD_TABLE_ENTRIES_BLOCK16(nc);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
         }
         // group remain
         if (group_size_remain > 0) {
-            const int pack_cnt = group_size_remain / 4 / TILE_SIZE;
+            int pack_cnt = group_size_remain / 4 / tile_size;
             for (int i = 0; i < pack_cnt; i++) {
-                for (int ts = 0; ts < TILE_SIZE; ++ts) {
-                    const int8_t *src_y = local_y + (group_count * group_size + (i * TILE_SIZE + ts) * 4) * TABLE_ENTRY_SIZE;
-                    gemm_make_table_i2s(this_table + ts * LUT_PLANE_SIZE, src_y);
-                }
-
-                const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 4 + i * 4) * bs;
-                for (int c = 0; c < nc; c++) {
-                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
-
-                    for (int ts = 0; ts < TILE_SIZE; ++ts) {
-                        uint8_t v = this_x[c * TILE_SIZE + ts];
-                        const int16_t *restrict rt = this_table + ts * LUT_PLANE_SIZE + v * TABLE_ENTRY_SIZE;
-                        for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
-                            rs[r] += rt[r];
-                        }
-                    }
-                }
+                MAKE_TABLES_I2S_BLOCK16(group_count);
+                const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 4 + i * tile_size) * bs;
+                ADD_TABLE_ENTRIES_BLOCK16(nc);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, TABLE_ENTRY_SIZE, t);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
         }
     }
-
     // tile remain
     if (entry_tile_remain > 0) {
         const int8_t *restrict local_y = (const int8_t *)vy + entry_tile_count * n * TABLE_ENTRY_SIZE;
         // groups
         for (int g = 0; g < group_count; g++) {
-            const int pack_cnt = group_size / 4 / TILE_SIZE;
+            int pack_cnt = group_size / 4 / tile_size;
             for (int i = 0; i < pack_cnt; i++) {
-                for (int ts = 0; ts < TILE_SIZE; ++ts) {
-                    const int8_t *src_y = local_y + (g * group_size + (i * TILE_SIZE + ts) * 4) * TABLE_ENTRY_SIZE;
-                    gemm_make_table_i2s(this_table + ts * LUT_PLANE_SIZE, src_y);
-                }
-
-                const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 4 + i * TILE_SIZE) * bs;
-                for (int c = 0; c < nc; c++) {
-                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
-
-                    for (int ts = 0; ts < TILE_SIZE; ++ts) {
-                        uint8_t v = this_x[c * TILE_SIZE + ts];
-                        const int16_t *restrict rt = this_table + ts * LUT_PLANE_SIZE + v * TABLE_ENTRY_SIZE;
-                        for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
-                            rs[r] += rt[r];
-                        }
-                    }
-                }
+                MAKE_TABLES_I2S_BLOCK16(g);
+                const uint8_t *restrict this_x = (const uint8_t *)vx + (g * group_size / 4 + i * tile_size) * bs;
+                ADD_TABLE_ENTRIES_BLOCK16(nc);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
         }
         // group remain
         if (group_size_remain > 0) {
-            const int pack_cnt = group_size_remain / 4 / TILE_SIZE;
+            int pack_cnt = group_size_remain / 4 / tile_size;
             for (int i = 0; i < pack_cnt; i++) {
-                for (int ts = 0; ts < TILE_SIZE; ++ts) {
-                    const int8_t *src_y = local_y + (group_count * group_size + (i * TILE_SIZE + ts) * 4) * TABLE_ENTRY_SIZE;
-                    gemm_make_table_i2s(this_table + ts * LUT_PLANE_SIZE, src_y);
-                }
-
-                const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 4 + i * 4) * bs;
-                for (int c = 0; c < nc; c++) {
-                    int16_t *restrict rs = sum_i16 + c * TABLE_ENTRY_SIZE;
-
-                    for (int ts = 0; ts < TILE_SIZE; ++ts) {
-                        uint8_t v = this_x[c * TILE_SIZE + ts];
-                        const int16_t *restrict rt = this_table + ts * LUT_PLANE_SIZE + v * TABLE_ENTRY_SIZE;
-                        for (int r = 0; r < TABLE_ENTRY_SIZE; r++) {
-                            rs[r] += rt[r];
-                        }
-                    }
-                }
+                MAKE_TABLES_I2S_BLOCK16(group_count);
+                const uint8_t *restrict this_x = (const uint8_t *)vx + (group_count * group_size / 4 + i * tile_size) * bs;
+                ADD_TABLE_ENTRIES_BLOCK16(nc);
             }
             ACCUMULATE_TABLE_TRANS(sum_i16, sum_i32, nc, entry_tile_remain, entry_tile_count);
             memset(sum_i16, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
@@ -1976,7 +1711,22 @@ void ggml_gemm_i2st_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t 
         }
     }
 
-    free(this_table);
+    free(this_table0);
+    free(this_table1);
+    free(this_table2);
+    free(this_table3);
+    free(this_table4);
+    free(this_table5);
+    free(this_table6);
+    free(this_table7);
+    free(this_table8);
+    free(this_table9);
+    free(this_table10);
+    free(this_table11);
+    free(this_table12);
+    free(this_table13);
+    free(this_table14);
+    free(this_table15);
     free(sum_i16);
     free(sum_i32);
 }
