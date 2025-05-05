@@ -485,6 +485,12 @@ static const struct ggml_type_traits_cpu type_traits_cpu[GGML_TYPE_COUNT] = {
             .vec_dot_type = GGML_TYPE_I8_B,
             .nrows = 1,
         },
+    [GGML_TYPE_I1_M_2] =
+        {
+            // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
+            .vec_dot_type = GGML_TYPE_I8_B,
+            .nrows = 1,
+        },
 };
 
 const struct ggml_type_traits_cpu *ggml_get_type_traits_cpu(enum ggml_type type) { return &type_traits_cpu[type]; }
@@ -7105,6 +7111,13 @@ static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] 
             .tile_size = 16,
             .gemm2 = ggml_gemm_i2s16_i8b_LUT2,
         },
+    [GGML_TYPE_I1_M_2] =
+        {
+            .is_bitnet_type = true,
+            .table_entries_num = 243,
+            .tile_size = 2,
+            .gemm2 = ggml_gemm_i1m2_i8b_LUT2,
+        },
 };
 
 int16_t *tables;
@@ -8798,6 +8811,7 @@ static void ggml_compute_forward_clamp(const struct ggml_compute_params *params,
         case GGML_TYPE_I2_S_4:
         case GGML_TYPE_I2_S_8:
         case GGML_TYPE_I2_S_16:
+        case GGML_TYPE_I1_M_2:
         case GGML_TYPE_COUNT: {
             GGML_ABORT("fatal error");
         }

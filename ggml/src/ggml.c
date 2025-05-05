@@ -949,6 +949,13 @@ static const struct ggml_type_traits type_traits[GGML_TYPE_COUNT] =
                 .type_size = sizeof(uint8_t),
                 .is_quantized = true,
             },
+        [GGML_TYPE_I1_M_2] =
+            {
+                .type_name = "i2_m_2",
+                .blck_size = 5,
+                .type_size = sizeof(uint8_t),
+                .is_quantized = true,
+            },
 };
 
 const struct ggml_type_traits * ggml_get_type_traits(enum ggml_type type) {
@@ -1253,8 +1260,8 @@ int64_t ggml_nrows(const struct ggml_tensor * tensor) {
 }
 
 size_t ggml_nbytes(const struct ggml_tensor * tensor) {
-    if (tensor->type == GGML_TYPE_I1_M) {
-        return ggml_row_size(GGML_TYPE_I1_M, tensor->ne[0]) * tensor->ne[1];
+    if (tensor->type == GGML_TYPE_I1_M || tensor->type == GGML_TYPE_I1_M_2) {
+        return ggml_row_size(tensor->type, tensor->ne[0]) * tensor->ne[1];
     }
 
     size_t nbytes;
@@ -1290,7 +1297,7 @@ size_t ggml_type_size(enum ggml_type type) {
 size_t ggml_row_size(enum ggml_type type, int64_t ne) {
     if (type == GGML_TYPE_I8_B) {
         return sizeof(int8_t) * ne + sizeof(float);
-    } else if (type == GGML_TYPE_I1_M){
+    } else if (type == GGML_TYPE_I1_M || type == GGML_TYPE_I1_M_2) {
         assert(ne % 4 == 0);
         int64_t blck_num = ne / 20 * 4;
         int64_t blck_remain = ne % 20 / 4;
@@ -6585,6 +6592,9 @@ size_t ggml_quantize_chunk(
             break;
         case GGML_TYPE_I2_S_16:
             result = quantize_i2_s(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);  // Cipherxzc: TODO
+            break;
+        case GGML_TYPE_I1_M_2:
+            result = quantize_i1_m_2(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
         default:
             assert(false);
