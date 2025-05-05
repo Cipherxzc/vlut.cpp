@@ -951,7 +951,7 @@ static const struct ggml_type_traits type_traits[GGML_TYPE_COUNT] =
             },
         [GGML_TYPE_I1_M_2] =
             {
-                .type_name = "i2_m_2",
+                .type_name = "i1_m_2",
                 .blck_size = 5,
                 .type_size = sizeof(uint8_t),
                 .is_quantized = true,

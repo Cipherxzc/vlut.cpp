@@ -31,9 +31,9 @@ mkdir -p "$RESULTS_DIR"
 # Pass to bench-pp.sh
 export RESULTS_DIR="$RESULTS_DIR"
 
-echo "Benchmarking I2_S_4 model..."
-"$SCRIPT_DIR/bench-pp.sh" -m "$MODEL_DIR/ggml-model-I2_S_4.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
-echo "Benchmarking I2_S_8 model..."
-"$SCRIPT_DIR/bench-pp.sh" -m "$MODEL_DIR/ggml-model-I2_S_8.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
+# echo "Benchmarking I2_S_4 model..."
+# "$SCRIPT_DIR/bench-pp.sh" -m "$MODEL_DIR/ggml-model-I2_S_4.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
+# echo "Benchmarking I2_S_8 model..."
+# "$SCRIPT_DIR/bench-pp.sh" -m "$MODEL_DIR/ggml-model-I2_S_8.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
 echo "Benchmarking I1_M_2 model..."
-"$SCRIPT_DIR/bench-pp.sh" -m "$MODEL_DIR/ggml-model-I1_M.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
+"$SCRIPT_DIR/bench-pp.sh" -m "$MODEL_DIR/ggml-model-I1_M_2.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
