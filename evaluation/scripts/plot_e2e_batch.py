@@ -6,9 +6,19 @@ import numpy as np
 import glob
 from matplotlib.ticker import MaxNLocator
 from plot_utils import *
+import argparse
 
-arch = "aws_arm"
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Plot GeMM Benchmarks')
+    
+    parser.add_argument('-a', '--arch', type=str, default=None, help='Input arch name')
+    
+    args = parser.parse_args()
+    return args
+
+# arch = "aws_arm"
 # arch = "pc_intel"
+arch = "laptop_amd"
 
 def read_batch_csv_files(directory):
     """Read all batch CSV files in directory and subdirectories into a single DataFrame."""
@@ -55,8 +65,11 @@ def read_batch_csv_files(directory):
             df['model_name'] = E2E_MODEL_MAP[model_name]
             df['model_quant'] = E2E_TYPE_MAP[model_quant]
             df['threads'] = threads
-            
-            all_data.append(df)
+
+            if not df.empty:
+                all_data.append(df)
+            else:
+                print(f"DataFrame of {basename} is empty")
             
         except Exception as e:
             print(f"Error processing {csv_file}: {e}")
@@ -102,9 +115,11 @@ def plot_batch_throughput(df, tg_values=None, model_names=None):
     
     # Get the max thread count for each model
     max_threads = filtered_df.groupby('model_name')['threads'].max().to_dict()
+    min_threads = filtered_df.groupby('model_name')['threads'].min().to_dict()
     
     # Filter to only include max thread counts
-    filtered_df = filtered_df[filtered_df.apply(lambda row: row['threads'] == max_threads[row['model_name']], axis=1)]
+    # filtered_df = filtered_df[filtered_df.apply(lambda row: row['threads'] == max_threads[row['model_name']], axis=1)]
+    filtered_df = filtered_df[filtered_df.apply(lambda row: row['threads'] == min_threads[row['model_name']], axis=1)]
     
     # Set the font to Arial
     plt.rcParams['font.family'] = 'Arial'
@@ -234,7 +249,7 @@ def plot_batch_throughput(df, tg_values=None, model_names=None):
             )
         
         # Add overall title
-        fig.suptitle(f'Token Generation Throughput (TG={tg} tokens)', fontsize=24)
+        fig.suptitle(f'End-to-End Batched Decoding on {ARCH_MAP[arch]} (TG={tg} tokens)', fontsize=24)
         
         # Save the figure
         output_file = f"evaluation/results_e2e_batch_{arch}/e2e_batch_{arch}_TG{tg}.png"
@@ -243,6 +258,9 @@ def plot_batch_throughput(df, tg_values=None, model_names=None):
         plt.close(fig)
 
 if __name__ == '__main__':
+    args = parse_arguments()
+    if args.arch:
+        arch = args.arch
     
     directory = f"evaluation/results_e2e_batch_{arch}"
     combined_df = read_batch_csv_files(directory)

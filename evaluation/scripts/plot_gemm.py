@@ -7,6 +7,15 @@ import glob
 from matplotlib.ticker import MaxNLocator
 import load_tmac_gemm_log as load_tmac
 from plot_utils import *
+import argparse
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Plot GeMM Benchmarks')
+    
+    parser.add_argument('-a', '--arch', type=str, default=None, help='Input arch name')
+    
+    args = parser.parse_args()
+    return args
 
 combinations_to_plot = [
     (3200, 3200, 256),
@@ -20,6 +29,8 @@ combinations_to_plot = [
 arch = 'aws_arm'
 # arch = 'smartphone'
 # arch = 'pc_intel'
+# arch = 'laptop_intel'
+# arch = 'orangepi'
 
 def load_adapt_tmac(tmac_arch: str):
     df_tmac = load_tmac.load_and_process_results(tmac_arch)
@@ -170,7 +181,7 @@ def plot_performance_comparison(df, arch_val, threads_val, mkn_to_plot=None, lut
     
     # Calculate subplot grid dimensions
     n_plots = len(mkn_combinations)
-    n_rows = 1  # Fixed number of rows per column
+    n_rows = 3 # Fixed number of rows per column
     n_cols = (n_plots + n_rows - 1) // n_rows  # Calculate needed columns
     
     # Set the font to Arial
@@ -178,7 +189,7 @@ def plot_performance_comparison(df, arch_val, threads_val, mkn_to_plot=None, lut
     plt.rcParams['font.size'] = 16  # Base font size
     
     # Create figure with extra space at the bottom for the legend
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 5))
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(3*n_cols, 3*n_rows))
 
     if n_plots <= 1:
         axes = np.array([axes])  # Ensure axes is an array
@@ -196,6 +207,16 @@ def plot_performance_comparison(df, arch_val, threads_val, mkn_to_plot=None, lut
     # Sort the types for consistent ordering
     all_type_a_values = sorted(all_type_a_values)
     # all_type_a_values = sorted(all_type_a_values, key=lambda s: TYPE_ORDER_MAP.get(s[0], len(TYPE_ORDER_MAP)))
+
+    # # Create a color map for type_a values
+    # colors = {
+    #     'Ours 1.58-bit': '#3274A1',
+    #     'Ours 2-bit': '#32A178',
+    #     'T-MAC 2-bit': '#9067A9',
+    #     'llama.cpp 1.58-bit': '#D76B69',
+    #     'llama.cpp 2-bit': '#CDB236',
+    #     'llama.cpp 4-bit': '#5DA8D4'
+    # }
     
     # Create color map
     colors = plt.cm.tab10(np.linspace(0, 1, len(all_type_a_values)))
@@ -237,7 +258,7 @@ def plot_performance_comparison(df, arch_val, threads_val, mkn_to_plot=None, lut
         ax.set_xlabel('')
         ax.set_xticks([])
         ax.set_xticklabels([])
-        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.yaxis.set_major_locator(MaxNLocator(5, integer=True))
         
         # Add padding to the left and right of the bar group
         xlim = ax.get_xlim()
@@ -245,11 +266,13 @@ def plot_performance_comparison(df, arch_val, threads_val, mkn_to_plot=None, lut
         new_xlim = (xlim[0] - padding, xlim[1] + padding)
         ax.set_xlim(new_xlim)
         
-        ax.set_title(f'm={m}, k={k}, n={n}', fontsize=24, pad=10)
-        ax.set_ylabel('Speed (runs/sec)', fontsize=20)
+        # ax.set_title(f'm={m}, k={k}, n={n}', fontsize=24, pad=10)
+        ax.set_title(f'{m}×{k}×{n}', fontsize=24, pad=10)
+        if x == 0 and y == 1:
+            ax.set_ylabel('Speed (runs/sec)', fontsize=24, labelpad=20)
         ax.grid(True, alpha=0.3, axis='y')
         
-        ax.tick_params(axis='y', which='major', labelsize=18)
+        ax.tick_params(axis='y', which='major', labelsize=20)
     
     # Remove any unused subplots
     for idx in range(len(mkn_combinations), len(axes)):
@@ -258,11 +281,11 @@ def plot_performance_comparison(df, arch_val, threads_val, mkn_to_plot=None, lut
     # Add a single legend for the entire figure at the bottom
     # This replaces the previous legend code
     # fig.subplots_adjust(bottom=0.2)  # Make room for legend at the bottom
-    fig.subplots_adjust(bottom=0.24, top=0.8, left=0.1, right=0.95, wspace=0.3, hspace=0.4)
-    fig.legend(handles=legend_handles, labels=legend_labels, 
-            loc='lower center', ncol=len(legend_labels),  # Force all items into one row
-            fontsize=24, frameon=True, bbox_to_anchor=(0.5, 0.05),
-            columnspacing=3.0)  # Adjust spacing between legend items
+    fig.subplots_adjust(bottom=0.24, top=0.88, left=0.1, right=0.95, wspace=0.3, hspace=0.4)
+    # fig.legend(handles=legend_handles, labels=legend_labels, 
+    #         loc='lower center', ncol=len(legend_labels),  # Force all items into one row
+    #         fontsize=24, frameon=True, bbox_to_anchor=(0.5, 0.05),
+    #         columnspacing=3.0)  # Adjust spacing between legend items
     
     # # Add information about LUT2 and entry size to title if provided
     # lut2_info = f", LUT2 {'on' if lut2_on else 'off'}" if lut2_on is not None else ""
@@ -270,8 +293,9 @@ def plot_performance_comparison(df, arch_val, threads_val, mkn_to_plot=None, lut
     
     # plt.subplots_adjust(top=0.85)
     
-    fig.suptitle(f'GeMM benchmark on {ARCH_MAP[arch_val]}, {threads_val} {"cores" if threads_val > 1 else "core"}', 
-                fontsize=32)
+    # fig.suptitle(f'{ARCH_MAP[arch_val]}, {threads_val} {"cores" if threads_val > 1 else "core"}', 
+                # fontsize=32)
+    fig.suptitle(f'{DEVICE_MAP[arch_val]}', fontsize=28)
     
     # plt.tight_layout(rect=[0, 0.1, 1, 0.88])  # Reduce the top margin 
     # plt.tight_layout(rect=[0, 0.1, 1, 0.95])  # Adjust layout but leave space for legend
@@ -324,4 +348,7 @@ def main():
         print(f"Plot saved to {output_file}")
 
 if __name__ == '__main__':
+    args = parse_arguments()
+    if args.arch:
+        arch = args.arch
     main()

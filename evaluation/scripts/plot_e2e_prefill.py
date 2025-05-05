@@ -6,9 +6,22 @@ import numpy as np
 import glob
 from matplotlib.ticker import MaxNLocator
 from plot_utils import *
+import argparse
 
-arch = "aws_arm"
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Plot GeMM Benchmarks')
+    
+    parser.add_argument('-a', '--arch', type=str, default=None, help='Input arch name')
+    
+    args = parser.parse_args()
+    return args
+
+# arch = "aws_arm"
 # arch = "pc_intel"
+# arch = "laptop_intel"
+# arch = "smartphone"
+# arch = "orangepi"
+arch = "laptop_amd"
 
 def read_csv_files(directory):
     """Read all CSV files in directory and subdirectories into a single DataFrame."""
@@ -55,7 +68,10 @@ def read_csv_files(directory):
             df['model_name'] = E2E_MODEL_MAP[model_name]
             df['model_quant'] = E2E_TYPE_MAP[model_quant]
             
-            all_data.append(df)
+            if not df.empty:
+                all_data.append(df)
+            else:
+                print(f"DataFrame of {basename} is empty")
             
         except Exception as e:
             print(f"Error processing {csv_file}: {e}")
@@ -191,13 +207,16 @@ def plot_latency_curves(df, t_values=None, model_names=None):
     )
     
     # Add overall title
-    fig.suptitle('Model Performance: Latency vs. Prompt Length', fontsize=28)
+    fig.suptitle(f'End-to-End Prefill on {ARCH_MAP[arch]}', fontsize=28)
     
     return fig
 
 if __name__ == '__main__':
-    
-    # Example usage
+
+    args = parse_arguments()
+    if args.arch:
+        arch = args.arch
+        
     directory = f"evaluation/results_e2e_prefill_{arch}"  # Path to your results folder
     combined_df = read_csv_files(directory)
 
@@ -208,7 +227,8 @@ if __name__ == '__main__':
         # print(f"\nTotal rows: {len(combined_df)}")
         # print(f"Columns: {combined_df.columns.tolist()}")
         # print(combined_df)
-        fig = plot_latency_curves(combined_df, t_values=[1, 4, 8], model_names=['BitNet 3B', 'Llama3 8B', 'Falcon 1B'])
+        # fig = plot_latency_curves(combined_df, t_values=[1, 4, 8], model_names=['BitNet 3B', 'Llama3 8B', 'Falcon 1B'])
+        fig = plot_latency_curves(combined_df, t_values=[1, 2, 4, 8], model_names=['BitNet 3B', 'Llama3 8B', 'Falcon 1B'])
         plt.savefig(f'{directory}/e2e_prefill_{arch}.png', dpi=300, bbox_inches='tight')
         # plt.show()
     else:
