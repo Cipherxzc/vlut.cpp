@@ -6571,7 +6571,7 @@ size_t ggml_quantize_chunk(
                 result = n * elemsize;
                 memcpy((uint8_t *)dst + start * elemsize, src + start, result);
             } break;
-        // BitNet type
+        // Row-LUT type
         case GGML_TYPE_I2_S:
             result = quantize_i2_s(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;

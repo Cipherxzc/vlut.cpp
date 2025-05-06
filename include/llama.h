@@ -179,7 +179,7 @@ extern "C" {
         //LLAMA_FTYPE_MOSTLY_Q4_0_8_8      = 35, // removed from gguf files, use Q4_0 and runtime repack
         LLAMA_FTYPE_MOSTLY_TQ1_0         = 36, // except 1d tensors
         LLAMA_FTYPE_MOSTLY_TQ2_0         = 37, // except 1d tensors
-        // BitNet types
+        // Row-LUT types
         LLAMA_FTYPE_MOSTLY_I2_S          = 38, // BitNet
         LLAMA_FTYPE_MOSTLY_I1_S          = 39, // BitNet
         LLAMA_FTYPE_MOSTLY_I1_M          = 40, // BitNet

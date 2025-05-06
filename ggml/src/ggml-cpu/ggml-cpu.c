@@ -13190,12 +13190,12 @@ struct ggml_cplan ggml_graph_plan(const struct ggml_cgraph *cgraph, int n_thread
     // BitNet I8_B
     
 #ifdef BITNET_TILING
-    work_size += TABLE_ENTRY_SIZE * 10000 * sizeof(int8_t);
+    work_size += TABLE_ENTRY_SIZE * 20000 * sizeof(int8_t);
 #endif
 
     const size_t MAX_INPUT_LENGTH = 2048;
 
-#if defined(BITNET_LUT) || defined(BITNET_LUT2)
+#if defined(BITNET_LUT)
     tables = (int16_t *)malloc(work_size / 4 * 256 * sizeof(int16_t));
     // sum1 = (int16_t *)malloc(n_threads * TABLE_ENTRY_SIZE * 8640 * sizeof(int16_t));
     // sum2 = (int *)malloc(n_threads * 8640 * MAX_INPUT_LENGTH * sizeof(int));

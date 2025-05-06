@@ -2398,8 +2398,6 @@ void ggml_gemm_i1m_i8b_LUT(int ith, int nth, int n, float *restrict s, size_t bs
     assert(n % 4 == 0);
     assert(bs % nc == 0);
 
-    // printf("ggml_gemm_i2s_i8b_LUT: %d %d %d %d\n", n, nr, nc, bs); // 3200 128 800 3200 (2160 8640)
-
     int16_t *restrict sum_i16 = (int16_t *)malloc(sizeof(int16_t) * TABLE_ENTRY_SIZE * nc);
     int32_t *restrict sum_i32 = (int32_t *)malloc(sizeof(int32_t) * nr * nc);
 
