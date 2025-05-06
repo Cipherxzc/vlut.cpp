@@ -13187,10 +13187,9 @@ struct ggml_cplan ggml_graph_plan(const struct ggml_cgraph *cgraph, int n_thread
         work_size += CACHE_LINE_SIZE * (n_threads);
     }
     
-    // BitNet I8_B
-    
+    // Allocate additional work size for Row-LUT
 #ifdef BITNET_TILING
-    work_size += TABLE_ENTRY_SIZE * 20000 * sizeof(int8_t);
+    work_size += TABLE_ENTRY_SIZE * 15000 * sizeof(int8_t);
 #endif
 
     const size_t MAX_INPUT_LENGTH = 2048;
