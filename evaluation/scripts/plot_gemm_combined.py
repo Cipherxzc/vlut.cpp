@@ -30,11 +30,11 @@ combinations_to_plot = [
 
 # List of architectures to include
 all_archs = [
-    'aws_arm',
-    'smartphone',
     'pc_intel',
     'laptop_amd',
-    'orangepi'
+    'orangepi',
+    'smartphone',
+    'aws_arm',
 ]
 
 # Multi-thread configuration for each architecture
@@ -212,7 +212,7 @@ def plot_multi_arch_comparison(results_dict, mkn_to_plot=None, lut2_on=None, ent
     cols_total = n_archs * n_cols_per_arch
     
     # Create the figure
-    fig = plt.figure(figsize=(6*n_archs, 10))
+    fig = plt.figure(figsize=(6*n_archs, 7))
     
     # First, find all unique type_a values across all datasets
     all_type_a_values = set()
@@ -239,7 +239,7 @@ def plot_multi_arch_comparison(results_dict, mkn_to_plot=None, lut2_on=None, ent
     # Define subplot adjustment parameters
     left_margin = 0.1
     right_margin = 0.95
-    bottom_margin = 0.1
+    bottom_margin = 0.12
     top_margin = 0.9
     wspace = 0.3
     hspace = 0.4
@@ -302,8 +302,12 @@ def plot_multi_arch_comparison(results_dict, mkn_to_plot=None, lut2_on=None, ent
                                     edgecolor='black', zorder=3)
                         bars.append(bar)
                     
-                    # Set y-axis ticks
-                    ax.yaxis.set_major_locator(MaxNLocator(5, integer=True))
+                # Set y-axis ticks
+                # ax.yaxis.set_major_locator(MaxNLocator(5, integer=True))
+                ax.yaxis.set_major_locator(MaxNLocator(4, integer=True))
+                for spine in ax.spines.values():
+                    spine.set_linewidth(1.5)
+                    spine.set_zorder(10)
                 
                 # Disable x-axis label, ticks, and tick labels for all subplots
                 ax.set_xlabel('')
@@ -378,12 +382,23 @@ def plot_multi_arch_comparison(results_dict, mkn_to_plot=None, lut2_on=None, ent
     # Hide the dummy axis
     legend_ax.set_visible(False)
 
-    # Add a single legend for the entire figure at the bottom
-    fig.legend(handles=legend_handles, labels=legend_labels, 
-              loc='lower center', ncol=min(len(legend_labels), 8),
-              fontsize=20, frameon=True, bbox_to_anchor=(0.5, 0.02),
-              columnspacing=2.0)
     
+    import matplotlib.font_manager as font_manager
+    font_prop = font_manager.FontProperties(weight='bold', size=20)
+
+    # Add a single legend for the entire figure at the bottom
+    # fig.legend(handles=legend_handles, labels=legend_labels, 
+    #           loc='lower center', ncol=min(len(legend_labels), 8),
+    #           fontsize=20, frameon=True, bbox_to_anchor=(0.5, 0.02),
+    #           columnspacing=2.0)
+    legend = fig.legend(handles=legend_handles, labels=legend_labels, prop=font_prop,
+              loc='lower center', ncol=min(len(legend_labels), 8),
+              frameon=False, bbox_to_anchor=(0.5, 0.00),
+              columnspacing=2.0)
+    # for line in legend.get_lines():
+    #     line.set_linewidth(1.5)
+    # legend.get_frame().set_linewidth(2)
+
     # Add overall title based on thread mode
     # if thread_mode == "single":
     #     fig.suptitle('GeMM Performance Comparison (Single-threaded)', fontsize=26, y=0.98)
@@ -391,6 +406,214 @@ def plot_multi_arch_comparison(results_dict, mkn_to_plot=None, lut2_on=None, ent
     #     fig.suptitle('GeMM Performance Comparison (Multi-threaded)', fontsize=26, y=0.98)
     
     return fig
+
+def generate_speedup_reports(results_dict, mkn_to_plot, output_dir, lut2_on=None, entry_size=None):
+    """Generate CSV reports on speedups for each architecture and matrix size."""
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Prepare dataframes to store average speedups across all matrix sizes
+    avg_speedups_by_arch = {}
+    
+    for arch, df in results_dict.items():
+        # Apply filters
+        if lut2_on is not None:
+            df = df[df['lut2_on'] == lut2_on]
+        if entry_size is not None:
+            df = df[df['entry_size'] == entry_size]
+        
+        # Create a dataframe to store speedup results for this architecture
+        speedup_results = []
+        
+        # Create a dataframe to accumulate speedups for averaging
+        all_speedups = []
+        
+        # Get relevant GEMM types for this architecture
+        relevant_types = set()
+        for m, k, n in mkn_to_plot:
+            subset = df[(df['m'] == m) & (df['k'] == k) & (df['n'] == n)]
+            for type_a in subset['type_a'].unique():
+                relevant_types.add(type_a)
+        
+        # Filter to only use types from GEMM_TYPE_DEVICE_MAP if available
+        if 'GEMM_TYPE_DEVICE_MAP' in globals() and arch in GEMM_TYPE_DEVICE_MAP:
+            comparison_types = set([GEMM_TYPE_MAP[t] for t in GEMM_TYPE_DEVICE_MAP[arch]]) & relevant_types
+        else:
+            comparison_types = relevant_types
+        
+        relevant_types = sorted(list(relevant_types))
+        comparison_types = sorted(list(comparison_types))
+        
+        # For each matrix size
+        for m, k, n in mkn_to_plot:
+            # Filter data for this m,k,n combination
+            subset = df[(df['m'] == m) & (df['k'] == k) & (df['n'] == n)]
+            
+            # Remove duplicates
+            subset = subset.drop_duplicates(subset=['m', 'n', 'k', 'type_a'], keep='first')
+            
+            # If we have data for this size
+            if not subset.empty:
+                # Create a dictionary to store performance for each type
+                perf_by_type = {}
+                
+                # Collect performance data
+                for _, row in subset.iterrows():
+                    perf_by_type[row['type_a']] = row['runs_per_sec']
+                
+                # Calculate speedups for each pair of types
+                for comp_type in comparison_types:
+                    if comp_type not in perf_by_type:
+                        continue
+                        
+                    comp_perf = perf_by_type[comp_type]
+                    
+                    for baseline_type in relevant_types:
+                        if baseline_type not in perf_by_type or baseline_type == comp_type:
+                            continue
+                            
+                        baseline_perf = perf_by_type[baseline_type]
+                        speedup = comp_perf / baseline_perf
+                        
+                        # Add to results
+                        speedup_results.append({
+                            'm': m,
+                            'n': n,
+                            'k': k,
+                            'comparison_type': comp_type,
+                            'baseline_type': baseline_type,
+                            'speedup': speedup
+                        })
+                        
+                        # Add to all speedups for averaging
+                        all_speedups.append({
+                            'comparison_type': comp_type,
+                            'baseline_type': baseline_type,
+                            'speedup': speedup,
+                            'mnk': f"{m}x{k}x{n}"
+                        })
+        
+        # Convert results to dataframe and save to CSV
+        if speedup_results:
+            speedup_df = pd.DataFrame(speedup_results)
+            output_file = os.path.join(output_dir, f'{arch}_speedup_details.csv')
+            speedup_df.to_csv(output_file, index=False)
+            print(f"Detailed speedup report for {arch} saved to {output_file}")
+        
+        # Calculate average, min, and max speedups and save to CSV
+        if all_speedups:
+            all_speedups_df = pd.DataFrame(all_speedups)
+            
+            # Group by comparison and baseline types
+            grouped = all_speedups_df.groupby(['comparison_type', 'baseline_type'])
+            
+            # Calculate stats
+            avg_speedups = grouped['speedup'].mean().reset_index()
+            min_speedups = grouped['speedup'].min().reset_index().rename(columns={'speedup': 'min_speedup'})
+            max_speedups = grouped['speedup'].max().reset_index().rename(columns={'speedup': 'max_speedup'})
+            
+            # Get mnk combinations for min and max speedups
+            min_mnk = grouped.apply(lambda x: x.loc[x['speedup'].idxmin(), 'mnk'], include_groups=False).reset_index(name='min_speedup_mnk')
+            max_mnk = grouped.apply(lambda x: x.loc[x['speedup'].idxmax(), 'mnk'], include_groups=False).reset_index(name='max_speedup_mnk')
+            
+            # Merge all stats
+            stats_df = avg_speedups.merge(min_speedups, on=['comparison_type', 'baseline_type'])
+            stats_df = stats_df.merge(max_speedups, on=['comparison_type', 'baseline_type'])
+            stats_df = stats_df.merge(min_mnk, on=['comparison_type', 'baseline_type'])
+            stats_df = stats_df.merge(max_mnk, on=['comparison_type', 'baseline_type'])
+            
+            # Add architecture column
+            stats_df['architecture'] = arch
+            
+            # Reorder columns with comparison_type as first column
+            stats_df = stats_df[['comparison_type', 'baseline_type', 'speedup', 'min_speedup', 'max_speedup', 
+                                'min_speedup_mnk', 'max_speedup_mnk', 'architecture']]
+            
+            # Save per-architecture average speedups
+            output_file = os.path.join(output_dir, f'{arch}_speedup_stats.csv')
+            stats_df.to_csv(output_file, index=False)
+            print(f"Speedup statistics report for {arch} saved to {output_file}")
+            
+            # Store for combined report
+            avg_speedups_by_arch[arch] = stats_df
+    
+    # Combine all average speedups into a single report
+    if avg_speedups_by_arch:
+        combined_stats = pd.concat(avg_speedups_by_arch.values(), ignore_index=True)
+        output_file = os.path.join(output_dir, 'combined_speedup_stats.csv')
+        combined_stats.to_csv(output_file, index=False)
+        print(f"Combined speedup statistics report saved to {output_file}")
+    
+    # Create a pivot table for easier comparison
+    if avg_speedups_by_arch:
+        # For average speedups
+        avg_pivot_rows = []
+        for arch, stats_df in avg_speedups_by_arch.items():
+            for _, row in stats_df.iterrows():
+                avg_pivot_rows.append({
+                    'architecture': arch,
+                    'comparison_type': row['comparison_type'],
+                    'baseline_type': row['baseline_type'],
+                    'avg_speedup': row['speedup']
+                })
+        
+        if avg_pivot_rows:
+            avg_pivot_df = pd.DataFrame(avg_pivot_rows)
+            avg_pivot_table = avg_pivot_df.pivot_table(
+                values='avg_speedup',
+                index=['architecture', 'comparison_type'],
+                columns=['baseline_type']
+            ).reset_index()
+            
+            output_file = os.path.join(output_dir, 'avg_speedup_pivot.csv')
+            avg_pivot_table.to_csv(output_file)
+            print(f"Average speedup pivot table saved to {output_file}")
+        
+        # For min speedups
+        min_pivot_rows = []
+        for arch, stats_df in avg_speedups_by_arch.items():
+            for _, row in stats_df.iterrows():
+                min_pivot_rows.append({
+                    'architecture': arch,
+                    'comparison_type': row['comparison_type'],
+                    'baseline_type': row['baseline_type'],
+                    'min_speedup': row['min_speedup']
+                })
+        
+        if min_pivot_rows:
+            min_pivot_df = pd.DataFrame(min_pivot_rows)
+            min_pivot_table = min_pivot_df.pivot_table(
+                values='min_speedup',
+                index=['architecture', 'comparison_type'],
+                columns=['baseline_type']
+            ).reset_index()
+            
+            output_file = os.path.join(output_dir, 'min_speedup_pivot.csv')
+            min_pivot_table.to_csv(output_file)
+            print(f"Minimum speedup pivot table saved to {output_file}")
+        
+        # For max speedups
+        max_pivot_rows = []
+        for arch, stats_df in avg_speedups_by_arch.items():
+            for _, row in stats_df.iterrows():
+                max_pivot_rows.append({
+                    'architecture': arch,
+                    'comparison_type': row['comparison_type'],
+                    'baseline_type': row['baseline_type'],
+                    'max_speedup': row['max_speedup']
+                })
+        
+        if max_pivot_rows:
+            max_pivot_df = pd.DataFrame(max_pivot_rows)
+            max_pivot_table = max_pivot_df.pivot_table(
+                values='max_speedup',
+                index=['architecture', 'comparison_type'],
+                columns=['baseline_type']
+            ).reset_index()
+            
+            output_file = os.path.join(output_dir, 'max_speedup_pivot.csv')
+            max_pivot_table.to_csv(output_file)
+            print(f"Maximum speedup pivot table saved to {output_file}")
 
 def main():
     args = parse_arguments()
@@ -408,9 +631,18 @@ def main():
             thread_mode="single"
         )
         
+        # Generate speedup reports for single-thread configuration
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        reports_dir_single = os.path.join(os.path.dirname(script_dir), 'reports_gemm/single_thread')
+        generate_speedup_reports(
+            results_dict_single,
+            combinations_to_plot,
+            reports_dir_single
+        )
+        
         # Save the single-thread plot
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        output_file_single = os.path.join(os.path.dirname(script_dir), 'figures/gemm_comparison_single_thread.png')
+        output_file_single = os.path.join(os.path.dirname(script_dir), 'figures/gemm_comparison_single_thread.pdf')
         fig_single.savefig(output_file_single, dpi=300, bbox_inches='tight')
         print(f"Single-thread comparison plot saved to {output_file_single}")
         
@@ -423,8 +655,16 @@ def main():
             thread_mode="multi"
         )
         
+        # Generate speedup reports for multi-thread configuration
+        reports_dir_multi = os.path.join(os.path.dirname(script_dir), 'reports_gemm/multi_thread')
+        generate_speedup_reports(
+            results_dict_multi,
+            combinations_to_plot,
+            reports_dir_multi
+        )
+        
         # Save the multi-thread plot
-        output_file_multi = os.path.join(os.path.dirname(script_dir), 'figures/gemm_comparison_multi_thread.png')
+        output_file_multi = os.path.join(os.path.dirname(script_dir), 'figures/gemm_comparison_multi_thread.pdf')
         fig_multi.savefig(output_file_multi, dpi=300, bbox_inches='tight')
         print(f"Multi-thread comparison plot saved to {output_file_multi}")
         
@@ -468,9 +708,17 @@ def main():
             thread_mode=thread_mode
         )
         
-        # Save the plot
+        # Generate speedup reports
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        output_file = os.path.join(os.path.dirname(script_dir), f'figures/gemm_comparison_{title_suffix}.png')
+        reports_dir = os.path.join(os.path.dirname(script_dir), f'reports/{title_suffix}')
+        generate_speedup_reports(
+            results_dict,
+            combinations_to_plot,
+            reports_dir
+        )
+        
+        # Save the plot
+        output_file = os.path.join(os.path.dirname(script_dir), f'figures/gemm_comparison_{title_suffix}.pdf')
         fig.savefig(output_file, dpi=300, bbox_inches='tight')
         print(f"Multi-architecture comparison plot saved to {output_file}")
 

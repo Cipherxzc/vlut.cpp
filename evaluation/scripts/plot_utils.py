@@ -16,28 +16,60 @@
 #     'orangepi': 'Orange Pi 5 Plus\n(ARM Embedded)',
 # }
 
+# DEVICE_MAP = {
+#     'pc_intel': 'Intel PC\n(Intel Core i7-13700k)',
+#     'laptop_amd': 'Legion 5 Pro\n(AMD Ryzen 7 5800H)',
+#     'smartphone': 'Xiaomi 15\n(Qualcomm Snapdragon 8 Elite)',
+#     'orangepi': 'Orange Pi 5 Plus\n(ARM Cortex-A76)',
+#     'aws_arm': 'AWS Gravition 3\n(ARM Neoverse-V1)',
+#     'laptop_intel': 'ASUS Zenbook Air\n(Intel Laptop)',
+# }
+
 DEVICE_MAP = {
-    'aws_arm': 'AWS Gravition 3\n(ARM Neoverse-V1)',
-    'pc_intel': 'Intel PC\n(Intel Core i7-13700k)',
-    'laptop_amd': 'Legion 5 Pro\n(AMD Ryzen 7 5800H)',
-    'laptop_intel': 'ASUS Zenbook Air\n(Intel Laptop)',
-    'smartphone': 'Xiaomi 15\n(Qualcomm Snapdragon 8 Elite)',
-    'orangepi': 'Orange Pi 5 Plus\n(ARM Cortex-A76)',
+    'pc_intel': 'Intel PC (x86)',
+    'laptop_amd': 'Legion 5 Pro (x86)',
+    'smartphone': 'Xiaomi 15 (ARM)',
+    'orangepi': 'Orange Pi 5 Plus (ARM)',
+    'aws_arm': 'AWS Gravition 3 (ARM)',
 }
 
 
 ARCH_MAP = {
-    'aws_arm': 'AWS Gravition 3 (ARM Neoverse-V1)',
     'pc_intel': 'Intel Core i7-13700k',
     'laptop_amd': 'AMD Ryzen 7 5800H',
-    'laptop_intel': 'Intel Core Ultra 7 258V',
     'smartphone': 'Qualcomm Snapdragon 8 Elite',
     'orangepi': 'RK3588 (ARM Cortex-A76)',
+    'aws_arm': 'AWS Gravition 3 (ARM Neoverse-V1)',
+    'laptop_intel': 'Intel Core Ultra 7 258V',
+}
+
+GEMM_TYPE_VARIANTS = ['i2_s','i2_s_4','i2_s_8','i1_58_m','i1_m_2']
+E2E_TYPE_VARIANTS = ['I2_S','I2_S_4','I2_S_8','I1_M','I1_M_2']
+
+GEMM_TYPE_DEVICE_MAP = {
+    'aws_arm': ['i2_s','i1_m'],
+    'pc_intel': ['i2_s_8','i1_m_2'],
+    'laptop_amd': ['i2_s_4','i1_m_2'],
+    'laptop_intel': ['i2_s_4','i1_m_2'],
+    'smartphone': ['i2_s_4','i1_m_2'],
+    'orangepi': ['i2_s_4','i1_m_2'],
+}
+
+E2E_TYPE_DEVICE_MAP = {
+    'aws_arm': ['I2_S','I1_M'],
+    'pc_intel': ['I2_S_8','I1_M_2'],
+    'laptop_amd': ['I2_S_4','I1_M_2'],
+    'laptop_intel': ['I2_S_4','I1_M_2'],
+    'smartphone': ['I2_S_4','I1_M_2'],
+    'orangepi': ['I2_S_4','I1_M_2'],
 }
 
 GEMM_TYPE_MAP = {
     'i2_s': 'Ours I2 (b2.00)',
-    'i1_58_m': 'Ours I1 (b1.60)',
+    'i2_s_4': 'Ours I2 (b2.00)',
+    'i2_s_8': 'Ours I2 (b2.00)',
+    'i1_m': 'Ours I1 (b1.60)',
+    'i1_m_2': 'Ours I1 (b1.60)',
     'tmac': 'T-MAC INT_N (b2.00)',
     'q4_0': 'llama.cpp Q4_0 (b4.50)',
     'tq1_0': 'llama.cpp TQ1_0 (b1.69)',
@@ -46,27 +78,20 @@ GEMM_TYPE_MAP = {
 
 # Custom colors and patterns for each implementation type
 GEMM_TYPE_STYLES = {
-    GEMM_TYPE_MAP['i2_s']: {'color': '#32A178', 'hatch': ''},
-    GEMM_TYPE_MAP['i1_58_m']: {'color': '#3274A1', 'hatch': '//'},
-    GEMM_TYPE_MAP['tmac']: {'color': '#9067A9', 'hatch': ''},
-    GEMM_TYPE_MAP['q4_0']: {'color': '#5DA8D4', 'hatch': ''},
-    GEMM_TYPE_MAP['tq1_0']: {'color': '#D76B69', 'hatch': '//'},
-    GEMM_TYPE_MAP['tq2_0']: {'color': '#CDB236', 'hatch': ''},
-}
-
-# Create a mapping dictionary where keys are characters and values are their positions
-GEMM_TYPE_ORDER_MAP = {
-    GEMM_TYPE_MAP['i2_s']: 0,
-    GEMM_TYPE_MAP['i1_58_m']: 1,
-    GEMM_TYPE_MAP['tmac']: 2,
-    GEMM_TYPE_MAP['q4_0']: 3,
-    GEMM_TYPE_MAP['tq1_0']: 4,
-    GEMM_TYPE_MAP['tq2_0']: 5,
+    'Ours I2 (b2.00)': {'color': '#32A178', 'hatch': ''},
+    'Ours I1 (b1.60)': {'color': '#3274A1', 'hatch': '//'},
+    'T-MAC INT_N (b2.00)': {'color': '#9067A9', 'hatch': ''},
+    'llama.cpp Q4_0 (b4.50)': {'color': '#5DA8D4', 'hatch': ''},
+    'llama.cpp TQ1_0 (b1.69)': {'color': '#D76B69', 'hatch': '//'},
+    'llama.cpp TQ2_0 (b2.06)': {'color': '#CDB236', 'hatch': ''},
 }
 
 E2E_TYPE_MAP = {
     'I2_S': 'Ours I2 (b2.00)',
+    'I2_S_4': 'Ours I2 (b2.00)',
+    'I2_S_8': 'Ours I2 (b2.00)',
     'I1_M': 'Ours I1 (b1.60)',
+    'I1_M_2': 'Ours I1 (b1.60)',
     'INT_N': 'T-MAC INT_N (b2.00)',
     'Q4_0': 'llama.cpp Q4_0 (b4.50)',
     'TQ2_0': 'llama.cpp TQ2_0 (b2.06)',
@@ -76,29 +101,16 @@ E2E_TYPE_MAP = {
     'tl2': 'bitnet.cpp TL2 (b1.67)',
 }
 
-# Custom colors and patterns for each implementation type
-# E2E_TYPE_STYLES = {
-#     'I2_S': GEMM_TYPE_MAP['i2_s'],
-#     'I1_M': GEMM_TYPE_MAP['i1_58_m'],
-#     'INT_N': GEMM_TYPE_MAP['tmac'],
-#     'Q4_0': GEMM_TYPE_MAP['q4_0'],
-#     'TQ1_0': GEMM_TYPE_MAP['tq1_0'],
-#     'TQ2_0': GEMM_TYPE_MAP['tq2_0'],
-#     'i2_s': {'color': '#E18727', 'hatch': ''},
-#     'tl1': {'color': '#26828E', 'hatch': ''},
-#     'tl2': {'color': '#7EB875', 'hatch': ''},
-# }
-
 E2E_TYPE_STYLES = {
-    E2E_TYPE_MAP['I2_S']: GEMM_TYPE_STYLES[GEMM_TYPE_MAP['i2_s']],
-    E2E_TYPE_MAP['I1_M']: GEMM_TYPE_STYLES[GEMM_TYPE_MAP['i1_58_m']],
-    E2E_TYPE_MAP['INT_N']: GEMM_TYPE_STYLES[GEMM_TYPE_MAP['tmac']],
-    E2E_TYPE_MAP['Q4_0']: GEMM_TYPE_STYLES[GEMM_TYPE_MAP['q4_0']],
-    E2E_TYPE_MAP['TQ1_0']: GEMM_TYPE_STYLES[GEMM_TYPE_MAP['tq1_0']],
-    E2E_TYPE_MAP['TQ2_0']: GEMM_TYPE_STYLES[GEMM_TYPE_MAP['tq2_0']],
-    E2E_TYPE_MAP['i2_s']: {'color': '#E18727', 'hatch': ''},
-    E2E_TYPE_MAP['tl1']: {'color': '#26828E', 'hatch': ''},
-    E2E_TYPE_MAP['tl2']: {'color': '#7EB875', 'hatch': '//'},
+    'Ours I2 (b2.00)': GEMM_TYPE_STYLES['Ours I2 (b2.00)'],
+    'Ours I1 (b1.60)': GEMM_TYPE_STYLES['Ours I1 (b1.60)'],
+    'T-MAC INT_N (b2.00)': GEMM_TYPE_STYLES['T-MAC INT_N (b2.00)'],
+    'llama.cpp Q4_0 (b4.50)': GEMM_TYPE_STYLES['llama.cpp Q4_0 (b4.50)'],
+    'llama.cpp TQ1_0 (b1.69)': GEMM_TYPE_STYLES['llama.cpp TQ1_0 (b1.69)'],
+    'llama.cpp TQ2_0 (b2.06)': GEMM_TYPE_STYLES['llama.cpp TQ2_0 (b2.06)'],
+    'bitnet.cpp I2_S (b2.00)': {'color': '#E18727', 'hatch': ''},
+    'bitnet.cpp TL1 (b2.00)': {'color': '#26828E', 'hatch': ''},
+    'bitnet.cpp TL2 (b1.67)': {'color': '#7EB875', 'hatch': '//'},
 }
 
 GEMM_MODEL_MAP = {

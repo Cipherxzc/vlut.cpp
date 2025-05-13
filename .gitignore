@@ -1,7 +1,8 @@
 # Results
 
-evaluation/results*/
-evaluation/figures*/
+evaluation/result*/
+evaluation/figure*/
+evaluation/report*/
 
 mytest/
 

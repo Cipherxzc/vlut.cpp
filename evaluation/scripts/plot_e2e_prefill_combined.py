@@ -20,11 +20,11 @@ def parse_arguments():
 
 # List of architectures to include
 all_archs = [
-    'aws_arm',
-    'smartphone',
     'pc_intel',
     'laptop_amd',
-    'orangepi'
+    'orangepi',
+    'smartphone',
+    'aws_arm',
 ]
 
 # Models to include in the plots
@@ -43,7 +43,7 @@ MULTI_THREAD_CONFIG = {
     'orangepi': 4
 }
 
-def read_csv_files(directory):
+def read_csv_files(directory, arch):
     """Read all CSV files in directory and subdirectories into a single DataFrame."""
     all_data = []
     failed_files = []
@@ -74,6 +74,10 @@ def read_csv_files(directory):
             else:
                 model_quant = None
                 failed_files.append(csv_file)
+                continue
+
+            # Skip if ours i1/i2 quant not in map
+            if model_quant in E2E_TYPE_VARIANTS and model_quant not in E2E_TYPE_DEVICE_MAP[arch]:
                 continue
             
             # Extract date from filename (assuming it's always in format YYYYMMDD)
@@ -120,7 +124,7 @@ def load_results_for_all_archs(archs_to_load, thread_config=None):
     for arch in archs_to_load:
         results_dir = os.path.join(os.path.dirname(script_dir), f'results_e2e_prefill_{arch}')
         # Load results for this architecture
-        df = read_csv_files(results_dir)
+        df = read_csv_files(results_dir, arch)
         
         if not df.empty:
             # Filter by thread value if specified in thread_config
@@ -163,7 +167,8 @@ def plot_all_archs_e2e_prefill(results_dict, model_names=None, thread_mode="auto
     n_models = len(model_names)
     
     # Create figure with 1 column per arch, 1 row per model
-    fig = plt.figure(figsize=(6*n_archs, 3.5*n_models))
+    # fig = plt.figure(figsize=(6*n_archs, 3.5*n_models))
+    fig = plt.figure(figsize=(6*n_archs, 8)) # 3 models
     
     # Create a grid for subplots
     gs = fig.add_gridspec(n_models, n_archs)
@@ -171,8 +176,8 @@ def plot_all_archs_e2e_prefill(results_dict, model_names=None, thread_mode="auto
     # Define subplot adjustment parameters
     left_margin = 0.1
     right_margin = 0.85  # Increase right margin to leave room for model names
-    bottom_margin = 0.2
-    top_margin = 0.95
+    bottom_margin = 0.22
+    top_margin = 0.9
     wspace = 0.3
     hspace = 0.4
     
@@ -261,6 +266,11 @@ def plot_all_archs_e2e_prefill(results_dict, model_names=None, thread_mode="auto
                                 align='center',
                                 zorder=3
                             )
+                            
+            ax.yaxis.set_major_locator(MaxNLocator(4, integer=True))
+            for spine in ax.spines.values():
+                spine.set_linewidth(1.5)
+                spine.set_zorder(10)
             
             # Set x-ticks at the center of each prompt length group
             ax.set_xticks(x_positions)
@@ -268,7 +278,7 @@ def plot_all_archs_e2e_prefill(results_dict, model_names=None, thread_mode="auto
             
             # Add labels
             if col_idx == 0 and row_idx == 1:
-                ax.set_ylabel('Throughput (tokens/s)', fontsize=24, fontweight='bold')
+                ax.set_ylabel('Throughput (tokens/s)', fontsize=24, fontweight='bold', labelpad=10)
             if row_idx == n_models - 1:
                 ax.set_xlabel('Prompt length (tokens)', fontsize=20)
             
@@ -314,7 +324,7 @@ def plot_all_archs_e2e_prefill(results_dict, model_names=None, thread_mode="auto
     legend_ax.set_yticks([])
     
     for quant in all_quants:
-        # Get style from E2E_TYPE_STYLES mapping (similar to GEMM_TYPE_STYLES)
+        # Get style from E2E_TYPE_STYLES mapping (similar to E2E_TYPE_STYLES)
         style = E2E_TYPE_STYLES.get(quant, {'color': '#000000', 'hatch': ''})
         
         # Create a small bar with proper styling
@@ -325,6 +335,9 @@ def plot_all_archs_e2e_prefill(results_dict, model_names=None, thread_mode="auto
     
     # Hide the dummy axis
     legend_ax.set_visible(False)
+    
+    import matplotlib.font_manager as font_manager
+    font_prop = font_manager.FontProperties(weight='bold', size=20)
 
     # Add a single legend for the entire figure at the bottom
     fig.legend(
@@ -332,13 +345,221 @@ def plot_all_archs_e2e_prefill(results_dict, model_names=None, thread_mode="auto
         labels=legend_labels, 
         loc='lower center', 
         ncol=min(len(legend_labels), 4),
+        prop=font_prop,
         fontsize=18, 
-        frameon=True, 
-        bbox_to_anchor=(0.5, 0.02),
+        frameon=False, 
+        bbox_to_anchor=(0.5, 0.00),
         columnspacing=1.0
     )
     
     return fig
+
+
+def generate_speedup_reports(results_dict, models_to_plot, output_dir, lut2_on=None, entry_size=None):
+    """Generate CSV reports on speedups for each architecture and matrix size."""
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Prepare dataframes to store average speedups across all matrix sizes
+    avg_speedups_by_arch = {}
+    
+    for arch, df in results_dict.items():
+        # Apply filters
+        if lut2_on is not None:
+            df = df[df['lut2_on'] == lut2_on]
+        if entry_size is not None:
+            df = df[df['entry_size'] == entry_size]
+        
+        # Create a dataframe to store speedup results for this architecture
+        speedup_results = []
+        
+        # Create a dataframe to accumulate speedups for averaging
+        all_speedups = []
+        
+        # Get relevant E2E types for this architecture
+        relevant_types = set()
+        for model in models_to_plot:
+            subset = df[(df['model_name'] == model)]
+            for quant in subset['model_quant'].unique():
+                relevant_types.add(quant)
+        
+        # Filter to only use types from E2E_TYPE_DEVICE_MAP if available
+        if 'E2E_TYPE_DEVICE_MAP' in globals() and arch in E2E_TYPE_DEVICE_MAP:
+            comparison_types = set([E2E_TYPE_MAP[t] for t in E2E_TYPE_DEVICE_MAP[arch]]) & relevant_types
+        else:
+            comparison_types = relevant_types
+        
+        relevant_types = sorted(list(relevant_types))
+        comparison_types = sorted(list(comparison_types))
+        
+        # For each model
+        for model in models_to_plot:
+            # Filter data for this model
+            subset = df[(df['model_name'] == model)]
+            
+            # Remove duplicates
+            subset = subset.drop_duplicates(subset=['model_name', 'model_quant'], keep='first')
+            
+            # If we have data for this size
+            if not subset.empty:
+                # Create a dictionary to store performance for each type
+                perf_by_type = {}
+                
+                # Collect performance data
+                for _, row in subset.iterrows():
+                    perf_by_type[row['model_quant']] = row['avg_ts']
+                
+                # Calculate speedups for each pair of types
+                for comp_type in comparison_types:
+                    if comp_type not in perf_by_type:
+                        continue
+                        
+                    comp_perf = perf_by_type[comp_type]
+                    
+                    for baseline_type in relevant_types:
+                        if baseline_type not in perf_by_type or baseline_type == comp_type:
+                            continue
+                            
+                        baseline_perf = perf_by_type[baseline_type]
+                        speedup = comp_perf / baseline_perf
+                        
+                        # Add to results
+                        speedup_results.append({
+                            'model': model,
+                            'comparison_type': comp_type,
+                            'baseline_type': baseline_type,
+                            'speedup': speedup
+                        })
+                        
+                        # Add to all speedups for averaging
+                        all_speedups.append({
+                            'comparison_type': comp_type,
+                            'baseline_type': baseline_type,
+                            'speedup': speedup,
+                            'model': model
+                        })
+        
+        # Convert results to dataframe and save to CSV
+        if speedup_results:
+            speedup_df = pd.DataFrame(speedup_results)
+            output_file = os.path.join(output_dir, f'{arch}_speedup_details.csv')
+            speedup_df.to_csv(output_file, index=False)
+            print(f"Detailed speedup report for {arch} saved to {output_file}")
+        
+        # Calculate average, min, and max speedups and save to CSV
+        if all_speedups:
+            all_speedups_df = pd.DataFrame(all_speedups)
+            
+            # Group by comparison and baseline types
+            grouped = all_speedups_df.groupby(['comparison_type', 'baseline_type'])
+            
+            # Calculate stats
+            avg_speedups = grouped['speedup'].mean().reset_index()
+            min_speedups = grouped['speedup'].min().reset_index().rename(columns={'speedup': 'min_speedup'})
+            max_speedups = grouped['speedup'].max().reset_index().rename(columns={'speedup': 'max_speedup'})
+            
+            # Get model combinations for min and max speedups
+            min_model = grouped.apply(lambda x: x.loc[x['speedup'].idxmin(), 'model'], include_groups=False).reset_index(name='min_speedup_model')
+            max_model = grouped.apply(lambda x: x.loc[x['speedup'].idxmax(), 'model'], include_groups=False).reset_index(name='max_speedup_model')
+            
+            # Merge all stats
+            stats_df = avg_speedups.merge(min_speedups, on=['comparison_type', 'baseline_type'])
+            stats_df = stats_df.merge(max_speedups, on=['comparison_type', 'baseline_type'])
+            stats_df = stats_df.merge(min_model, on=['comparison_type', 'baseline_type'])
+            stats_df = stats_df.merge(max_model, on=['comparison_type', 'baseline_type'])
+            
+            # Add architecture column
+            stats_df['architecture'] = arch
+            
+            # Reorder columns with comparison_type as first column
+            stats_df = stats_df[['comparison_type', 'baseline_type', 'speedup', 'min_speedup', 'max_speedup', 
+                                'min_speedup_model', 'max_speedup_model', 'architecture']]
+            
+            # Save per-architecture average speedups
+            output_file = os.path.join(output_dir, f'{arch}_speedup_stats.csv')
+            stats_df.to_csv(output_file, index=False)
+            print(f"Speedup statistics report for {arch} saved to {output_file}")
+            
+            # Store for combined report
+            avg_speedups_by_arch[arch] = stats_df
+    
+    # Combine all average speedups into a single report
+    if avg_speedups_by_arch:
+        combined_stats = pd.concat(avg_speedups_by_arch.values(), ignore_index=True)
+        output_file = os.path.join(output_dir, 'combined_speedup_stats.csv')
+        combined_stats.to_csv(output_file, index=False)
+        print(f"Combined speedup statistics report saved to {output_file}")
+    
+    # Create a pivot table for easier comparison
+    if avg_speedups_by_arch:
+        # For average speedups
+        avg_pivot_rows = []
+        for arch, stats_df in avg_speedups_by_arch.items():
+            for _, row in stats_df.iterrows():
+                avg_pivot_rows.append({
+                    'architecture': arch,
+                    'comparison_type': row['comparison_type'],
+                    'baseline_type': row['baseline_type'],
+                    'avg_speedup': row['speedup']
+                })
+        
+        if avg_pivot_rows:
+            avg_pivot_df = pd.DataFrame(avg_pivot_rows)
+            avg_pivot_table = avg_pivot_df.pivot_table(
+                values='avg_speedup',
+                index=['architecture', 'comparison_type'],
+                columns=['baseline_type']
+            ).reset_index()
+            
+            output_file = os.path.join(output_dir, 'avg_speedup_pivot.csv')
+            avg_pivot_table.to_csv(output_file)
+            print(f"Average speedup pivot table saved to {output_file}")
+        
+        # For min speedups
+        min_pivot_rows = []
+        for arch, stats_df in avg_speedups_by_arch.items():
+            for _, row in stats_df.iterrows():
+                min_pivot_rows.append({
+                    'architecture': arch,
+                    'comparison_type': row['comparison_type'],
+                    'baseline_type': row['baseline_type'],
+                    'min_speedup': row['min_speedup']
+                })
+        
+        if min_pivot_rows:
+            min_pivot_df = pd.DataFrame(min_pivot_rows)
+            min_pivot_table = min_pivot_df.pivot_table(
+                values='min_speedup',
+                index=['architecture', 'comparison_type'],
+                columns=['baseline_type']
+            ).reset_index()
+            
+            output_file = os.path.join(output_dir, 'min_speedup_pivot.csv')
+            min_pivot_table.to_csv(output_file)
+            print(f"Minimum speedup pivot table saved to {output_file}")
+        
+        # For max speedups
+        max_pivot_rows = []
+        for arch, stats_df in avg_speedups_by_arch.items():
+            for _, row in stats_df.iterrows():
+                max_pivot_rows.append({
+                    'architecture': arch,
+                    'comparison_type': row['comparison_type'],
+                    'baseline_type': row['baseline_type'],
+                    'max_speedup': row['max_speedup']
+                })
+        
+        if max_pivot_rows:
+            max_pivot_df = pd.DataFrame(max_pivot_rows)
+            max_pivot_table = max_pivot_df.pivot_table(
+                values='max_speedup',
+                index=['architecture', 'comparison_type'],
+                columns=['baseline_type']
+            ).reset_index()
+            
+            output_file = os.path.join(output_dir, 'max_speedup_pivot.csv')
+            max_pivot_table.to_csv(output_file)
+            print(f"Maximum speedup pivot table saved to {output_file}")
 
 def main():
     args = parse_arguments()
@@ -356,10 +577,20 @@ def main():
                 model_names=models_to_plot,
                 thread_mode="single"
             )
+
+            # Generate speedup reports for single-thread configuration
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            reports_dir_single = os.path.join(os.path.dirname(script_dir), 'reports_e2e_prefill/single_thread')
+            generate_speedup_reports(
+                results_dict_single,
+                models_to_plot,
+                reports_dir_single
+            )
             
             # Save the single-thread plot
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            output_file_single = os.path.join(os.path.dirname(script_dir), 'figures/e2e_prefill_comparison_single_thread.png')
+            # output_file_single = os.path.join(os.path.dirname(script_dir), 'figures/e2e_prefill_comparison_single_thread.png')
+            output_file_single = os.path.join(os.path.dirname(script_dir), 'figures/e2e_prefill_comparison_single_thread.pdf')
             fig_single.savefig(output_file_single, dpi=300, bbox_inches='tight')
             print(f"Single-thread comparison plot saved to {output_file_single}")
         
@@ -372,9 +603,20 @@ def main():
                 model_names=models_to_plot,
                 thread_mode="multi"
             )
+
+            # Generate speedup reports for single-thread configuration
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            reports_dir_multi = os.path.join(os.path.dirname(script_dir), 'reports_e2e_prefill/multi_thread')
+            generate_speedup_reports(
+                results_dict_multi,
+                models_to_plot,
+                reports_dir_multi
+            )
             
             # Save the multi-thread plot
-            output_file_multi = os.path.join(os.path.dirname(script_dir), 'figures/e2e_prefill_comparison_multi_thread.png')
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            # output_file_multi = os.path.join(os.path.dirname(script_dir), 'figures/e2e_prefill_comparison_multi_thread.png')
+            output_file_multi = os.path.join(os.path.dirname(script_dir), 'figures/e2e_prefill_comparison_multi_thread.pdf')
             fig_multi.savefig(output_file_multi, dpi=300, bbox_inches='tight')
             print(f"Multi-thread comparison plot saved to {output_file_multi}")
         
@@ -405,7 +647,8 @@ def main():
             )
             
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            output_file = os.path.join(os.path.dirname(script_dir), f'figures/e2e_prefill_comparison_{title_suffix}.png')
+            # output_file = os.path.join(os.path.dirname(script_dir), f'figures/e2e_prefill_comparison_{title_suffix}.png')
+            output_file = os.path.join(os.path.dirname(script_dir), f'figures/e2e_prefill_comparison_{title_suffix}.pdf')
             fig.savefig(output_file, dpi=300, bbox_inches='tight')
             print(f"End-to-end prefill comparison plot saved to {output_file}")
 
