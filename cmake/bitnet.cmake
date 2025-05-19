@@ -74,6 +74,8 @@ else()
   set(HAVE_SVE FALSE)
 endif()
 
+# TODO: This detect is buggy on some devices (e.g., NEON smartphone)
+# Currently, mannually comment out the `set(BITNET_SVE ON)` line
 if(HAVE_SVE)
     message(STATUS "SVE support detected, enabling BITNET_SVE")
     set(BITNET_SVE ON)

@@ -90,7 +90,7 @@ for i, (opt, val) in enumerate(zip(single_thread['optimization'], single_thread[
 # Calculate appropriate y-axis limit with extra space for annotations
 y_max1 = max(single_thread['avg_ts']) * 1.2
 
-ax1.set_title('Single-threaded prefill', fontsize=14, fontweight='bold')
+ax1.set_title('Single-thread prefilling', fontsize=14, fontweight='bold')
 ax1.set_ylabel('Throughput (tokens/sec)', fontsize=14, fontweight='bold')  # Only display on first subfigure
 ax1.axhline(y=baseline_single, color='red', linestyle='--', 
            label=f'T-MAC: {baseline_single}', zorder=4)  # Increased zorder
@@ -114,7 +114,7 @@ for i, (opt, val) in enumerate(zip(multi_thread['optimization'], multi_thread['a
 # Calculate appropriate y-axis limit with extra space for annotations
 y_max2 = max(multi_thread['avg_ts']) * 1.2
 
-ax2.set_title('Multi-threaded prefill', fontsize=14, fontweight='bold')
+ax2.set_title('Multi-thread prefilling', fontsize=14, fontweight='bold')
 # No y-axis label for second subfigure
 ax2.axhline(y=baseline_multi, color='red', linestyle='--', 
            label=f'T-MAC: {baseline_multi}', zorder=4)  # Increased zorder
