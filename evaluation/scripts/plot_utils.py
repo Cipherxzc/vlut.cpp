@@ -21,7 +21,7 @@
 #     'laptop_amd': 'Legion 5 Pro\n(AMD Ryzen 7 5800H)',
 #     'smartphone': 'Xiaomi 15\n(Qualcomm Snapdragon 8 Elite)',
 #     'orangepi': 'Orange Pi 5 Plus\n(ARM Cortex-A76)',
-#     'aws_arm': 'AWS Gravition 3\n(ARM Neoverse-V1)',
+#     'aws_arm': 'AWS Graviton 3\n(ARM Neoverse-V1)',
 #     'laptop_intel': 'ASUS Zenbook Air\n(Intel Laptop)',
 # }
 
@@ -30,7 +30,7 @@ DEVICE_MAP = {
     'laptop_amd': 'Legion 5 Pro (x86)',
     'smartphone': 'Xiaomi 15 (ARM)',
     'orangepi': 'Orange Pi 5 Plus (ARM)',
-    'aws_arm': 'AWS Gravition 3 (ARM)',
+    'aws_arm': 'AWS Graviton 3 (ARM)',
 }
 
 
@@ -39,7 +39,7 @@ ARCH_MAP = {
     'laptop_amd': 'AMD Ryzen 7 5800H',
     'smartphone': 'Qualcomm Snapdragon 8 Elite',
     'orangepi': 'RK3588 (ARM Cortex-A76)',
-    'aws_arm': 'AWS Gravition 3 (ARM Neoverse-V1)',
+    'aws_arm': 'AWS Graviton 3 (ARM Neoverse-V1)',
     'laptop_intel': 'Intel Core Ultra 7 258V',
 }
 

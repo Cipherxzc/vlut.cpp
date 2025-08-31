@@ -2,7 +2,7 @@
 
 # Default source and destination directories
 DEFAULT_SOURCE_DIR="evaluation/figures"
-DEFAULT_DEST_DIR="/mnt/c/Users/xiang/Documents/Working/2024 BitNet/figrues/eval/"
+DEFAULT_DEST_DIR="/mnt/c/Users/xiang/Documents/Working/2024 BitNet/mobicom26/figrues/eval/"
 
 # Use default values or command line arguments
 SOURCE_DIR="${1:-$DEFAULT_SOURCE_DIR}"
