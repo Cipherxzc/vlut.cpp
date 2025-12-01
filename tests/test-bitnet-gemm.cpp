@@ -73,7 +73,7 @@ static void init_tensor_uniform(ggml_tensor * tensor, float min = -1.0f, float m
     if (tensor->type == GGML_TYPE_F32 || tensor->type == GGML_TYPE_I32) {
         ggml_backend_tensor_set(tensor, data.data(), 0, nels * sizeof(float));
     } else if (ggml_is_quantized(tensor->type) || tensor->type == GGML_TYPE_F16 || tensor->type == GGML_TYPE_BF16) {
-        if (tensor->type != GGML_TYPE_I1_M && tensor->type != GGML_TYPE_I1_M_2 && tensor->type != GGML_TYPE_I1_M_4) {
+        if (tensor->type != GGML_TYPE_I1_V && tensor->type != GGML_TYPE_I1_V_2 && tensor->type != GGML_TYPE_I1_V_4) {
             GGML_ASSERT(nels % ggml_blck_size(tensor->type) == 0);
         }
 
@@ -92,9 +92,9 @@ static void init_tensor_uniform(ggml_tensor * tensor, float min = -1.0f, float m
         {
             // parallel quantization by block
             size_t blck_size = ggml_blck_size(tensor->type);
-            if (tensor->type == GGML_TYPE_I2_S_4) {
+            if (tensor->type == GGML_TYPE_I2_V_4) {
                 blck_size *= 4;
-            } else if (tensor->type == GGML_TYPE_I2_S_8) {
+            } else if (tensor->type == GGML_TYPE_I2_V_8) {
                 blck_size *= 8;
             }
             size_t n_blocks = nels / blck_size;
@@ -1134,7 +1134,7 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_eval() {
     std::uniform_int_distribution<> dist_n(16, 128);
     std::uniform_int_distribution<> dist_k(1, 16);
     for (int i = 0; i < 1000; i++) {
-        for (ggml_type type_a : {GGML_TYPE_I2_S, GGML_TYPE_I1_M}) {
+        for (ggml_type type_a : {GGML_TYPE_I2_V, GGML_TYPE_I1_V}) {
             for (ggml_type type_b : {GGML_TYPE_F32}) {
                 int m = dist_m(rng);
                 int n = dist_n(rng);
@@ -1160,14 +1160,14 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_perf(const char* 
     };
 
     std::vector<ModelConfig> models = {
-        {"bitnet_3b",  3200, 8640,  {GGML_TYPE_Q4_0, GGML_TYPE_I2_S_4, GGML_TYPE_I1_M_2}},
-        {"llama3_8b",  4096, 14336, {GGML_TYPE_TQ2_0, GGML_TYPE_I2_S_4, GGML_TYPE_TQ1_0, GGML_TYPE_I1_M_2}},
-        // {"falcon_1b",  2048, 8192,  {GGML_TYPE_TQ2_0, GGML_TYPE_I2_S_4, GGML_TYPE_TQ1_0, GGML_TYPE_I1_M_2}},
-        // {"trilm_1.5b", 2048, 6144,  {GGML_TYPE_TQ2_0, GGML_TYPE_I2_S_4, GGML_TYPE_TQ1_0, GGML_TYPE_I1_M_2}},
+        {"bitnet_3b",  3200, 8640,  {GGML_TYPE_Q4_0, GGML_TYPE_I2_V_4, GGML_TYPE_I1_V_2}},
+        {"llama3_8b",  4096, 14336, {GGML_TYPE_TQ2_0, GGML_TYPE_I2_V_4, GGML_TYPE_TQ1_0, GGML_TYPE_I1_V_2}},
+        // {"falcon_1b",  2048, 8192,  {GGML_TYPE_TQ2_0, GGML_TYPE_I2_V_4, GGML_TYPE_TQ1_0, GGML_TYPE_I1_V_2}},
+        // {"trilm_1.5b", 2048, 6144,  {GGML_TYPE_TQ2_0, GGML_TYPE_I2_V_4, GGML_TYPE_TQ1_0, GGML_TYPE_I1_V_2}},
         // {"llama3_8b", 4096, 14336, {GGML_TYPE_Q8_0, GGML_TYPE_Q6_K, GGML_TYPE_Q5_K, GGML_TYPE_Q4_K, GGML_TYPE_Q4_0,
-        // GGML_TYPE_Q3_K, GGML_TYPE_Q2_K, GGML_TYPE_TQ2_0, GGML_TYPE_TQ1_0, GGML_TYPE_I2_S_4, GGML_TYPE_I1_M_2}},
-        // {"bitnet_3b", 3200, 8640, {GGML_TYPE_I2_S_2, GGML_TYPE_I2_S_4, GGML_TYPE_I2_S_8, GGML_TYPE_I2_S_16}},
-        // {"llama3_8b", 3200, 8640, {GGML_TYPE_I2_S_2, GGML_TYPE_I2_S_4, GGML_TYPE_I2_S_8, GGML_TYPE_I2_S_16}},
+        // GGML_TYPE_Q3_K, GGML_TYPE_Q2_K, GGML_TYPE_TQ2_0, GGML_TYPE_TQ1_0, GGML_TYPE_I2_V_4, GGML_TYPE_I1_V_2}},
+        // {"bitnet_3b", 3200, 8640, {GGML_TYPE_I2_V_2, GGML_TYPE_I2_V_4, GGML_TYPE_I2_V_8, GGML_TYPE_I2_V_16}},
+        // {"llama3_8b", 3200, 8640, {GGML_TYPE_I2_V_2, GGML_TYPE_I2_V_4, GGML_TYPE_I2_V_8, GGML_TYPE_I2_V_16}},
     };
 
     // Filter by model if specified
@@ -1213,10 +1213,10 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_search(const char
     };
 
     std::vector<ModelConfig> models = {
-        {"bitnet_3b",  3200, 8640,  {GGML_TYPE_I2_S}},
-        {"llama3_8b",  4096, 14336, {GGML_TYPE_I2_S}},
-        {"falcon_1b",  2048, 8192,  {GGML_TYPE_I2_S}},
-        {"trilm_1.5b", 2048, 6144,  {GGML_TYPE_I2_S}},
+        {"bitnet_3b",  3200, 8640,  {GGML_TYPE_I2_V}},
+        {"llama3_8b",  4096, 14336, {GGML_TYPE_I2_V}},
+        {"falcon_1b",  2048, 8192,  {GGML_TYPE_I2_V}},
+        {"trilm_1.5b", 2048, 6144,  {GGML_TYPE_I2_V}},
     };
 
     // Filter by model if specified

@@ -1,4 +1,4 @@
-# This file contains bitnet-specific compile definitions. @xiangyu
+# This file contains bitnet-specific compile definitions.
 
 # Set the default options
 option(BITNET_DEBUG "Enable BITNET debug timing output" OFF)

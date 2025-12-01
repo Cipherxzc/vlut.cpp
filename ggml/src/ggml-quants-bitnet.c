@@ -19,7 +19,7 @@
 
 
 
-size_t quantize_i2_s(const float *restrict src, void *restrict dst, int64_t nrows, int64_t n_per_row,
+size_t quantize_i2_v(const float *restrict src, void *restrict dst, int64_t nrows, int64_t n_per_row,
                      const float *imatrix) {
     // 2 bits per weight
     UNUSED(imatrix);
@@ -40,10 +40,10 @@ size_t quantize_i2_s(const float *restrict src, void *restrict dst, int64_t nrow
         }
     }
 
-    return nrows * ggml_row_size(GGML_TYPE_I2_S, n_per_row);
+    return nrows * ggml_row_size(GGML_TYPE_I2_V, n_per_row);
 }
 
-size_t quantize_i2_s_4(const float *restrict src, void *restrict dst, int64_t nrows, int64_t n_per_row,
+size_t quantize_i2_v_4(const float *restrict src, void *restrict dst, int64_t nrows, int64_t n_per_row,
                      const float *imatrix) {
     // 2 bits per weight
     UNUSED(imatrix);
@@ -64,10 +64,10 @@ size_t quantize_i2_s_4(const float *restrict src, void *restrict dst, int64_t nr
         }
     }
 
-    return nrows * ggml_row_size(GGML_TYPE_I2_S_4, n_per_row);
+    return nrows * ggml_row_size(GGML_TYPE_I2_V_4, n_per_row);
 }
 
-size_t quantize_i2_s_8(const float *restrict src, void *restrict dst, int64_t nrows, int64_t n_per_row,
+size_t quantize_i2_v_8(const float *restrict src, void *restrict dst, int64_t nrows, int64_t n_per_row,
                        const float *imatrix) {
     // 2 bits per weight
     UNUSED(imatrix);
@@ -88,12 +88,12 @@ size_t quantize_i2_s_8(const float *restrict src, void *restrict dst, int64_t nr
         }
     }
 
-    return nrows * ggml_row_size(GGML_TYPE_I2_S_8, n_per_row);
+    return nrows * ggml_row_size(GGML_TYPE_I2_V_8, n_per_row);
 }
 
 
 
-size_t quantize_i1_m(const float *restrict src, void *restrict dst, int64_t nrows, int64_t n_per_row,
+size_t quantize_i1_v(const float *restrict src, void *restrict dst, int64_t nrows, int64_t n_per_row,
                      const float *imatrix) {
     // 1.58 bits per weight
     UNUSED(imatrix);
@@ -132,10 +132,10 @@ size_t quantize_i1_m(const float *restrict src, void *restrict dst, int64_t nrow
         }
     }
 
-    return nrows * ggml_row_size(GGML_TYPE_I1_M, n_per_row);
+    return nrows * ggml_row_size(GGML_TYPE_I1_V, n_per_row);
 }
 
-size_t quantize_i1_m_2(const float *restrict src, void *restrict dst, int64_t nrows, int64_t n_per_row,
+size_t quantize_i1_v_2(const float *restrict src, void *restrict dst, int64_t nrows, int64_t n_per_row,
                      const float *imatrix) {
     // 1.58 bits per weight
     UNUSED(imatrix);
@@ -174,5 +174,5 @@ size_t quantize_i1_m_2(const float *restrict src, void *restrict dst, int64_t nr
         }
     }
 
-    return nrows * ggml_row_size(GGML_TYPE_I1_M_2, n_per_row);
+    return nrows * ggml_row_size(GGML_TYPE_I1_V_2, n_per_row);
 }

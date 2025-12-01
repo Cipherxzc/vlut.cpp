@@ -2,7 +2,7 @@
 using namespace std;
 using LL = long long;
 
-class BitNetNum {
+class VecLutNum {
    public:
     vector<int> bits_;
 
@@ -42,8 +42,8 @@ class BitNetNum {
 
     int toI2S() const { return toI1_58(); }
 
-    static BitNetNum fromI1_58(int x) {
-        BitNetNum res;
+    static VecLutNum fromI1_58(int x) {
+        VecLutNum res;
         for (int i = 0; i < 5; i++) {
             int gg = x % 3 - 1;
             x /= 3;
@@ -52,8 +52,8 @@ class BitNetNum {
         return res;
     }
 
-    static BitNetNum fromI2S(int x) {
-        BitNetNum res;
+    static VecLutNum fromI2S(int x) {
+        VecLutNum res;
         for (int i = 0; i < 4; i++) {
             int gg = x % 3 - 1;
             x /= 3;
@@ -104,7 +104,7 @@ void generate_function(int s, string name) {
 
 void gemm_make_table_I2S() {
     for (int i = 0; i < 81; i++) {
-        BitNetNum x = BitNetNum::fromI2S(i), y = x;
+        VecLutNum x = VecLutNum::fromI2S(i), y = x;
         if (!x.validate() || i == 40) {
             continue;
         }
@@ -125,7 +125,7 @@ void gemm_make_table_I2S() {
 
 void gemm_make_table_I1_58S() {
     for (int i = 0; i < 243; i++) {
-        BitNetNum x = BitNetNum::fromI1_58(i), y = x;
+        VecLutNum x = VecLutNum::fromI1_58(i), y = x;
         if (!x.validate() || i == 121) {
             continue;
         }

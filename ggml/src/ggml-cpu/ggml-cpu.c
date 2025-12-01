@@ -439,44 +439,49 @@ static const struct ggml_type_traits_cpu type_traits_cpu[GGML_TYPE_COUNT] = {
             .vec_dot_type = GGML_TYPE_Q8_K,
             .nrows = 1,
         },
-    [GGML_TYPE_I8_B] = 
+    [GGML_TYPE_I8_V] = 
         {
             .from_float = quantize_row_i8_b  // UNUSED
         },
     // TODO: support .vecdot for Vec-LUT types
-    [GGML_TYPE_I2_S] =
+    [GGML_TYPE_I2_V] =
         {
-            .vec_dot_type = GGML_TYPE_I8_B,
+            .vec_dot_type = GGML_TYPE_I8_V,
             .nrows = 1,
         },
-    [GGML_TYPE_I2_S_2] =
+    [GGML_TYPE_I2_V_2] =
         {
-            .vec_dot_type = GGML_TYPE_I8_B,
+            .vec_dot_type = GGML_TYPE_I8_V,
             .nrows = 1,
         },
-    [GGML_TYPE_I2_S_4] =
+    [GGML_TYPE_I2_V_4] =
         {
-            .vec_dot_type = GGML_TYPE_I8_B,
+            .vec_dot_type = GGML_TYPE_I8_V,
             .nrows = 1,
         },
-    [GGML_TYPE_I2_S_8] =
+    [GGML_TYPE_I2_V_8] =
         {
-            .vec_dot_type = GGML_TYPE_I8_B,
+            .vec_dot_type = GGML_TYPE_I8_V,
             .nrows = 1,
         },
-    [GGML_TYPE_I2_S_16] =
+    [GGML_TYPE_I2_V_16] =
         {
-            .vec_dot_type = GGML_TYPE_I8_B,
+            .vec_dot_type = GGML_TYPE_I8_V,
             .nrows = 1,
         },
-    [GGML_TYPE_I1_M] =
+    [GGML_TYPE_I1_V] =
         {
-            .vec_dot_type = GGML_TYPE_I8_B,
+            .vec_dot_type = GGML_TYPE_I8_V,
             .nrows = 1,
         },
-    [GGML_TYPE_I1_M_2] =
+    [GGML_TYPE_I1_V_2] =
         {
-            .vec_dot_type = GGML_TYPE_I8_B,
+            .vec_dot_type = GGML_TYPE_I8_V,
+            .nrows = 1,
+        },
+    [GGML_TYPE_I1_V_4] =
+        {
+            .vec_dot_type = GGML_TYPE_I8_V,
             .nrows = 1,
         },
 };
@@ -6991,54 +6996,61 @@ struct ggml_type_traits_bitnet {
 };
 
 static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] = {
-    [GGML_TYPE_I2_S] =
+    [GGML_TYPE_I2_V] =
         {
             .is_bitnet_type = true,
             .table_entries_num = 81,
             .tile_size = 1,
-            .gemm2 = ggml_gemm_i2s_i8b_LUT2,
+            .gemm2 = ggml_gemm_i2v_i8v_LUT2,
         },
-    [GGML_TYPE_I2_S_2] =
+    [GGML_TYPE_I2_V_2] =
         {
             .is_bitnet_type = true,
             .table_entries_num = 81,
             .tile_size = 2,
-            .gemm2 = ggml_gemm_i2s2_i8b_LUT2,
+            .gemm2 = ggml_gemm_i2v2_i8v_LUT2,
         },
-    [GGML_TYPE_I2_S_4] =
+    [GGML_TYPE_I2_V_4] =
         {
             .is_bitnet_type = true,
             .table_entries_num = 81,
             .tile_size = 4,
-            .gemm2 = ggml_gemm_i2s4_i8b_LUT2,
+            .gemm2 = ggml_gemm_i2v4_i8v_LUT2,
         },
-    [GGML_TYPE_I2_S_8] =
+    [GGML_TYPE_I2_V_8] =
         {
             .is_bitnet_type = true,
             .table_entries_num = 81,
             .tile_size = 8,
-            .gemm2 = ggml_gemm_i2s8_i8b_LUT2,
+            .gemm2 = ggml_gemm_i2v8_i8v_LUT2,
         },
-    [GGML_TYPE_I2_S_16] =
+    [GGML_TYPE_I2_V_16] =
         {
             .is_bitnet_type = true,
             .table_entries_num = 81,
             .tile_size = 16,
-            .gemm2 = ggml_gemm_i2s16_i8b_LUT2,
+            .gemm2 = ggml_gemm_i2v16_i8v_LUT2,
         },
-    [GGML_TYPE_I1_M] =
+    [GGML_TYPE_I1_V] =
         {
             .is_bitnet_type = true,
             .table_entries_num = 243,
             .tile_size = 1,
-            .gemm2 = ggml_gemm_i1m_i8b_LUT2,
+            .gemm2 = ggml_gemm_i1v_i8v_LUT2,
         },
-    [GGML_TYPE_I1_M_2] =
+    [GGML_TYPE_I1_V_2] =
         {
             .is_bitnet_type = true,
             .table_entries_num = 243,
             .tile_size = 2,
-            .gemm2 = ggml_gemm_i1m2_i8b_LUT2,
+            .gemm2 = ggml_gemm_i1v2_i8v_LUT2,
+        },
+    [GGML_TYPE_I1_V_4] =
+        {
+            .is_bitnet_type = true,
+            .table_entries_num = 243,
+            .tile_size = 4,
+            .gemm2 = ggml_gemm_i1v4_i8v_LUT2,
         },
 };
 // Vec-LUT traits end
@@ -8657,15 +8669,15 @@ static void ggml_compute_forward_clamp(const struct ggml_compute_params *params,
         case GGML_TYPE_I32:
         case GGML_TYPE_I64:
         case GGML_TYPE_F64:
-        case GGML_TYPE_I8_B:
-        case GGML_TYPE_I2_S:
-        case GGML_TYPE_I2_S_2:
-        case GGML_TYPE_I2_S_4:
-        case GGML_TYPE_I2_S_8:
-        case GGML_TYPE_I2_S_16:
-        case GGML_TYPE_I1_M:
-        case GGML_TYPE_I1_M_2:
-        case GGML_TYPE_I1_M_4:
+        case GGML_TYPE_I8_V:
+        case GGML_TYPE_I2_V:
+        case GGML_TYPE_I2_V_2:
+        case GGML_TYPE_I2_V_4:
+        case GGML_TYPE_I2_V_8:
+        case GGML_TYPE_I2_V_16:
+        case GGML_TYPE_I1_V:
+        case GGML_TYPE_I1_V_2:
+        case GGML_TYPE_I1_V_4:
         case GGML_TYPE_COUNT: {
             GGML_ABORT("fatal error");
         }
@@ -12295,23 +12307,6 @@ static void ggml_compute_forward(struct ggml_compute_params *params, struct ggml
             GGML_ABORT("fatal error");
         }
     }
-
-    // if (tensor->op == GGML_OP_MUL_MAT) {
-    //     ggml_barrier(params->threadpool);
-    //     if (params->ith == 0) {
-    //         printf("write tensors\n");
-    //         FILE *outfile = fopen("/home/cipherxzc/Projects/llama.cpp-bitnet/mytest/tensors", "a");
-    //         print_tensor(outfile, tensor->src[0], 0);
-    //         print_tensor(outfile, tensor->src[1], 0);
-    //         print_tensor(outfile, tensor, 1);
-    //         fclose(outfile);
-    //         static int cnt = 0;
-    //         cnt++;
-    //         if (cnt == 20) {
-    //             exit(0);
-    //         }
-    //     }
-    // }
 }
 
 // Android's libc implementation "bionic" does not support setting affinity

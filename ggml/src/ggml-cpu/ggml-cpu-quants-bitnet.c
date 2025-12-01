@@ -929,30 +929,6 @@
     } while(0)
 #endif
 
-#ifdef BITNET_AVX2
-#include <immintrin.h>
-
-static inline float hsum_float_8(const __m256 x) {
-    __m128 res = _mm256_extractf128_ps(x, 1);
-    res = _mm_add_ps(res, _mm256_castps256_ps128(x));
-    res = _mm_add_ps(res, _mm_movehl_ps(res, res));
-    res = _mm_add_ss(res, _mm_movehdup_ps(res));
-    return _mm_cvtss_f32(res);
-}
-
-static inline __m256i bitnet_mul(const __m256i x, const __m256i y) {
-    const __m256i ax = _mm256_sign_epi8(x, x);
-    const __m256i sy = _mm256_sign_epi8(y, x);
-
-    const __m256i dot = _mm256_maddubs_epi16(ax, sy);
-
-    const __m256i ones = _mm256_set1_epi16(1);
-    const __m256i summed_pairs = _mm256_madd_epi16(ones, dot);
-
-    return summed_pairs;
-}
-#endif
-
 
 void quantize_row_i8_b(const float *x, void *y, int64_t n) {
     int8_t *dst = (int8_t *)y;
@@ -1006,7 +982,7 @@ inline static void gemm_make_table_i2s(int16_t *restrict table, const int8_t *re
 inline static void gemm_make_table_i1_58s(int16_t *restrict table, const int8_t *restrict y);
 
 
-void ggml_gemm_i2s_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
+void ggml_gemm_i2v_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
                             const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
     UNUSED(nth);
@@ -1095,7 +1071,7 @@ void ggml_gemm_i2s_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t b
     free(sum_i32);
 }
 
-void ggml_gemm_i2s2_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
+void ggml_gemm_i2v2_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
                             const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
     UNUSED(nth);
@@ -1193,7 +1169,7 @@ void ggml_gemm_i2s2_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t 
     free(sum_i32);
 }
 
-void ggml_gemm_i2s4_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
+void ggml_gemm_i2v4_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
                             const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
     UNUSED(nth);
@@ -1297,7 +1273,7 @@ void ggml_gemm_i2s4_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t 
     free(sum_i32);
 }
 
-void ggml_gemm_i2s8_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
+void ggml_gemm_i2v8_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
                             const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
     UNUSED(nth);
@@ -1412,7 +1388,7 @@ void ggml_gemm_i2s8_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t 
     free(sum_i32);
 }
 
-void ggml_gemm_i2s16_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
+void ggml_gemm_i2v16_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
                             const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
     UNUSED(nth);
@@ -1551,7 +1527,7 @@ void ggml_gemm_i2s16_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t
     free(sum_i32);
 }
 
-void ggml_gemm_i1s_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
+void ggml_gemm_i1s_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
                             const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
     UNUSED(nth);
@@ -1640,7 +1616,7 @@ void ggml_gemm_i1s_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t b
     free(sum_i32);
 }
 
-void ggml_gemm_i1m_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
+void ggml_gemm_i1v_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
                             const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
     UNUSED(nth);
@@ -1743,7 +1719,7 @@ void ggml_gemm_i1m_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t b
 }
 
 // Note: we assume all threads have the same nc here. otherwise, it may cause out-of-bounds errors in the look-up
-void ggml_gemm_i1m2_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
+void ggml_gemm_i1v2_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
                             const void *restrict vy, int nr, int nc) {
     UNUSED(nth);
     
@@ -1856,7 +1832,7 @@ void ggml_gemm_i1m2_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t 
     free(sum_i32);
 }
 
-void ggml_gemm_i1m4_i8b_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
+void ggml_gemm_i1v4_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
                             const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
     UNUSED(nth);

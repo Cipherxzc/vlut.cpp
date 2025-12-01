@@ -893,58 +893,58 @@ static const struct ggml_type_traits type_traits[GGML_TYPE_COUNT] =
                 .type_size = 0,
                 .is_quantized = false,
             },
-        [GGML_TYPE_I8_B] =
+        [GGML_TYPE_I8_V] =
             {
-                .type_name = "i8_b",
+                .type_name = "i8_v",
                 .blck_size = 1,
                 .type_size = sizeof(int8_t),
                 .is_quantized = true,
             },
-        [GGML_TYPE_I2_S] =
+        [GGML_TYPE_I2_V] =
             {
-                .type_name = "i2_s",
+                .type_name = "i2_v",
                 .blck_size = 4,
                 .type_size = sizeof(uint8_t),
                 .is_quantized = true,
             },
-        [GGML_TYPE_I2_S_2] =
+        [GGML_TYPE_I2_V_2] =
             {
-                .type_name = "i2_s_2",
+                .type_name = "i2_v_2",
                 .blck_size = 4,
                 .type_size = sizeof(uint8_t),
                 .is_quantized = true,
             },
-        [GGML_TYPE_I2_S_4] =
+        [GGML_TYPE_I2_V_4] =
             {
-                .type_name = "i2_s_4",
+                .type_name = "i2_v_4",
                 .blck_size = 4,
                 .type_size = sizeof(uint8_t),
                 .is_quantized = true,
             },
-        [GGML_TYPE_I2_S_8] =
+        [GGML_TYPE_I2_V_8] =
             {
-                .type_name = "i2_s_8",
+                .type_name = "i2_v_8",
                 .blck_size = 4,
                 .type_size = sizeof(uint8_t),
                 .is_quantized = true,
             },
-        [GGML_TYPE_I2_S_16] =
+        [GGML_TYPE_I2_V_16] =
             {
-                .type_name = "i2_s_16",
+                .type_name = "i2_v_16",
                 .blck_size = 4,
                 .type_size = sizeof(uint8_t),
                 .is_quantized = true,
             },
-        [GGML_TYPE_I1_M] =
+        [GGML_TYPE_I1_V] =
             {
-                .type_name = "i1_58_m",
+                .type_name = "i1_v",
                 .blck_size = 5,
                 .type_size = sizeof(uint8_t),
                 .is_quantized = true,
             },
-        [GGML_TYPE_I1_M_2] =
+        [GGML_TYPE_I1_V_2] =
             {
-                .type_name = "i1_m_2",
+                .type_name = "i1_v_2",
                 .blck_size = 5,
                 .type_size = sizeof(uint8_t),
                 .is_quantized = true,
@@ -1253,7 +1253,7 @@ int64_t ggml_nrows(const struct ggml_tensor * tensor) {
 }
 
 size_t ggml_nbytes(const struct ggml_tensor * tensor) {
-    if (tensor->type == GGML_TYPE_I1_M || tensor->type == GGML_TYPE_I1_M_2 || tensor->type == GGML_TYPE_I1_M_4) {
+    if (tensor->type == GGML_TYPE_I1_V || tensor->type == GGML_TYPE_I1_V_2 || tensor->type == GGML_TYPE_I1_V_4) {
         return ggml_row_size(tensor->type, tensor->ne[0]) * tensor->ne[1];
     }
 
@@ -1288,9 +1288,9 @@ size_t ggml_type_size(enum ggml_type type) {
 }
 
 size_t ggml_row_size(enum ggml_type type, int64_t ne) {
-    if (type == GGML_TYPE_I8_B) {
+    if (type == GGML_TYPE_I8_V) {
         return sizeof(int8_t) * ne + sizeof(float);
-    } else if (type == GGML_TYPE_I1_M || type == GGML_TYPE_I1_M_2 || type == GGML_TYPE_I1_M_4) {
+    } else if (type == GGML_TYPE_I1_V || type == GGML_TYPE_I1_V_2 || type == GGML_TYPE_I1_V_4) {
         assert(ne % 4 == 0);
         int64_t blck_num = ne / 20 * 4;
         int64_t blck_remain = ne % 20 / 4;
@@ -6566,32 +6566,32 @@ size_t ggml_quantize_chunk(
             } break;
             
         // Vec-LUT types
-        case GGML_TYPE_I2_S:
-            result = quantize_i2_s(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
+        case GGML_TYPE_I2_V:
+            result = quantize_i2_v(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
-        case GGML_TYPE_I2_S_2:
+        case GGML_TYPE_I2_V_2:
             // TODO
-            // result = quantize_i2_s_2(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
+            // result = quantize_i2_v_2(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
-        case GGML_TYPE_I2_S_4:
-            result = quantize_i2_s_4(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
+        case GGML_TYPE_I2_V_4:
+            result = quantize_i2_v_4(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
-        case GGML_TYPE_I2_S_8:
-            result = quantize_i2_s_8(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
+        case GGML_TYPE_I2_V_8:
+            result = quantize_i2_v_8(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
-        case GGML_TYPE_I2_S_16:
+        case GGML_TYPE_I2_V_16:
             // TODO
-            // result = quantize_i2_s_16(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
+            // result = quantize_i2_v_16(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
-        case GGML_TYPE_I1_M:
-            result = quantize_i1_m(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
+        case GGML_TYPE_I1_V:
+            result = quantize_i1_v(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
-        case GGML_TYPE_I1_M_2:
-            result = quantize_i1_m_2(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
+        case GGML_TYPE_I1_V_2:
+            result = quantize_i1_v_2(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
-        case GGML_TYPE_I1_M_4:
+        case GGML_TYPE_I1_V_4:
             // TODO
-            // result = quantize_i1_m_4(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
+            // result = quantize_i1_v_4(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
         default:
             assert(false);
