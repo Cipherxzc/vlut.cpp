@@ -15,7 +15,7 @@ THREAD_COUNT="${THREAD_COUNT:-1,4,8}" # use 2 on snapdragon 8 elite
 REPEAT_COUNT="${REPEAT_COUNT:-3}"
 
 
-# Benchmark the bitnet inference speed of different frameworks with `bench-prefill.sh`
+# Benchmark the inference speed of different frameworks with `bench-prefill.sh`
 echo "Starting benchmarks with parameters:"
 echo "  Device name: $DEVICE_NAME"
 echo "  Workspace directory: $WORKSPACE_DIR"

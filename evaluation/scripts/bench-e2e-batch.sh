@@ -16,7 +16,7 @@ PARALLEL_SEQS="${PARALLEL_SEQS:-64,128,256}"
 THREAD_COUNT="${THREAD_COUNT:-4}" # use 2 on snapdragon 8 elite
 
 
-# Benchmark the bitnet inference speed of different frameworks with `bench-batch-decode.sh`
+# Benchmark the inference speed of different frameworks with `bench-batch-decode.sh`
 echo "Starting batched decoding benchmarks with parameters:"
 echo "  Device name: $DEVICE_NAME"
 echo "  Workspace directory: $WORKSPACE_DIR"

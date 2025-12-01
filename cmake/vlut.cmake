@@ -1,4 +1,4 @@
-# This file contains bitnet-specific compile definitions.
+# This file contains vec-lut-specific compile definitions.
 
 # Set the default options
 option(VLUT_AVX512 "Enable AVX512 intrinsics" OFF)
