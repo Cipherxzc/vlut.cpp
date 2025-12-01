@@ -8,7 +8,7 @@
 #include <stdlib.h>  // for qsort
 #include <string.h>
 
-#include "ggml-cpu-quants-bitnet.h"
+#include "ggml-cpu-quants-vlut.h"
 
 #include "ggml-common.h"
 #include "ggml-impl.h"

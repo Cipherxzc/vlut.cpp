@@ -6,7 +6,7 @@
 #include <stdlib.h>  // for qsort
 #include <string.h>
 
-#include "ggml-quants-bitnet.h"
+#include "ggml-quants-vlut.h"
 
 #include "ggml-common.h"
 #include "ggml-cpu.h"

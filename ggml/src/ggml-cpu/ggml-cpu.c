@@ -2,7 +2,7 @@
 #define _CRT_SECURE_NO_DEPRECATE  // Disables "unsafe" warnings on Windows
 #define _USE_MATH_DEFINES         // For M_PI on MSVC
 
-#include "ggml-cpu-quants-bitnet.h"
+#include "ggml-cpu-quants-vlut.h"
 
 #include "ggml-cpu.h"
 
