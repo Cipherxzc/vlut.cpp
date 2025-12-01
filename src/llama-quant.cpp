@@ -151,7 +151,7 @@ static ggml_type llama_tensor_get_type(quantize_state_impl & qs, ggml_type new_t
     // for arches that share the same tensor between the token embeddings and the output, we quantize the token embeddings
     // with the quantization of the output tensor
     if (name == tn(LLM_TENSOR_OUTPUT, "weight") || (!qs.has_output && name == tn(LLM_TENSOR_TOKEN_EMBD, "weight"))) {
-        // Special case for bitnet, align with TQ2_0
+        // Special case for Vec-LUT
         if (qs.params->ftype == LLAMA_FTYPE_MOSTLY_I2_V || qs.params->ftype == LLAMA_FTYPE_MOSTLY_I2_V_4 ||
             qs.params->ftype == LLAMA_FTYPE_MOSTLY_I2_V_8 || qs.params->ftype == LLAMA_FTYPE_MOSTLY_I1_V ||
             qs.params->ftype == LLAMA_FTYPE_MOSTLY_I1_V_2) {
@@ -175,7 +175,7 @@ static ggml_type llama_tensor_get_type(quantize_state_impl & qs, ggml_type new_t
             }
         }
     } else if (name == "token_embd.weight") {
-        // Special case for bitnet, align with TQ2_0
+        // Special case for Vec-LUT
         if (qs.params->ftype == LLAMA_FTYPE_MOSTLY_I2_V || qs.params->ftype == LLAMA_FTYPE_MOSTLY_I2_V_4 ||
             qs.params->ftype == LLAMA_FTYPE_MOSTLY_I2_V_8 || qs.params->ftype == LLAMA_FTYPE_MOSTLY_I1_V ||
             qs.params->ftype == LLAMA_FTYPE_MOSTLY_I1_V_2) {

@@ -6986,71 +6986,71 @@ static void ggml_compute_forward_mul_mat_one_chunk(const struct ggml_compute_par
 
 
 // Vec-LUT traits
-typedef void (*bitnet_gemm)(int ith, int nth, int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
+typedef void (*vlut_gemm)(int ith, int nth, int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
 
-struct ggml_type_traits_bitnet {
-    bool is_bitnet_type;
+struct ggml_type_traits_vlut {
+    bool is_vlut_type;
     int64_t table_entries_num;
     int64_t tile_size;
-    bitnet_gemm gemm2;
+    vlut_gemm gemm;
 };
 
-static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] = {
+static const struct ggml_type_traits_vlut type_traits_vlut[GGML_TYPE_COUNT] = {
     [GGML_TYPE_I2_V] =
         {
-            .is_bitnet_type = true,
+            .is_vlut_type = true,
             .table_entries_num = 81,
             .tile_size = 1,
-            .gemm2 = ggml_gemm_i2v_i8v_LUT2,
+            .gemm = ggml_gemm_i2v_i8v_LUT2,
         },
     [GGML_TYPE_I2_V_2] =
         {
-            .is_bitnet_type = true,
+            .is_vlut_type = true,
             .table_entries_num = 81,
             .tile_size = 2,
-            .gemm2 = ggml_gemm_i2v2_i8v_LUT2,
+            .gemm = ggml_gemm_i2v2_i8v_LUT2,
         },
     [GGML_TYPE_I2_V_4] =
         {
-            .is_bitnet_type = true,
+            .is_vlut_type = true,
             .table_entries_num = 81,
             .tile_size = 4,
-            .gemm2 = ggml_gemm_i2v4_i8v_LUT2,
+            .gemm = ggml_gemm_i2v4_i8v_LUT2,
         },
     [GGML_TYPE_I2_V_8] =
         {
-            .is_bitnet_type = true,
+            .is_vlut_type = true,
             .table_entries_num = 81,
             .tile_size = 8,
-            .gemm2 = ggml_gemm_i2v8_i8v_LUT2,
+            .gemm = ggml_gemm_i2v8_i8v_LUT2,
         },
     [GGML_TYPE_I2_V_16] =
         {
-            .is_bitnet_type = true,
+            .is_vlut_type = true,
             .table_entries_num = 81,
             .tile_size = 16,
-            .gemm2 = ggml_gemm_i2v16_i8v_LUT2,
+            .gemm = ggml_gemm_i2v16_i8v_LUT2,
         },
     [GGML_TYPE_I1_V] =
         {
-            .is_bitnet_type = true,
+            .is_vlut_type = true,
             .table_entries_num = 243,
             .tile_size = 1,
-            .gemm2 = ggml_gemm_i1v_i8v_LUT2,
+            .gemm = ggml_gemm_i1v_i8v_LUT2,
         },
     [GGML_TYPE_I1_V_2] =
         {
-            .is_bitnet_type = true,
+            .is_vlut_type = true,
             .table_entries_num = 243,
             .tile_size = 2,
-            .gemm2 = ggml_gemm_i1v2_i8v_LUT2,
+            .gemm = ggml_gemm_i1v2_i8v_LUT2,
         },
     [GGML_TYPE_I1_V_4] =
         {
-            .is_bitnet_type = true,
+            .is_vlut_type = true,
             .table_entries_num = 243,
             .tile_size = 4,
-            .gemm2 = ggml_gemm_i1v4_i8v_LUT2,
+            .gemm = ggml_gemm_i1v4_i8v_LUT2,
         },
 };
 // Vec-LUT traits end
@@ -7091,13 +7091,13 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
     // Currently use LUT for all GeMM/GeMV with Vec-LUT weights
     // TODO: use LUT only for large GeMM, and add a GeMV fallback
     const int gemm_lim = 0;
-    bool bitnet_mulmat = type_traits_bitnet[type].is_bitnet_type && (ne11 > gemm_lim);
+    bool vlut_mulmat = type_traits_vlut[type].is_vlut_type && (ne11 > gemm_lim);
     
-    if (bitnet_mulmat) {
+    if (vlut_mulmat) {
         // Get gemm kernel from type_traits
-        bitnet_gemm gemm = type_traits_bitnet[type].gemm2;
+        vlut_gemm gemm = type_traits_vlut[type].gemm;
         assert(gemm);
-        int64_t tile_size = type_traits_bitnet[type].tile_size;
+        int64_t tile_size = type_traits_vlut[type].tile_size;
 
         // Quantize activation (src1)
         GGML_ASSERT(src1->type == GGML_TYPE_F32);
@@ -7136,7 +7136,7 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
                  (const char *)src0->data + src0_start * tile_size, src1_wdata, ne11, src0_end - src0_start);
         }
         return;
-    } // bitnet_mulmat
+    } // vlut_mulmat
 
 
 

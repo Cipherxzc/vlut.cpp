@@ -1,13 +1,4 @@
-// This file defines tests for various GGML ops and backends.
-// For the forward pass it asserts that the results of multiple backends computing the same GGML ops are consistent.
-// For the backward pass it asserts that the gradients from backpropagation are consistent
-// with the gradients obtained via the method of finite differences ("grad" mode, this is optional).
-// It is also possible to check the performance ("perf" mode).
-//
-// this file has three sections: Section 1 does general setup, section 2 defines the GGML ops to be tested,
-// and section 3 defines which tests to run.
-// Quick start for adding a new GGML op: Go to section 2 and create a struct that inherits from test_case,
-// then go to section 3 and add an instantiation of your struct.
+// This file defines MUL-MAT tests for Vec-LUT on CPU backends.
 
 
 // ##############################
@@ -305,9 +296,7 @@ static bool ggml_is_view_op(enum ggml_op op) {
 }
 
 enum test_mode {
-    MODE_TEST,
     MODE_PERF,
-    MODE_GRAD,
     MODE_SEARCH,
 };
 
@@ -386,7 +375,7 @@ struct test_case {
     std::vector<ggml_tensor *> sentinels;
 
     void add_sentinel(ggml_context * ctx) {
-        if (mode == MODE_PERF || mode == MODE_SEARCH || mode == MODE_GRAD) {
+        if (mode == MODE_PERF || mode == MODE_SEARCH) {
             return;
         }
         ggml_tensor * sentinel = ::ggml_new_tensor_1d(ctx, GGML_TYPE_F32, sentinel_size);
@@ -426,166 +415,6 @@ struct test_case {
         return t;
     }
 
-    bool eval(ggml_backend_t backend1, ggml_backend_t backend2, const char * op_name) {
-        mode = MODE_TEST;
-
-        ggml_init_params params = {
-            /* .mem_size = */ ggml_tensor_overhead()*128 + ggml_graph_overhead(),
-            /* .mem_base = */ NULL,
-            /* .no_alloc = */ true,
-        };
-        ggml_context * ctx = ggml_init(params);
-        GGML_ASSERT(ctx);
-
-        gf = ggml_new_graph(ctx);
-
-        // pre-graph sentinel
-        add_sentinel(ctx);
-
-        ggml_tensor * out = build_graph(ctx);
-
-        if (op_name != nullptr && op_desc(out) != op_name) {
-            //printf("  %s: skipping\n", op_desc(out).c_str());
-            ggml_free(ctx);
-            return true;
-        }
-
-        printf("  %s(%s): ", op_desc(out).c_str(), vars().c_str());
-        fflush(stdout);
-
-        // check if the backends support the ops
-        bool supported = true;
-        for (ggml_backend_t backend : {backend1, backend2}) {
-            for (ggml_tensor * t = ggml_get_first_tensor(ctx); t != NULL; t = ggml_get_next_tensor(ctx, t)) {
-                if (!ggml_backend_supports_op(backend, t)) {
-                    printf("not supported [%s] ", ggml_backend_name(backend));
-                    supported = false;
-                    break;
-                }
-            }
-        }
-        if (!supported) {
-            printf("\n");
-            ggml_free(ctx);
-            return true;
-        }
-
-        // post-graph sentinel
-        add_sentinel(ctx);
-
-        // allocate
-        ggml_backend_buffer_t buf = ggml_backend_alloc_ctx_tensors(ctx, backend1);
-        if (buf == NULL) {
-            printf("failed to allocate tensors [%s] ", ggml_backend_name(backend1));
-            ggml_free(ctx);
-            return false;
-        }
-
-        // build graph
-        ggml_build_forward_expand(gf, out);
-
-        // add sentinels as graph nodes so that they are checked in the callback
-        for (ggml_tensor * sentinel : sentinels) {
-            ggml_graph_add_node(gf, sentinel);
-        }
-
-        // randomize tensors
-        initialize_tensors(ctx);
-
-        // compare
-        struct callback_userdata {
-            bool   ok;
-            double max_err;
-            ggml_backend_t backend1;
-            ggml_backend_t backend2;
-        };
-
-        callback_userdata ud {
-            true,
-            max_nmse_err(),
-            backend1,
-            backend2
-        };
-
-        auto callback = [](int index, ggml_tensor * t1, ggml_tensor * t2, void * user_data) -> bool {
-            callback_userdata * ud = (callback_userdata *) user_data;
-            const char * bn1 = ggml_backend_name(ud->backend1);
-            const char * bn2 = ggml_backend_name(ud->backend2);
-
-            if (t1->op == GGML_OP_NONE) {
-                // sentinels must be unchanged
-                std::vector<uint8_t> t1_data(ggml_nbytes(t1));
-                std::vector<uint8_t> t2_data(ggml_nbytes(t2));
-                ggml_backend_tensor_get(t1, t1_data.data(), 0, ggml_nbytes(t1));
-                ggml_backend_tensor_get(t2, t2_data.data(), 0, ggml_nbytes(t2));
-
-                if (memcmp(t1_data.data(), t2_data.data(), ggml_nbytes(t1)) != 0) {
-                    printf("sentinel mismatch: %s ", t1->name);
-                    ud->ok = false;
-                    return true;
-                }
-            }
-
-            std::vector<float> f1 = tensor_to_float(t1);
-            std::vector<float> f2 = tensor_to_float(t2);
-
-            for (size_t i = 0; i < f1.size(); i++) {
-                // check for nans
-                if (std::isnan(f1[i]) || std::isnan(f2[i])) {
-                    printf("[%s] NaN at index %zu (%s=%f %s=%f) ", ggml_op_desc(t1), i, bn1, f1[i], bn2, f2[i]);
-                    ud->ok = false;
-                    return true;
-                }
-                // check for infs: both must be inf of the same sign, or both must be finite
-                if (isinf_or_max(f1[i]) || isinf_or_max(f2[i])) {
-                    if (isinf_or_max(f1[i]) && isinf_or_max(f2[i])) {
-                        if (std::signbit(f1[i]) != std::signbit(f2[i])) {
-                            printf("[%s] inf sign mismatch: %s=%f %s=%f ", ggml_op_desc(t1), bn1, f1[i], bn2, f2[i]);
-                            ud->ok = false;
-                            return true;
-                        }
-                    } else {
-                        printf("[%s] inf mismatch: %s=%f %s=%f ", ggml_op_desc(t1), bn1, f1[i], bn2, f2[i]);
-                        ud->ok = false;
-                        return true;
-                    }
-                }
-            }
-
-            double err = nmse(f1.data(), f2.data(), f1.size());
-            if (err > ud->max_err) {
-                printf("[%s] NMSE = %.9f > %.9f ", ggml_op_desc(t1), err, ud->max_err);
-                //for (int i = 0; i < (int) f1.size(); i++) {
-                //    printf("%5d %9.6f %9.6f, diff = %9.6f\n", i, f1[i], f2[i], f1[i] - f2[i]);
-                //}
-                //printf("\n");
-                //exit(1);
-                ud->ok = false;
-            }
-            return true;
-
-            GGML_UNUSED(index);
-        };
-
-        const bool cmp_ok = ggml_backend_compare_graph_backend(backend1, backend2, gf, callback, &ud);
-
-        if (!cmp_ok) {
-            printf("compare failed ");
-        }
-
-        ggml_backend_buffer_free(buf);
-
-        ggml_free(ctx);
-
-        if (ud.ok && cmp_ok) {
-            printf("\033[1;32mOK\033[0m\n");
-            return true;
-        }
-
-        printf("\033[1;31mFAIL\033[0m\n");
-        return false;
-    }
-
     bool eval_perf(ggml_backend_t backend, const char * op_name) {
         mode = mode == MODE_SEARCH ? MODE_SEARCH : MODE_PERF;
 
@@ -602,7 +431,7 @@ struct test_case {
         ggml_tensor * out = build_graph(ctx);
 
         if (op_name != nullptr && op_desc(out) != op_name) {
-            //printf("  %s: skipping\n", op_desc(out).c_str());
+            printf("  %s: skipping\n", op_desc(out).c_str());
             ggml_free(ctx);
             return true;
         }
@@ -736,278 +565,12 @@ struct test_case {
 
         return true;
     }
-
-    bool eval_grad(ggml_backend_t backend, const char * op_name) {
-        mode = MODE_GRAD;
-        const std::vector<float> expect = grad_expect();
-
-        ggml_init_params params = {
-            /* .mem_size = */ ggml_tensor_overhead()*128 + 2*ggml_graph_overhead_custom(GGML_DEFAULT_GRAPH_SIZE, true),
-            /* .mem_base = */ NULL,
-            /* .no_alloc = */ true,
-        };
-        ggml_context * ctx = ggml_init(params);
-        GGML_ASSERT(ctx);
-
-        gf = ggml_new_graph_custom(ctx, GGML_DEFAULT_GRAPH_SIZE, true);
-        gb = ggml_new_graph_custom(ctx, GGML_DEFAULT_GRAPH_SIZE, true);
-
-        ggml_tensor * out = build_graph(ctx);
-
-        if ((op_name != nullptr && op_desc(out) != op_name) || out->op == GGML_OP_OPT_STEP_ADAMW) {
-            //printf("  %s: skipping\n", op_desc(out).c_str());
-            ggml_free(ctx);
-            return true;
-        }
-
-        printf("  %s(%s): ", op_desc(out).c_str(), vars().c_str());
-        fflush(stdout);
-
-        if (out->type != GGML_TYPE_F32) {
-            ggml_free(ctx);
-            printf("not supported [%s->type != FP32]\n", out->name);
-            return true;
-        }
-
-        // check if the backend supports the ops
-        bool supported = true;
-        bool any_params = false;
-        for (ggml_tensor * t = ggml_get_first_tensor(ctx); t != NULL; t = ggml_get_next_tensor(ctx, t)) {
-            if (!ggml_backend_supports_op(backend, t)) {
-                printf("not supported [%s] ", ggml_backend_name(backend));
-                supported = false;
-                break;
-            }
-            if ((t->flags & GGML_TENSOR_FLAG_PARAM)) {
-                any_params = true;
-                if (t->type != GGML_TYPE_F32) {
-                    printf("not supported [%s->type != FP32] ", t->name);
-                    supported = false;
-                    break;
-                }
-            }
-        }
-        if (!any_params) {
-            printf("not supported [%s] \n", op_name);
-            supported = false;
-        }
-        if (!supported) {
-            printf("\n");
-            ggml_free(ctx);
-            return true;
-        }
-
-        int64_t ngrads = 0;
-        for (ggml_tensor * t = ggml_get_first_tensor(ctx); t != NULL; t = ggml_get_next_tensor(ctx, t)) {
-            if (t->flags & GGML_TENSOR_FLAG_PARAM) {
-                ngrads += ggml_nelements(t);
-            }
-        }
-        if (ngrads > grad_nmax()) {
-            printf("skipping large tensors for speed \n");
-            ggml_free(ctx);
-            return true;
-        }
-
-
-        if (!ggml_is_scalar(out)) {
-            out = ggml_sum(ctx, out);
-            ggml_set_name(out, "sum_of_out");
-        }
-        ggml_set_loss(out);
-
-        ggml_build_forward_expand(gf, out);
-        ggml_graph_cpy(gf, gb);
-        ggml_build_backward_expand(ctx, ctx, gb, false);
-        if (expect.size() != 1 || expect[0] != 0.0f) {
-            GGML_ASSERT(ggml_graph_n_nodes(gb) > ggml_graph_n_nodes(gf));
-            for (ggml_tensor * t = ggml_get_first_tensor(ctx); t != NULL; t = ggml_get_next_tensor(ctx, t)) {
-                GGML_ASSERT(!(t->flags & GGML_TENSOR_FLAG_PARAM) || ggml_graph_get_grad(gb, t)->op != GGML_OP_NONE);
-            }
-        }
-
-        for (ggml_tensor * t = ggml_get_first_tensor(ctx); t != NULL; t = ggml_get_next_tensor(ctx, t)) {
-            if (!ggml_backend_supports_op(backend, t)) {
-                printf("not supported [%s] ", ggml_backend_name(backend));
-                supported = false;
-                break;
-            }
-            if ((t->flags & GGML_TENSOR_FLAG_PARAM) && t->type != GGML_TYPE_F32) {
-                printf("not supported [%s->type != FP32] ", t->name);
-                supported = false;
-                break;
-            }
-        }
-        if (!supported) {
-            printf("\n");
-            ggml_free(ctx);
-            return true;
-        }
-
-        // allocate
-        ggml_backend_buffer_t buf = ggml_backend_alloc_ctx_tensors(ctx, backend);
-        if (buf == NULL) {
-            printf("failed to allocate tensors [%s] ", ggml_backend_name(backend));
-            ggml_free(ctx);
-            return false;
-        }
-
-
-        initialize_tensors(ctx); // Randomizes all tensors (including gradients).
-        ggml_graph_reset(gb);    // Sets gradients to 1 if loss, 0 otherwise.
-
-        ggml_backend_graph_compute(backend, gf);
-        ggml_backend_graph_compute(backend, gb);
-
-        bool ok = true;
-        for (struct ggml_tensor * t = ggml_get_first_tensor(ctx); t != nullptr; t = ggml_get_next_tensor(ctx, t)) {
-            if (!(t->flags & GGML_TENSOR_FLAG_PARAM)) {
-                continue;
-            }
-
-            const char * bn = ggml_backend_name(backend);
-            const int64_t ne = ggml_nelements(t);
-
-            std::vector<float> ga;
-            struct ggml_tensor * grad = ggml_graph_get_grad(gb, t);
-            if (grad) {
-                ga = tensor_to_float(grad);
-            } else {
-                ga.resize(ne); // default value is 0.0f
-            }
-
-            for (int64_t i = 0; i < ne; ++i) { // gradient algebraic
-                // check for nans
-                if (!std::isfinite(ga[i])) {
-                    printf("[%s] nonfinite gradient at index %" PRId64 " (%s=%f) ", ggml_op_desc(t), i, bn, ga[i]);
-                    ok = false;
-                    break;
-                }
-            }
-            if (!ok) {
-                break;
-            }
-
-            std::vector<float> gn(ne); // gradient numeric
-            GGML_ASSERT(ga.size() == gn.size());
-
-            std::vector<float> x0 = tensor_to_float(t); // original t data
-            GGML_ASSERT(ggml_is_scalar(out));
-            GGML_ASSERT(out->type == GGML_TYPE_F32);
-
-            const float eps = grad_eps();
-            for (int64_t i = 0; i < ne; ++i) {
-                const float xiu  = x0[i] + 1.0f*eps; // x, index i, up
-                const float xiuh = x0[i] + 0.5f*eps; // x, index i, up half
-                const float xidh = x0[i] - 0.5f*eps; // x, index i, down half
-                const float xid  = x0[i] - 1.0f*eps; // x, index i, down
-
-                float fu, fuh, fdh, fd; // output values for xiu, xiuh, xid, xidh
-
-                ggml_backend_tensor_set(t, &xiu, i*sizeof(float), sizeof(float));
-                ggml_backend_graph_compute(backend, gf);
-                ggml_backend_tensor_get(out, &fu, 0, ggml_nbytes(out));
-
-                ggml_backend_tensor_set(t, &xid, i*sizeof(float), sizeof(float));
-                ggml_backend_graph_compute(backend, gf);
-                ggml_backend_tensor_get(out, &fd, 0, ggml_nbytes(out));
-
-                if (grad_precise()) {
-                    ggml_backend_tensor_set(t, &xiuh, i*sizeof(float), sizeof(float));
-                    ggml_backend_graph_compute(backend, gf);
-                    ggml_backend_tensor_get(out, &fuh, 0, ggml_nbytes(out));
-
-                    ggml_backend_tensor_set(t, &xidh, i*sizeof(float), sizeof(float));
-                    ggml_backend_graph_compute(backend, gf);
-                    ggml_backend_tensor_get(out, &fdh, 0, ggml_nbytes(out));
-
-                    gn[i] = (8.0*(double)fuh + (double)fd - (8.0*(double)fdh + (double)fu)) / (6.0*(double)eps);
-                } else {
-                    gn[i] = (fu - fd) / (2.0f*eps);
-                }
-
-                ggml_backend_tensor_set(t, x0.data(), 0, ggml_nbytes(t));
-            }
-
-            const double err = mean_abs_asymm(gn.data(), ga.data(), gn.size(), expect);
-            if (err > max_maa_err()) {
-                printf("[%s] MAA = %.9f > %.9f ", ggml_op_desc(t), err, max_maa_err());
-                ok = false;
-                break;
-            }
-            if (!ok) {
-                break;
-            }
-        }
-
-        if (!ok) {
-            printf("compare failed ");
-        }
-
-        ggml_backend_buffer_free(buf);
-
-        ggml_free(ctx);
-
-        if (ok) {
-            printf("\033[1;32mOK\033[0m\n");
-            return true;
-        }
-
-        printf("\033[1;31mFAIL\033[0m\n");
-        return false;
-    }
 };
 
 
 // ###################################
 // ## Section 2: GGML Op Defintions ##
 // ###################################
-
-
-// The following is an example showing the bare minimum for creating a test for a GGML op.
-
-// GGML_OP_EXAMPLE
-struct test_example : public test_case {
-    // Always define these 2 or variants thereof:
-    const ggml_type type; // The type of the input tensors.
-    const std::array<int64_t, 4> ne; // The shape of the input tensors.
-    // For some ops it's necessary to define multiple types or shapes for the inputs.
-    // Or they may need additional parameters.
-
-    // Put all parameters needed to fully define the test into one of the VARS_TO_STR macros.
-    // In most cases these are just the properties of the struct that you defined above.
-    // This is needed for info prints.
-    std::string vars() override {
-        return VARS_TO_STR2(type, ne);
-    }
-
-    // Define a constructor for the struct.
-    // In most cases it will be sufficient to have the same arguments as the struct has properties
-    // and just use initializer lists.
-    test_example(ggml_type type = GGML_TYPE_F32,
-            std::array<int64_t, 4> ne = {10, 5, 4, 3})
-        : type(type), ne(ne) {}
-
-    // Define how a simple GGML compute graph can be constructed for the new GGML op.
-    ggml_tensor * build_graph(ggml_context * ctx) override {
-        // Step 1: create input tensors that don't depend on any other tensors:
-        ggml_tensor * a = ggml_new_tensor(ctx, type, 4, ne.data());
-        ggml_set_name(a, "a"); // Setting names is optional but it's useful for debugging.
-
-        ggml_tensor * b = ggml_new_tensor(ctx, type, 4, ne.data());
-        ggml_set_name(b, "b");
-
-        // Step 2: use the op that you want to test in the GGML compute graph.
-        ggml_tensor * out = ggml_add(ctx, a, b); // For this example we're just doing a simple addition.
-        ggml_set_name(out, "out");
-
-        // Step 3: return the output tensor.
-        return out;
-    }
-    // In order to also check the gradients for your op, add calls like ggml_set_param(ctx, a)
-    // immediately after you create the tensors.
-    // This is optional and only makes sense if a backward pass has actually been implemented for the new op.
-};
 
 // GGML_OP_MUL_MAT
 struct test_mul_mat : public test_case {
@@ -1085,89 +648,24 @@ struct test_mul_mat : public test_case {
 // ###########################################
 // ## Section 3: GGML Op Test Instantiation ##
 // ###########################################
-static const ggml_type all_types[] = {
-    GGML_TYPE_F32, GGML_TYPE_F16, GGML_TYPE_BF16,
-    GGML_TYPE_Q4_0, GGML_TYPE_Q4_1,
-    GGML_TYPE_Q5_0, GGML_TYPE_Q5_1,
-    GGML_TYPE_Q8_0,
-    GGML_TYPE_Q2_K, GGML_TYPE_Q3_K,
-    GGML_TYPE_Q4_K, GGML_TYPE_Q5_K,
-    GGML_TYPE_Q6_K,
-    // GGML_TYPE_TQ1_0, GGML_TYPE_TQ2_0, // TODO: implement for all backends
-    GGML_TYPE_IQ2_XXS, GGML_TYPE_IQ2_XS, GGML_TYPE_IQ2_S,
-    GGML_TYPE_IQ3_XXS, GGML_TYPE_IQ1_S, GGML_TYPE_IQ1_M,
-    GGML_TYPE_IQ4_NL, GGML_TYPE_IQ3_S, GGML_TYPE_IQ4_XS,
+
+// Define model configurations with explicit types to test
+struct ModelConfig {
+    std::string name;
+    int d_model;
+    int d_ff;
+    std::vector<ggml_type> types_to_test;
 };
-
-static const ggml_type base_types[] = {
-    GGML_TYPE_F32, GGML_TYPE_F16,
-    GGML_TYPE_Q8_0, // for I8MM tests
-    GGML_TYPE_Q4_0,
-    GGML_TYPE_Q4_1, // for I8MM tests
-    GGML_TYPE_Q4_K,
-    GGML_TYPE_IQ2_XXS
-};
-
-static const ggml_type other_types[] = {
-    GGML_TYPE_Q4_1,
-    GGML_TYPE_Q5_0, GGML_TYPE_Q5_1,
-    GGML_TYPE_Q8_0,
-    GGML_TYPE_Q2_K, GGML_TYPE_Q3_K,
-    GGML_TYPE_Q5_K,
-    GGML_TYPE_Q6_K,
-    // GGML_TYPE_TQ1_0, GGML_TYPE_TQ2_0, // TODO: implement for all backends
-    GGML_TYPE_IQ2_XS, GGML_TYPE_IQ2_S,
-    GGML_TYPE_IQ3_XXS, GGML_TYPE_IQ1_S, GGML_TYPE_IQ1_M,
-    GGML_TYPE_IQ4_NL, GGML_TYPE_IQ3_S, GGML_TYPE_IQ4_XS,
-    GGML_TYPE_BF16,
-};
-
-// Test cases for evaluation: should try to cover edge cases while using small input sizes to keep the runtime low
-static std::vector<std::unique_ptr<test_case>> make_test_cases_eval() {
-    std::vector<std::unique_ptr<test_case>> test_cases;
-    std::default_random_engine rng(0);
-
-    // m = a rows
-    // n = b rows
-    // k = cols
-    std::uniform_int_distribution<> dist_m(1, 128);
-    std::uniform_int_distribution<> dist_n(16, 128);
-    std::uniform_int_distribution<> dist_k(1, 16);
-    for (int i = 0; i < 1000; i++) {
-        for (ggml_type type_a : {GGML_TYPE_I2_V, GGML_TYPE_I1_V}) {
-            for (ggml_type type_b : {GGML_TYPE_F32}) {
-                int m = dist_m(rng);
-                int n = dist_n(rng);
-                int k = dist_k(rng) * ggml_blck_size(type_a);
-                test_cases.emplace_back(new test_mul_mat(type_a, type_b, m, n, k, { 1,  1}, {1, 1}));
-            }
-        }
-    }
-
-    return test_cases;
-}
 
 // Test cases for performance evaluation: should be representative of real-world use cases
 static std::vector<std::unique_ptr<test_case>> make_test_cases_perf(const char* model_filter = nullptr, const std::vector<int>& test_ns = {}) {
     std::vector<std::unique_ptr<test_case>> test_cases;
 
-    // Define model configurations with explicit types to test
-    struct ModelConfig {
-        std::string name;
-        int d_model;
-        int d_ff;
-        std::vector<ggml_type> types_to_test;
-    };
-
     std::vector<ModelConfig> models = {
-        {"bitnet_3b",  3200, 8640,  {GGML_TYPE_Q4_0, GGML_TYPE_I2_V_4, GGML_TYPE_I1_V_2}},
+        {"bitnet_3b",  3200, 8640,  {GGML_TYPE_Q4_0, GGML_TYPE_I2_V_4, GGML_TYPE_I1_V_2}},  // TQ not supported for d_model=3200, fallback to Q4_0
         {"llama3_8b",  4096, 14336, {GGML_TYPE_TQ2_0, GGML_TYPE_I2_V_4, GGML_TYPE_TQ1_0, GGML_TYPE_I1_V_2}},
-        // {"falcon_1b",  2048, 8192,  {GGML_TYPE_TQ2_0, GGML_TYPE_I2_V_4, GGML_TYPE_TQ1_0, GGML_TYPE_I1_V_2}},
-        // {"trilm_1.5b", 2048, 6144,  {GGML_TYPE_TQ2_0, GGML_TYPE_I2_V_4, GGML_TYPE_TQ1_0, GGML_TYPE_I1_V_2}},
-        // {"llama3_8b", 4096, 14336, {GGML_TYPE_Q8_0, GGML_TYPE_Q6_K, GGML_TYPE_Q5_K, GGML_TYPE_Q4_K, GGML_TYPE_Q4_0,
-        // GGML_TYPE_Q3_K, GGML_TYPE_Q2_K, GGML_TYPE_TQ2_0, GGML_TYPE_TQ1_0, GGML_TYPE_I2_V_4, GGML_TYPE_I1_V_2}},
-        // {"bitnet_3b", 3200, 8640, {GGML_TYPE_I2_V_2, GGML_TYPE_I2_V_4, GGML_TYPE_I2_V_8, GGML_TYPE_I2_V_16}},
-        // {"llama3_8b", 3200, 8640, {GGML_TYPE_I2_V_2, GGML_TYPE_I2_V_4, GGML_TYPE_I2_V_8, GGML_TYPE_I2_V_16}},
+        {"falcon_1b",  2048, 8192,  {GGML_TYPE_TQ2_0, GGML_TYPE_I2_V_4, GGML_TYPE_TQ1_0, GGML_TYPE_I1_V_2}},
+        {"trilm_1.5b", 2048, 6144,  {GGML_TYPE_TQ2_0, GGML_TYPE_I2_V_4, GGML_TYPE_TQ1_0, GGML_TYPE_I1_V_2}},
     };
 
     // Filter by model if specified
@@ -1203,14 +701,6 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_perf(const char* 
 // Test cases for configuration search
 static std::vector<std::unique_ptr<test_case>> make_test_cases_search(const char* model_filter = nullptr, const std::vector<int>& test_ns = {}) {
     std::vector<std::unique_ptr<test_case>> test_cases;
-
-    // Define model configurations with explicit types to test
-    struct ModelConfig {
-        std::string name;
-        int d_model;
-        int d_ff;
-        std::vector<ggml_type> types_to_test;
-    };
 
     std::vector<ModelConfig> models = {
         {"bitnet_3b",  3200, 8640,  {GGML_TYPE_I2_V}},
@@ -1249,32 +739,12 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_search(const char
 }
 
 // Update the test_backend function to accept a model filter
-static bool test_backend(ggml_backend_t backend, test_mode mode, const char* op_name, const char* model_filter = nullptr, const std::vector<int>& test_ns = {}) {
-    if (mode == MODE_TEST) {
-        auto test_cases = make_test_cases_eval();
-        ggml_backend_t backend_cpu = ggml_backend_init_by_type(GGML_BACKEND_DEVICE_TYPE_CPU, NULL);
-        if (backend_cpu == NULL) {
-            printf("  Failed to initialize CPU backend\n");
-            return false;
-        }
-
-        size_t n_ok = 0;
-        for (auto & test : test_cases) {
-            if (test->eval(backend, backend_cpu, op_name)) {
-                n_ok++;
-            }
-        }
-        printf("  %zu/%zu tests passed\n", n_ok, test_cases.size());
-
-        ggml_backend_free(backend_cpu);
-
-        return n_ok == test_cases.size();
-    }
+static bool test_backend(ggml_backend_t backend, test_mode mode, const char* model_filter = nullptr, const std::vector<int>& test_ns = {}) {
 
     if (mode == MODE_PERF) {
         auto test_cases = make_test_cases_perf(model_filter, test_ns);
         for (auto & test : test_cases) {
-            test->eval_perf(backend, op_name);
+            test->eval_perf(backend, "MUL_MAT");
         }
         return true;
     }
@@ -1282,7 +752,7 @@ static bool test_backend(ggml_backend_t backend, test_mode mode, const char* op_
     if (mode == MODE_SEARCH) {
         auto test_cases = make_test_cases_search(model_filter, test_ns);
         for (auto & test : test_cases) {
-            test->eval_perf(backend, op_name);
+            test->eval_perf(backend, "MUL_MAT");
         }
         return true;
     }
@@ -1291,45 +761,43 @@ static bool test_backend(ggml_backend_t backend, test_mode mode, const char* op_
     GGML_ABORT("fatal error");
 }
 
-static void usage(char ** argv) {
-    printf("Usage: %s [mode] [-o op] [-b backend] [-m model]\n", argv[0]);
-    printf("    valid modes:\n");
-    printf("      - test (default, compare with CPU backend for correctness)\n");
-    printf("      - perf (performance evaluation)\n");
-    printf("    op names for -o are as given by ggml_op_desc() (e.g. ADD, MUL_MAT, etc)\n");
-    printf("    model names for -m are: bitnet_3b, llama3_8b, falcon_1b, trilm_1.5b\n");
-    printf("      - if not specified, all models are tested\n");
+static void usage(char** argv) {
+    printf("Usage: %s [mode] [-m model] [-t threads] [-ns seq_lens]\n", argv[0]);
+    printf("\n");
+    printf("  valid modes:\n");
+    printf("    - perf   (default)  : run performance evaluation\n");
+    printf("    - search            : operator search / tuning mode\n");
+    printf("\n");
+    printf("  options:\n");
+    printf("    -m model            : test only the given model\n");
+    printf("                          valid models: bitnet_3b, llama3_8b, falcon_1b, trilm_1.5b\n");
+    printf("                          if omitted, all models are tested\n");
+    printf("\n");
+    printf("    -t threads          : number of CPU threads to use\n");
+    printf("                          default = hardware concurrency\n");
+    printf("\n");
+    printf("    -ns seq_lens        : comma-separated list of sequence lengths to test\n");
+    printf("                          e.g. -ns 128,256,512\n");
+    printf("                          default = 128\n");
+    printf("\n");
+    printf("  examples:\n");
+    printf("    %s perf -m llama3_8b -t 8\n", argv[0]);
+    printf("    %s search -ns 128,256\n", argv[0]);
+    printf("\n");
 }
 
 int main(int argc, char ** argv) {
-    test_mode mode = MODE_TEST;
+    test_mode mode = MODE_PERF;
     const char * op_name_filter = NULL;
-    const char * backend_filter = NULL;
     const char * model_filter = NULL;
-    int n_threads = 0;
+    int n_threads = std::thread::hardware_concurrency();
     std::vector<int> test_ns = {128}; // default test sequence lengths
 
     for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "test") == 0) {
-            mode = MODE_TEST;
-        } else if (strcmp(argv[i], "perf") == 0) {
+        if (strcmp(argv[i], "perf") == 0) {
             mode = MODE_PERF;
         } else if (strcmp(argv[i], "search") == 0) {
             mode = MODE_SEARCH;
-        } else if (strcmp(argv[i], "-o") == 0) {
-            if (i + 1 < argc) {
-                op_name_filter = argv[++i];
-            } else {
-                usage(argv);
-                return 1;
-            }
-        } else if (strcmp(argv[i], "-b") == 0) {
-            if (i + 1 < argc) {
-                backend_filter = argv[++i];
-            } else {
-                usage(argv);
-                return 1;
-            }
         } else if (strcmp(argv[i], "-m") == 0) {
             if (i + 1 < argc) {
                 model_filter = argv[++i];
@@ -1380,14 +848,8 @@ int main(int argc, char ** argv) {
 
         printf("Backend %zu/%zu: %s\n", i + 1, ggml_backend_dev_count(), ggml_backend_dev_name(dev));
 
-        if (backend_filter != NULL && strcmp(backend_filter, ggml_backend_dev_name(dev)) != 0) {
-            printf("  Skipping\n");
-            n_ok++;
-            continue;
-        }
-
-        if (backend_filter == NULL && ggml_backend_dev_type(dev) == GGML_BACKEND_DEVICE_TYPE_CPU && mode != MODE_GRAD) {
-            printf("  Skipping CPU backend\n");
+        if (ggml_backend_dev_type(dev) != GGML_BACKEND_DEVICE_TYPE_CPU) {
+            printf("  Skipping non-CPU backend\n");
             n_ok++;
             continue;
         }
@@ -1399,10 +861,12 @@ int main(int argc, char ** argv) {
         auto ggml_backend_set_n_threads_fn = (ggml_backend_set_n_threads_t) ggml_backend_reg_get_proc_address(reg, "ggml_backend_set_n_threads");
         if (ggml_backend_set_n_threads_fn) {
             int act_n_threads = std::thread::hardware_concurrency();
-            if (n_threads > 0 && n_threads < std::thread::hardware_concurrency()) {
+            if (n_threads > 0 && n_threads <= std::thread::hardware_concurrency()) {
                 act_n_threads = n_threads;
-            } else {
+            } else if (n_threads > std::thread::hardware_concurrency()) {
                 printf("  Warning: requested %d threads, but only %u are available\n", n_threads, std::thread::hardware_concurrency());
+            } else {
+                printf("  Warning: invalid number of threads %d, using %u instead\n", n_threads, std::thread::hardware_concurrency());
             }
             ggml_backend_set_n_threads_fn(backend, act_n_threads);
             printf("  Using %d threads\n", act_n_threads);
@@ -1414,7 +878,7 @@ int main(int argc, char ** argv) {
         printf("  Device memory: %zu MB (%zu MB free)\n", total / 1024 / 1024, free / 1024 / 1024);
         printf("\n");
 
-        bool ok = test_backend(backend, mode, op_name_filter, model_filter, test_ns);
+        bool ok = test_backend(backend, mode, model_filter, test_ns);
 
         printf("  Backend %s: ", ggml_backend_name(backend));
         if (ok) {

@@ -44,7 +44,7 @@ BUILD_DIR="$PROJECT_ROOT/build-lut2${LUT2}-entry${ENTRY_SIZE}"
 echo "Building with LUT2=$LUT2, ENTRY_SIZE=$ENTRY_SIZE..."
 cd "$PROJECT_ROOT"
 cmake -B "$BUILD_DIR" $BUILD_FLAGS > /dev/null 2>&1
-cmake --build "$BUILD_DIR" --target test-bitnet-gemm --config Release -j$(nproc) > /dev/null 2>&1
+cmake --build "$BUILD_DIR" --target test-vlut-gemm --config Release -j$(nproc) > /dev/null 2>&1
 
 if [ $? -ne 0 ]; then
     echo "Build failed. Exiting."
@@ -62,7 +62,7 @@ for model in "${MODELS[@]}"; do
     LOG_FILE="$RESULTS_DIR/${model}_t${THREADS}_ns${NS//,/-}_l${LUT2}_s${ENTRY_SIZE}.log"
     
     # Run the benchmark
-    "$BUILD_DIR/bin/test-bitnet-gemm" perf -b CPU -t "$THREADS" -m "$model" -ns "$NS" > "$LOG_FILE" 2>&1
+    "$BUILD_DIR/bin/test-vlut-gemm" perf -b CPU -t "$THREADS" -m "$model" -ns "$NS" > "$LOG_FILE" 2>&1
     
     echo "Results saved to $LOG_FILE"
     

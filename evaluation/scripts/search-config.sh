@@ -37,7 +37,7 @@ for lut2 in "${LUT2_OPTIONS[@]}"; do
         # Build with this configuration
         echo "Building with LUT2=$lut2, ENTRY_SIZE=$entry_size..."
         cmake -B "$BUILD_DIR" $BUILD_FLAGS > /dev/null 2>&1
-        cmake --build $BUILD_DIR --target test-bitnet-gemm --config Release -j$(nproc) > /dev/null 2>&1
+        cmake --build $BUILD_DIR --target test-vlut-gemm --config Release -j$(nproc) > /dev/null 2>&1
         
         # If build was successful, run benchmarks with different thread counts
         if [ $? -eq 0 ]; then
@@ -48,7 +48,7 @@ for lut2 in "${LUT2_OPTIONS[@]}"; do
                 # Loop by models sequentially to avoid OOM
                 > "$LOG_FILE"
                 for model in "${MODELS[@]}"; do
-                    "$BUILD_DIR/bin/test-bitnet-gemm" search -b CPU -t "$threads" -m "$model" -ns 128,512 >> "$LOG_FILE" 2>&1
+                    "$BUILD_DIR/bin/test-vlut-gemm" search -b CPU -t "$threads" -m "$model" -ns 128,512 >> "$LOG_FILE" 2>&1
                 done
                 echo "Results saved to $LOG_FILE"
                 

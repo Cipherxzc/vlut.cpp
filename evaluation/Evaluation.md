@@ -40,7 +40,7 @@
 
 #### Scripts
 
-- `bench-gemm.sh`: Ours & llama.cpp GeMM (with `test-bitnet-gemm`).
+- `bench-gemm.sh`: Ours & llama.cpp GeMM (with `test-vlut-gemm`).
 - `bench-gemm-tmac.sh`: T-MAC GeMM (T-MAC is tuned for n=256, will overide previous kernels).
     - Will copy `tmac_model_utils.py` and `tmac_platform.py` to target directory.
         - Increased tuning timeout in `platform.py` to avoid tuning failure.
