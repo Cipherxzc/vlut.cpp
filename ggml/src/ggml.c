@@ -907,20 +907,6 @@ static const struct ggml_type_traits type_traits[GGML_TYPE_COUNT] =
                 .type_size = sizeof(uint8_t),
                 .is_quantized = true,
             },
-        [GGML_TYPE_I1_S] =
-            {
-                .type_name = "i1_58_s",
-                .blck_size = 5,
-                .type_size = sizeof(uint8_t),
-                .is_quantized = true,
-            },
-        [GGML_TYPE_I1_M] =
-            {
-                .type_name = "i1_58_m",
-                .blck_size = 5,
-                .type_size = sizeof(uint8_t),
-                .is_quantized = true,
-            },
         [GGML_TYPE_I2_S_2] =
             {
                 .type_name = "i2_s_2",
@@ -946,6 +932,13 @@ static const struct ggml_type_traits type_traits[GGML_TYPE_COUNT] =
             {
                 .type_name = "i2_s_16",
                 .blck_size = 4,
+                .type_size = sizeof(uint8_t),
+                .is_quantized = true,
+            },
+        [GGML_TYPE_I1_M] =
+            {
+                .type_name = "i1_58_m",
+                .blck_size = 5,
                 .type_size = sizeof(uint8_t),
                 .is_quantized = true,
             },
@@ -1260,7 +1253,7 @@ int64_t ggml_nrows(const struct ggml_tensor * tensor) {
 }
 
 size_t ggml_nbytes(const struct ggml_tensor * tensor) {
-    if (tensor->type == GGML_TYPE_I1_M || tensor->type == GGML_TYPE_I1_M_2) {
+    if (tensor->type == GGML_TYPE_I1_M || tensor->type == GGML_TYPE_I1_M_2 || tensor->type == GGML_TYPE_I1_M_4) {
         return ggml_row_size(tensor->type, tensor->ne[0]) * tensor->ne[1];
     }
 
@@ -1297,7 +1290,7 @@ size_t ggml_type_size(enum ggml_type type) {
 size_t ggml_row_size(enum ggml_type type, int64_t ne) {
     if (type == GGML_TYPE_I8_B) {
         return sizeof(int8_t) * ne + sizeof(float);
-    } else if (type == GGML_TYPE_I1_M || type == GGML_TYPE_I1_M_2) {
+    } else if (type == GGML_TYPE_I1_M || type == GGML_TYPE_I1_M_2 || type == GGML_TYPE_I1_M_4) {
         assert(ne % 4 == 0);
         int64_t blck_num = ne / 20 * 4;
         int64_t blck_remain = ne % 20 / 4;
@@ -6571,18 +6564,14 @@ size_t ggml_quantize_chunk(
                 result = n * elemsize;
                 memcpy((uint8_t *)dst + start * elemsize, src + start, result);
             } break;
-        // Row-LUT type
+            
+        // Vec-LUT types
         case GGML_TYPE_I2_S:
             result = quantize_i2_s(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
-        case GGML_TYPE_I1_S:
-            result = quantize_i1_s(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
-            break;
-        case GGML_TYPE_I1_M:
-            result = quantize_i1_m(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
-            break;
         case GGML_TYPE_I2_S_2:
-            result = quantize_i2_s(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);  // Cipherxzc: TODO
+            // TODO
+            // result = quantize_i2_s_2(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
         case GGML_TYPE_I2_S_4:
             result = quantize_i2_s_4(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
@@ -6591,10 +6580,18 @@ size_t ggml_quantize_chunk(
             result = quantize_i2_s_8(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
         case GGML_TYPE_I2_S_16:
-            result = quantize_i2_s(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);  // Cipherxzc: TODO
+            // TODO
+            // result = quantize_i2_s_16(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
+            break;
+        case GGML_TYPE_I1_M:
+            result = quantize_i1_m(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
         case GGML_TYPE_I1_M_2:
             result = quantize_i1_m_2(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
+            break;
+        case GGML_TYPE_I1_M_4:
+            // TODO
+            // result = quantize_i1_m_4(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
         default:
             assert(false);

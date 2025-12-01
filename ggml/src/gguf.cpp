@@ -556,7 +556,8 @@ struct gguf_context * gguf_init_from_file_impl(FILE * file, struct gguf_init_par
             const int64_t blck_size = ggml_blck_size(info.t.type);
 
             // check that row size is divisible by block size
-            if (info.t.type != GGML_TYPE_I1_M && info.t.type != GGML_TYPE_I1_M_2 && (blck_size == 0 || info.t.ne[0] % blck_size != 0)) {
+            if (info.t.type != GGML_TYPE_I1_M && info.t.type != GGML_TYPE_I1_M_2 && info.t.type != GGML_TYPE_I1_M_4 &&
+                (blck_size == 0 || info.t.ne[0] % blck_size != 0)) {
                 fprintf(stderr, "%s: tensor '%s' of type %d (%s) has %" PRId64 " elements per row, "
                     "not a multiple of block size (%" PRId64 ")\n",
                     __func__, info.t.name, (int) info.t.type, ggml_type_name(info.t.type), info.t.ne[0], blck_size);
@@ -1109,7 +1110,7 @@ void gguf_set_tensor_type(struct gguf_context * ctx, const char * name, enum ggm
     const int64_t blck_size = ggml_blck_size(type);
 
     tensor->type = type;
-    if (type != GGML_TYPE_I1_M && type != GGML_TYPE_I1_M_2) {
+    if (type != GGML_TYPE_I1_M && type != GGML_TYPE_I1_M_2 && type != GGML_TYPE_I1_M_4) {
         GGML_ASSERT(tensor->ne[0] % blck_size == 0 && "tensor row size not divisible by block size of new type");
     }
 

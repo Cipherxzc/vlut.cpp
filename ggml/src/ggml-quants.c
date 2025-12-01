@@ -5226,15 +5226,15 @@ bool ggml_validate_row_data(enum ggml_type type, const void * data, size_t nbyte
         case GGML_TYPE_I16:
         case GGML_TYPE_I32:
         case GGML_TYPE_I64:
-        // Row-LUT type
+        // Vec-LUT type
         case GGML_TYPE_I2_S:
-        case GGML_TYPE_I1_S:
-        case GGML_TYPE_I1_M:
         case GGML_TYPE_I2_S_2:
         case GGML_TYPE_I2_S_4:
         case GGML_TYPE_I2_S_8:
         case GGML_TYPE_I2_S_16:
+        case GGML_TYPE_I1_M:
         case GGML_TYPE_I1_M_2:
+        case GGML_TYPE_I1_M_4:
             // nothing to validate
             break;
         default:

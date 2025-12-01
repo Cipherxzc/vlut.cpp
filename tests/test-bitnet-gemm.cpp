@@ -73,7 +73,7 @@ static void init_tensor_uniform(ggml_tensor * tensor, float min = -1.0f, float m
     if (tensor->type == GGML_TYPE_F32 || tensor->type == GGML_TYPE_I32) {
         ggml_backend_tensor_set(tensor, data.data(), 0, nels * sizeof(float));
     } else if (ggml_is_quantized(tensor->type) || tensor->type == GGML_TYPE_F16 || tensor->type == GGML_TYPE_BF16) {
-        if (tensor->type != GGML_TYPE_I1_M && tensor->type != GGML_TYPE_I1_M_2){
+        if (tensor->type != GGML_TYPE_I1_M && tensor->type != GGML_TYPE_I1_M_2 && tensor->type != GGML_TYPE_I1_M_4) {
             GGML_ASSERT(nels % ggml_blck_size(tensor->type) == 0);
         }
 
@@ -1134,7 +1134,7 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_eval() {
     std::uniform_int_distribution<> dist_n(16, 128);
     std::uniform_int_distribution<> dist_k(1, 16);
     for (int i = 0; i < 1000; i++) {
-        for (ggml_type type_a : {GGML_TYPE_I2_S, GGML_TYPE_I1_S}) {
+        for (ggml_type type_a : {GGML_TYPE_I2_S, GGML_TYPE_I1_M}) {
             for (ggml_type type_b : {GGML_TYPE_F32}) {
                 int m = dist_m(rng);
                 int n = dist_n(rng);

@@ -389,16 +389,16 @@ extern "C" {
         // GGML_TYPE_IQ4_NL_4_8 = 37,
         // GGML_TYPE_IQ4_NL_8_8 = 38,
 
-        // Row-LUT types
+        // Vec-LUT types
         GGML_TYPE_I8_B = 39,
         GGML_TYPE_I2_S = 40,
-        GGML_TYPE_I1_S = 41,
-        GGML_TYPE_I1_M = 42,
-        GGML_TYPE_I2_S_2 = 43,
-        GGML_TYPE_I2_S_4 = 44,
-        GGML_TYPE_I2_S_8 = 45,
-        GGML_TYPE_I2_S_16 = 46,
-        GGML_TYPE_I1_M_2 = 47,
+        GGML_TYPE_I2_S_2 = 41,
+        GGML_TYPE_I2_S_4 = 42,
+        GGML_TYPE_I2_S_8 = 43,
+        GGML_TYPE_I2_S_16 = 44,
+        GGML_TYPE_I1_M = 45,
+        GGML_TYPE_I1_M_2 = 46,
+        GGML_TYPE_I1_M_4 = 47,
         GGML_TYPE_COUNT = 48,
     };
 

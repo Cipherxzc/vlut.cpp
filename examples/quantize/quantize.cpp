@@ -53,12 +53,12 @@ static const std::vector<struct quant_option> QUANT_OPTIONS = {
     { "F32",      LLAMA_FTYPE_ALL_F32,         "26.00G              @ 7B",          },
     // Note: Ensure COPY comes after F32 to avoid ftype 0 from matching.
     { "COPY",     LLAMA_FTYPE_ALL_F32,         "only copy tensors, no quantizing",  },
-    // Row-LUT
+
+    // Vec-LUT types
     { "I2_S",     LLAMA_FTYPE_MOSTLY_I2_S,     "BitNet 2 bit"                       },
-    { "I1_S",     LLAMA_FTYPE_MOSTLY_I1_S,     "BitNet 1.58 bit"                    },
-    { "I1_M",     LLAMA_FTYPE_MOSTLY_I1_M,     "BitNet 1.58 bit with 2 bit"         },
     { "I2_S_4",   LLAMA_FTYPE_MOSTLY_I2_S_4,   "BitNet 2 bit with K tiling 4"       },
     { "I2_S_8",   LLAMA_FTYPE_MOSTLY_I2_S_8,   "BitNet 2 bit with K tiling 8"       },
+    { "I1_M",     LLAMA_FTYPE_MOSTLY_I1_M,     "BitNet 1.58 bit with 2 bit"         },
     { "I1_M_2",   LLAMA_FTYPE_MOSTLY_I1_M_2,   "BitNet 1.58 bit with K tiling 2"    },
 };
 

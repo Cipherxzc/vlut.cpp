@@ -441,53 +441,41 @@ static const struct ggml_type_traits_cpu type_traits_cpu[GGML_TYPE_COUNT] = {
         },
     [GGML_TYPE_I8_B] = 
         {
-            .from_float = quantize_row_i8_b,
+            .from_float = quantize_row_i8_b  // UNUSED
         },
+    // TODO: support .vecdot for Vec-LUT types
     [GGML_TYPE_I2_S] =
         {
-            // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
-            .vec_dot_type = GGML_TYPE_I8_B,
-            .nrows = 1,
-        },
-    [GGML_TYPE_I1_S] =
-        {
-            // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
-            .vec_dot_type = GGML_TYPE_I8_B,
-            .nrows = 1,
-        },
-    [GGML_TYPE_I1_M] =
-        {
-            // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
             .vec_dot_type = GGML_TYPE_I8_B,
             .nrows = 1,
         },
     [GGML_TYPE_I2_S_2] =
         {
-            // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
             .vec_dot_type = GGML_TYPE_I8_B,
             .nrows = 1,
         },
     [GGML_TYPE_I2_S_4] =
         {
-            // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
             .vec_dot_type = GGML_TYPE_I8_B,
             .nrows = 1,
         },
     [GGML_TYPE_I2_S_8] =
         {
-            // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
             .vec_dot_type = GGML_TYPE_I8_B,
             .nrows = 1,
         },
     [GGML_TYPE_I2_S_16] =
         {
-            // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
+            .vec_dot_type = GGML_TYPE_I8_B,
+            .nrows = 1,
+        },
+    [GGML_TYPE_I1_M] =
+        {
             .vec_dot_type = GGML_TYPE_I8_B,
             .nrows = 1,
         },
     [GGML_TYPE_I1_M_2] =
         {
-            // .vec_dot = (ggml_vec_dot_t)ggml_vec_dot_i2_i8_b,  // TODO
             .vec_dot_type = GGML_TYPE_I8_B,
             .nrows = 1,
         },
@@ -7010,20 +6998,6 @@ static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] 
             .tile_size = 1,
             .gemm2 = ggml_gemm_i2s_i8b_LUT2,
         },
-    [GGML_TYPE_I1_S] =
-        {
-            .is_bitnet_type = true,
-            .table_entries_num = 243,
-            .tile_size = 1,
-            .gemm2 = ggml_gemm_i1s_i8b_LUT2,
-        },
-    [GGML_TYPE_I1_M] =
-        {
-            .is_bitnet_type = true,
-            .table_entries_num = 243,
-            .tile_size = 1,
-            .gemm2 = ggml_gemm_i1m_i8b_LUT2,
-        },
     [GGML_TYPE_I2_S_2] =
         {
             .is_bitnet_type = true,
@@ -7051,6 +7025,13 @@ static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] 
             .table_entries_num = 81,
             .tile_size = 16,
             .gemm2 = ggml_gemm_i2s16_i8b_LUT2,
+        },
+    [GGML_TYPE_I1_M] =
+        {
+            .is_bitnet_type = true,
+            .table_entries_num = 243,
+            .tile_size = 1,
+            .gemm2 = ggml_gemm_i1m_i8b_LUT2,
         },
     [GGML_TYPE_I1_M_2] =
         {
@@ -8678,13 +8659,13 @@ static void ggml_compute_forward_clamp(const struct ggml_compute_params *params,
         case GGML_TYPE_F64:
         case GGML_TYPE_I8_B:
         case GGML_TYPE_I2_S:
-        case GGML_TYPE_I1_S:
-        case GGML_TYPE_I1_M:
         case GGML_TYPE_I2_S_2:
         case GGML_TYPE_I2_S_4:
         case GGML_TYPE_I2_S_8:
         case GGML_TYPE_I2_S_16:
+        case GGML_TYPE_I1_M:
         case GGML_TYPE_I1_M_2:
+        case GGML_TYPE_I1_M_4:
         case GGML_TYPE_COUNT: {
             GGML_ABORT("fatal error");
         }
@@ -13059,21 +13040,13 @@ struct ggml_cplan ggml_graph_plan(const struct ggml_cgraph *cgraph, int n_thread
     if (work_size > 0) {
         work_size += CACHE_LINE_SIZE * (n_threads);
     }
+
     
-    // Allocate additional work size for Row-LUT
-#ifdef BITNET_TILING
+    // Allocate additional work size for Vec-LUT
     work_size += TABLE_ENTRY_SIZE * 15000 * sizeof(int8_t);
-#endif
-
     const size_t MAX_INPUT_LENGTH = 2048;
-
-#if defined(BITNET_LUT)
-    tables = (int16_t *)malloc(work_size / 4 * 256 * sizeof(int16_t));
-    // sum1 = (int16_t *)malloc(n_threads * TABLE_ENTRY_SIZE * 8640 * sizeof(int16_t));
-    // sum2 = (int *)malloc(n_threads * 8640 * MAX_INPUT_LENGTH * sizeof(int));
-#endif
-
     work_size += MAX_INPUT_LENGTH * sizeof(float);
+
 
     cplan.threadpool = threadpool;
     cplan.n_threads = MIN(max_tasks, n_threads);
