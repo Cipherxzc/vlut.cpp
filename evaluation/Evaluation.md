@@ -98,11 +98,11 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Configuration variables that can be easily changed
 DEVICE_NAME="${DEVICE_NAME:-"mydevice"}"
-WORKSPACE_DIR="${WORKSPACE_DIR:-$SCRIPT_DIR/../../..}" # scripts -> evaluation -> llama.cpp-bitnet -> workspace
+WORKSPACE_DIR="${WORKSPACE_DIR:-$SCRIPT_DIR/../../..}" # scripts -> evaluation -> vlut.cpp -> workspace
 MODEL_DIR="${MODEL_DIR:-$HOME/models/bitnet_b1_58-3B}"
 # Extract model name from model dir to separate results folder
 MODEL_NAME=$(basename "$MODEL_DIR")
-RESULTS_DIR="${RESULTS_DIR:-"${WORKSPACE_DIR}/llama.cpp-bitnet/evaluation/results_e2e_${DEVICE_NAME}/${MODEL_NAME}"}"
+RESULTS_DIR="${RESULTS_DIR:-"${WORKSPACE_DIR}/vlut.cpp/evaluation/results_e2e_${DEVICE_NAME}/${MODEL_NAME}"}"
 PROMPT_LENGTH="${PROMPT_LENGTH:-128,256,512}"
 THREAD_COUNT="${THREAD_COUNT:-1,4,8}" # use 1, 2 on snapdragon 8 elite
 REPEAT_COUNT="${REPEAT_COUNT:-3}"
