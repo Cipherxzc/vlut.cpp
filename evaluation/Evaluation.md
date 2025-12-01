@@ -50,8 +50,8 @@
 
 ```bash
 ./evaluation/scripts/bench-gemm.sh -h
-Usage: ./evaluation/scripts/bench-gemm.sh <device_name> <threads> <ns> [lut2(on/off)] [entry_size]
-Example: ./evaluation/scripts/bench-gemm.sh mydevice 4 256 on 32
+Usage: ./evaluation/scripts/bench-gemm.sh <device_name> <threads> <ns> [entry_size]
+Example: ./evaluation/scripts/bench-gemm.sh mydevice 4 256 32
 
 ./evaluation/scripts/bench-gemm-tmac.sh -h
 Unknown argument: -h
@@ -61,7 +61,7 @@ Usage: ./evaluation/scripts/bench-gemm-tmac.sh [--device DEVICE_NAME] [--tmac_pa
 #### Example
 
 ```bash
-./evaluation/scripts/bench-gemm.sh pc_intel 1 256 on 32
+./evaluation/scripts/bench-gemm.sh pc_intel 1 256 32
 ./evaluation/scripts/bench-gemm-tmac.sh pc_intel
 ```
 

@@ -7001,56 +7001,56 @@ static const struct ggml_type_traits_vlut type_traits_vlut[GGML_TYPE_COUNT] = {
             .is_vlut_type = true,
             .table_entries_num = 81,
             .tile_size = 1,
-            .gemm = ggml_gemm_i2v_i8v_LUT2,
+            .gemm = ggml_gemm_i2v_i8v_lut,
         },
     [GGML_TYPE_I2_V_2] =
         {
             .is_vlut_type = true,
             .table_entries_num = 81,
             .tile_size = 2,
-            .gemm = ggml_gemm_i2v2_i8v_LUT2,
+            .gemm = ggml_gemm_i2v2_i8v_lut,
         },
     [GGML_TYPE_I2_V_4] =
         {
             .is_vlut_type = true,
             .table_entries_num = 81,
             .tile_size = 4,
-            .gemm = ggml_gemm_i2v4_i8v_LUT2,
+            .gemm = ggml_gemm_i2v4_i8v_lut,
         },
     [GGML_TYPE_I2_V_8] =
         {
             .is_vlut_type = true,
             .table_entries_num = 81,
             .tile_size = 8,
-            .gemm = ggml_gemm_i2v8_i8v_LUT2,
+            .gemm = ggml_gemm_i2v8_i8v_lut,
         },
     [GGML_TYPE_I2_V_16] =
         {
             .is_vlut_type = true,
             .table_entries_num = 81,
             .tile_size = 16,
-            .gemm = ggml_gemm_i2v16_i8v_LUT2,
+            .gemm = ggml_gemm_i2v16_i8v_lut,
         },
     [GGML_TYPE_I1_V] =
         {
             .is_vlut_type = true,
             .table_entries_num = 243,
             .tile_size = 1,
-            .gemm = ggml_gemm_i1v_i8v_LUT2,
+            .gemm = ggml_gemm_i1v_i8v_lut,
         },
     [GGML_TYPE_I1_V_2] =
         {
             .is_vlut_type = true,
             .table_entries_num = 243,
             .tile_size = 2,
-            .gemm = ggml_gemm_i1v2_i8v_LUT2,
+            .gemm = ggml_gemm_i1v2_i8v_lut,
         },
     [GGML_TYPE_I1_V_4] =
         {
             .is_vlut_type = true,
             .table_entries_num = 243,
             .tile_size = 4,
-            .gemm = ggml_gemm_i1v4_i8v_LUT2,
+            .gemm = ggml_gemm_i1v4_i8v_lut,
         },
 };
 // Vec-LUT traits end

@@ -18,7 +18,7 @@
 #define eps 1e-5
 
 
-#if defined(BITNET_AVX512) // AVX512
+#if defined(VLUT_AVX512) // AVX512
     #include <immintrin.h>
     #define ADD_TABLE_ENTRIES(rs, rt, size) \
     do { \
@@ -35,7 +35,7 @@
             _mm512_storeu_si512((__m512i*)((rs) + i), rs_vec); \
         } \
     } while(0)
-#elif defined(BITNET_SVE) // SVE auto-vectorization is not well-supported by compilers, so we explicitly do it
+#elif defined(VLUT_SVE) // SVE auto-vectorization is not well-supported by compilers, so we explicitly do it
     #include <arm_sve.h>
     #define ADD_TABLE_ENTRIES(rs, rt, size) \
     do { \
@@ -52,7 +52,7 @@
         /* Store result */ \
         svst1_s16(pg, (rs), acc); \
     } while(0)
-#elif defined(BITNET_ACCELERATE) // Accelerate framework of Apple
+#elif defined(VLUT_ACCELERATE) // Accelerate framework of Apple
     #include <Accelerate/Accelerate.h>
     #define ADD_TABLE_ENTRIES(rs, rt, size) \
     do { \
@@ -977,7 +977,7 @@ inline static void gemm_make_table_i2s(int16_t *restrict table, const int8_t *re
 inline static void gemm_make_table_i1_58s(int16_t *restrict table, const int8_t *restrict y);
 
 
-void ggml_gemm_i2v_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
+void ggml_gemm_i2v_i8v_lut(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
                             const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
     UNUSED(nth);
@@ -1066,7 +1066,7 @@ void ggml_gemm_i2v_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t b
     free(sum_i32);
 }
 
-void ggml_gemm_i2v2_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
+void ggml_gemm_i2v2_i8v_lut(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
                             const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
     UNUSED(nth);
@@ -1164,7 +1164,7 @@ void ggml_gemm_i2v2_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t 
     free(sum_i32);
 }
 
-void ggml_gemm_i2v4_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
+void ggml_gemm_i2v4_i8v_lut(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
                             const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
     UNUSED(nth);
@@ -1268,7 +1268,7 @@ void ggml_gemm_i2v4_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t 
     free(sum_i32);
 }
 
-void ggml_gemm_i2v8_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
+void ggml_gemm_i2v8_i8v_lut(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
                             const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
     UNUSED(nth);
@@ -1383,7 +1383,7 @@ void ggml_gemm_i2v8_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t 
     free(sum_i32);
 }
 
-void ggml_gemm_i2v16_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
+void ggml_gemm_i2v16_i8v_lut(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
                             const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
     UNUSED(nth);
@@ -1522,7 +1522,7 @@ void ggml_gemm_i2v16_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t
     free(sum_i32);
 }
 
-void ggml_gemm_i1s_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
+void ggml_gemm_i1s_i8v_lut(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
                             const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
     UNUSED(nth);
@@ -1611,7 +1611,7 @@ void ggml_gemm_i1s_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t b
     free(sum_i32);
 }
 
-void ggml_gemm_i1v_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
+void ggml_gemm_i1v_i8v_lut(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
                             const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
     UNUSED(nth);
@@ -1714,7 +1714,7 @@ void ggml_gemm_i1v_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t b
 }
 
 // Note: we assume all threads have the same nc here. otherwise, it may cause out-of-bounds errors in the look-up
-void ggml_gemm_i1v2_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
+void ggml_gemm_i1v2_i8v_lut(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
                             const void *restrict vy, int nr, int nc) {
     UNUSED(nth);
     
@@ -1827,7 +1827,7 @@ void ggml_gemm_i1v2_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t 
     free(sum_i32);
 }
 
-void ggml_gemm_i1v4_i8v_LUT2(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
+void ggml_gemm_i1v4_i8v_lut(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
                             const void *restrict vy, int nr, int nc) {
     UNUSED(ith);
     UNUSED(nth);

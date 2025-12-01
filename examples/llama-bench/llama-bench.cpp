@@ -1461,10 +1461,6 @@ static std::unique_ptr<printer> create_printer(output_formats format) {
     GGML_ABORT("fatal error");
 }
 
-#ifdef BITNET_DEBUG
-extern long long total_time, quant_time, make_table_time, convert_time, scale_time, LUT_time, vec_add_time;
-#endif
-
 int main(int argc, char ** argv) {
     // try to set locale for unicode characters in markdown
     setlocale(LC_CTYPE, ".UTF-8");
@@ -1643,22 +1639,6 @@ int main(int argc, char ** argv) {
     }
 
     llama_backend_free();
-
-#ifdef BITNET_DEBUG
-    quant_time /= params.n_threads.back();
-    make_table_time /= params.n_threads.back();
-    convert_time /= params.n_threads.back();
-    scale_time /= params.n_threads.back();
-    total_time /= params.n_threads.back();
-    LUT_time /= params.n_threads.back();
-
-    printf("Quant time: %.3f seconds (Percentage: %.2f %%)\n", quant_time / 1e9, (double)quant_time / total_time * 100);
-    printf("Make table time: %.3f seconds (Percentage: %.2f %%)\n", make_table_time / 1e9, (double)make_table_time / total_time * 100);
-    printf("Convert time: %.3f seconds (Percentage: %.2f %%)\n", convert_time / 1e9, (double)convert_time / total_time * 100);
-    printf("Scale time: %.3f seconds (Percentage: %.2f %%)\n", scale_time / 1e9, (double)scale_time / total_time * 100);
-    printf("Look up time: %.3f seconds (Percentage: %.2f %%)\n", LUT_time / 1e9, (double)LUT_time / total_time * 100);
-    printf("Total time: %.3f seconds\n", total_time / 1e9);
-#endif
 
     return 0;
 }

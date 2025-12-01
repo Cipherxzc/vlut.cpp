@@ -287,8 +287,8 @@ def plot_performance_comparison(df, arch_val, threads_val, mkn_to_plot=None, lut
     #         fontsize=24, frameon=True, bbox_to_anchor=(0.5, 0.05),
     #         columnspacing=3.0)  # Adjust spacing between legend items
     
-    # # Add information about LUT2 and entry size to title if provided
-    # lut2_info = f", LUT2 {'on' if lut2_on else 'off'}" if lut2_on is not None else ""
+    # # Add information about lut and entry size to title if provided
+    # lut2_info = f", lut {'on' if lut2_on else 'off'}" if lut2_on is not None else ""
     # entry_size_info = f", Entry size {entry_size}" if entry_size is not None else ""
     
     # plt.subplots_adjust(top=0.85)

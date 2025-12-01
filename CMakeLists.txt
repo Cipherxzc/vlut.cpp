@@ -3,7 +3,7 @@ project("llama.cpp" C CXX)
 include(CheckIncludeFileCXX)
 
 # Vec-LUT configs
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bitnet.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/vlut.cmake)
 
 #set(CMAKE_WARN_DEPRECATED YES)
 set(CMAKE_WARN_UNUSED_CLI YES)

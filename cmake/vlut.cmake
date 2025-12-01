@@ -1,14 +1,9 @@
 # This file contains bitnet-specific compile definitions.
 
 # Set the default options
-option(BITNET_DEBUG "Enable BITNET debug timing output" OFF)
-option(BITNET_AVX2 "Enable BITNET AVX2 feature" OFF)
-option(BITNET_LUT2 "Enable LUT2 instead of LUT1" ON)
-option(BITNET_TILING "Enable tiling on prompt length" ON)
-option(BITNET_PRINT_TENSORS "Enable printing tensors" OFF)
-option(BITNET_AVX512 "Enable AVX512 intrinsics" OFF)
-option(BITNET_SVE "Enable SVE intrinsics" OFF)
-option(BITNET_ACCELERATE "Enable Accelerate framework on Apple devices" OFF)
+option(VLUT_AVX512 "Enable AVX512 intrinsics" OFF)
+option(VLUT_SVE "Enable SVE intrinsics" OFF)
+option(VLUT_ACCELERATE "Enable Accelerate framework on Apple devices" OFF)
 
 set(TABLE_ENTRY_SIZE 32 CACHE STRING "Tile size of the table entry")
 set(WEIGHT_UNROLL_BLOCK 16 CACHE STRING "Weight unroll block size")
@@ -75,58 +70,30 @@ else()
 endif()
 
 # TODO: This detect is buggy on some devices (e.g., NEON smartphone)
-# Currently, mannually comment out the `set(BITNET_SVE ON)` line
+# Currently, mannually comment out the `set(VLUT_SVE ON)` line
 if(HAVE_SVE)
-    message(STATUS "SVE support detected, enabling BITNET_SVE")
-    set(BITNET_SVE ON)
+    message(STATUS "SVE support detected, enabling VLUT_SVE")
+    set(VLUT_SVE ON)
 endif()
 
 # Add compile definitions based on options
-if(BITNET_DEBUG)
-    add_compile_definitions(BITNET_DEBUG)
-    message(STATUS "Adding definition: BITNET_DEBUG")
-endif()
-
-if(BITNET_AVX2)
-    add_compile_definitions(BITNET_AVX2)
-    message(STATUS "Adding definition: BITNET_AVX2")
-endif()
-
-if(BITNET_LUT2)
-    add_compile_definitions(BITNET_LUT2)
-    message(STATUS "Adding definition: BITNET_LUT2")
-else()
-    add_compile_definitions(BITNET_LUT)
-    message(STATUS "Adding definition: BITNET_LUT")
-endif()
-
-if(BITNET_TILING)
-    add_compile_definitions(BITNET_TILING)
-    message(STATUS "Adding definition: BITNET_TILING")
-    
-    add_compile_definitions(TABLE_ENTRY_SIZE=${TABLE_ENTRY_SIZE})
-    message(STATUS "Adding definition: TABLE_ENTRY_SIZE=${TABLE_ENTRY_SIZE}")
-endif()
+add_compile_definitions(TABLE_ENTRY_SIZE=${TABLE_ENTRY_SIZE})
+message(STATUS "Adding definition: TABLE_ENTRY_SIZE=${TABLE_ENTRY_SIZE}")
 
 add_compile_definitions(WEIGHT_UNROLL_BLOCK=${WEIGHT_UNROLL_BLOCK})
 message(STATUS "Adding definition: WEIGHT_UNROLL_BLOCK=${WEIGHT_UNROLL_BLOCK}")
 
-if(BITNET_PRINT_TENSORS)
-    add_compile_definitions(BITNET_PRINT_TENSORS)
-    message(STATUS "Adding definition: BITNET_PRINT_TENSORS")
+if(VLUT_AVX512)
+    add_compile_definitions(VLUT_AVX512)
+    message(STATUS "Adding definition: VLUT_AVX512")
 endif()
 
-if(BITNET_AVX512)
-    add_compile_definitions(BITNET_AVX512)
-    message(STATUS "Adding definition: BITNET_AVX512")
+if(VLUT_SVE)
+    add_compile_definitions(VLUT_SVE)
+    message(STATUS "Adding definition: VLUT_SVE")
 endif()
 
-if(BITNET_SVE)
-    add_compile_definitions(BITNET_SVE)
-    message(STATUS "Adding definition: BITNET_SVE")
-endif()
-
-if(BITNET_ACCELERATE)
-    add_compile_definitions(BITNET_ACCELERATE)
-    message(STATUS "Adding definition: BITNET_ACCELERATE")
+if(VLUT_ACCELERATE)
+    add_compile_definitions(VLUT_ACCELERATE)
+    message(STATUS "Adding definition: VLUT_ACCELERATE")
 endif()
