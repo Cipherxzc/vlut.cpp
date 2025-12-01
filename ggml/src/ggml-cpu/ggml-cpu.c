@@ -441,7 +441,7 @@ static const struct ggml_type_traits_cpu type_traits_cpu[GGML_TYPE_COUNT] = {
         },
     [GGML_TYPE_I8_V] = 
         {
-            .from_float = quantize_row_i8_b  // UNUSED
+            .from_float = quantize_row_i8_v  // UNUSED
         },
     // TODO: support .vecdot for Vec-LUT types
     [GGML_TYPE_I2_V] =
@@ -7118,7 +7118,7 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
                 for (int64_t i11 = ith; i11 < ne11; i11 += nth) {
                     int64_t i = i11 / TABLE_ENTRY_SIZE;
                     int64_t j = i11 % TABLE_ENTRY_SIZE;
-                    quantize_row_i8_b_tile((float *)((char *)src1->data + i13 * nb13 + i12 * nb12 + i11 * nb11),
+                    quantize_row_i8_v_tile((float *)((char *)src1->data + i13 * nb13 + i12 * nb12 + i11 * nb11),
                                            (void *)(wdata + i * TABLE_ENTRY_SIZE + j), ne10, scale + i11);
                 }
             }

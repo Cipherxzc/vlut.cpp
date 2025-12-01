@@ -930,7 +930,7 @@
 #endif
 
 
-void quantize_row_i8_b(const float *x, void *y, int64_t n) {
+void quantize_row_i8_v(const float *x, void *y, int64_t n) {
     int8_t *dst = (int8_t *)y;
 
     double max = eps;
@@ -954,7 +954,7 @@ void quantize_row_i8_b(const float *x, void *y, int64_t n) {
     *scale = (float)s;
 }
 
-void quantize_row_i8_b_tile(const float *x, void *y, int64_t n, float *scale) {
+void quantize_row_i8_v_tile(const float *x, void *y, int64_t n, float *scale) {
     int8_t *dst = (int8_t *)y;
 
     double max = eps;
