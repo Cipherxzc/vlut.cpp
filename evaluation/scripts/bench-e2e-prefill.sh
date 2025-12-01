@@ -14,7 +14,7 @@ PROMPT_LENGTH="${PROMPT_LENGTH:-128,256,512}"
 THREAD_COUNT="${THREAD_COUNT:-1,4,8}" # use 2 on snapdragon 8 elite
 REPEAT_COUNT="${REPEAT_COUNT:-3}"
 
-# Benchmark the bitnet inference speed of different frameworks with `bench-pp.sh`
+# Benchmark the bitnet inference speed of different frameworks with `bench-prefill.sh`
 echo "Starting benchmarks with parameters:"
 echo "  Device name: $DEVICE_NAME"
 echo "  Workspace directory: $WORKSPACE_DIR"
@@ -31,28 +31,28 @@ rm -rf "$RESULTS_DIR"
 # Create results directory if it doesn't exist
 mkdir -p "$RESULTS_DIR"
 
-# Pass to bench-pp.sh
+# Pass to bench-prefill.sh
 export RESULTS_DIR="$RESULTS_DIR"
 
 # Benchmark I2_S and I1_M
 echo "Benchmarking I2_S model..."
-"$SCRIPT_DIR/bench-pp.sh" -m "$MODEL_DIR/ggml-model-I2_S.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
+"$SCRIPT_DIR/bench-prefill.sh" -m "$MODEL_DIR/ggml-model-I2_S.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
 echo "Benchmarking I1_M model..."
-"$SCRIPT_DIR/bench-pp.sh" -m "$MODEL_DIR/ggml-model-I1_M.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
+"$SCRIPT_DIR/bench-prefill.sh" -m "$MODEL_DIR/ggml-model-I1_M.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
 
 # Benchmark llama.cpp TQ2_0 and TQ1_0
 echo "Benchmarking TQ2_0 and TQ1_0 model with llama.cpp..."
 LLAMA_CPP_DIR="$WORKSPACE_DIR/llama.cpp"
 
-"$SCRIPT_DIR/bench-pp.sh" -w "$LLAMA_CPP_DIR" -m "$MODEL_DIR/ggml-model-TQ2_0.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
-"$SCRIPT_DIR/bench-pp.sh" -w "$LLAMA_CPP_DIR" -m "$MODEL_DIR/ggml-model-TQ1_0.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
+"$SCRIPT_DIR/bench-prefill.sh" -w "$LLAMA_CPP_DIR" -m "$MODEL_DIR/ggml-model-TQ2_0.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
+"$SCRIPT_DIR/bench-prefill.sh" -w "$LLAMA_CPP_DIR" -m "$MODEL_DIR/ggml-model-TQ1_0.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
 
 # Benchmark T-MAC
 echo "Benchmarking T-MAC model..."
 TMAC_DIR="$WORKSPACE_DIR/T-MAC"
 TMAC_LLAMA_CPP_DIR="$TMAC_DIR/3rdparty/llama.cpp"
 
-"$SCRIPT_DIR/bench-pp.sh" -w "$TMAC_LLAMA_CPP_DIR" -m "$MODEL_DIR/$MODEL_NAME.INT_N.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv # model name is not ggml-model-...
+"$SCRIPT_DIR/bench-prefill.sh" -w "$TMAC_LLAMA_CPP_DIR" -m "$MODEL_DIR/$MODEL_NAME.INT_N.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv # model name is not ggml-model-...
 
 echo "Benchmarking bitnet.cpp model..."
 BITNET_CPP_DIR="$WORKSPACE_DIR/BitNet"
@@ -65,8 +65,8 @@ if [ ! -d $BITNET_CPP_DIR ]; then
 fi
 
 # one of these would work
-"$SCRIPT_DIR/bench-pp.sh" -w "$BITNET_CPP_DIR" -m "$MODEL_DIR/ggml-model-tl2.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
-"$SCRIPT_DIR/bench-pp.sh" -w "$BITNET_CPP_DIR" -m "$MODEL_DIR/ggml-model-tl1.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
-"$SCRIPT_DIR/bench-pp.sh" -w "$BITNET_CPP_DIR" -m "$MODEL_DIR/ggml-model-i2_s.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
+"$SCRIPT_DIR/bench-prefill.sh" -w "$BITNET_CPP_DIR" -m "$MODEL_DIR/ggml-model-tl2.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
+"$SCRIPT_DIR/bench-prefill.sh" -w "$BITNET_CPP_DIR" -m "$MODEL_DIR/ggml-model-tl1.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
+"$SCRIPT_DIR/bench-prefill.sh" -w "$BITNET_CPP_DIR" -m "$MODEL_DIR/ggml-model-i2_s.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
 
 echo "All benchmarks completed. Results stored in $RESULTS_DIR"

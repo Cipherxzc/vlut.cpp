@@ -75,7 +75,7 @@ Usage: ./evaluation/scripts/bench-gemm-tmac.sh [--device DEVICE_NAME] [--tmac_pa
 #### Scripts
 
 - `bench-e2e-prefill.sh`: evaluate all frameworks on one model, need `MODEL_DIR` as input environment variable.
-    - Denpends on `bench-pp.sh`: use `llama-bench` to evaluate one framework.
+    - Denpends on `bench-prefill.sh`: use `llama-bench` to evaluate one framework.
     - **Note:** Ensure T-MAC's model uses the folder name as model name (by default). For example: `~/models/bitnet_b1_58-3B/bitnet_b1_58-3B.INT_N.gguf`, so the script can correctly find T-MAC's model.
     - **Note:** Ensure all other models are named `ggml-model-{quant}.gguf` (by default), so the script can correctly find them.
     - **Note:** Re-compile T-MAC and re-convert T-MAC models for n=1 before **each evaluation** (not just for model changes: we compiled for n=256 in GeMM benchmark, and it doesn't directly work for E2E evaluation).

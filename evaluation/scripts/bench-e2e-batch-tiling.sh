@@ -15,7 +15,7 @@ TOKEN_GEN_LENS="${TOKEN_GEN_LENS:-16}"
 PARALLEL_SEQS="${PARALLEL_SEQS:-64,128,256}"
 THREAD_COUNT="${THREAD_COUNT:-4}" # use 2 on snapdragon 8 elite
 
-# Benchmark the bitnet inference speed of different frameworks with `bench-bd.sh`
+# Benchmark the bitnet inference speed of different frameworks with `bench-batch-decode.sh`
 echo "Starting batched decoding benchmarks with parameters:"
 echo "  Device name: $DEVICE_NAME"
 echo "  Workspace directory: $WORKSPACE_DIR"
@@ -30,15 +30,15 @@ echo "  Results will be saved to: $RESULTS_DIR"
 # Create results directory if it doesn't exist
 mkdir -p "$RESULTS_DIR"
 
-# Pass to bench-bd.sh
+# Pass to bench-batch-decode.sh
 export RESULTS_DIR="$RESULTS_DIR"
 
 # Benchmark I2_S and I1_M
 echo "Benchmarking I2_S_4 model..."
-"$SCRIPT_DIR/bench-bd.sh" -m "$MODEL_DIR/ggml-model-I2_S_4.gguf" -p "$PREFILL_LEN" -g "$TOKEN_GEN_LENS" -n "$PARALLEL_SEQS" -t "$THREAD_COUNT" --csv
+"$SCRIPT_DIR/bench-batch-decode.sh" -m "$MODEL_DIR/ggml-model-I2_S_4.gguf" -p "$PREFILL_LEN" -g "$TOKEN_GEN_LENS" -n "$PARALLEL_SEQS" -t "$THREAD_COUNT" --csv
 echo "Benchmarking I2_S_8 model..."
-"$SCRIPT_DIR/bench-bd.sh" -m "$MODEL_DIR/ggml-model-I2_S_8.gguf" -p "$PREFILL_LEN" -g "$TOKEN_GEN_LENS" -n "$PARALLEL_SEQS" -t "$THREAD_COUNT" --csv
+"$SCRIPT_DIR/bench-batch-decode.sh" -m "$MODEL_DIR/ggml-model-I2_S_8.gguf" -p "$PREFILL_LEN" -g "$TOKEN_GEN_LENS" -n "$PARALLEL_SEQS" -t "$THREAD_COUNT" --csv
 echo "Benchmarking I1_M_2 model..."
-"$SCRIPT_DIR/bench-bd.sh" -m "$MODEL_DIR/ggml-model-I1_M_2.gguf" -p "$PREFILL_LEN" -g "$TOKEN_GEN_LENS" -n "$PARALLEL_SEQS" -t "$THREAD_COUNT" --csv
+"$SCRIPT_DIR/bench-batch-decode.sh" -m "$MODEL_DIR/ggml-model-I1_M_2.gguf" -p "$PREFILL_LEN" -g "$TOKEN_GEN_LENS" -n "$PARALLEL_SEQS" -t "$THREAD_COUNT" --csv
 
 echo "All batched decoding benchmarks completed. Results stored in $RESULTS_DIR"

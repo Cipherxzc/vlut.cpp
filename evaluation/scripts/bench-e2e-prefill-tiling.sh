@@ -14,7 +14,7 @@ PROMPT_LENGTH="${PROMPT_LENGTH:-128,256,512}"
 THREAD_COUNT="${THREAD_COUNT:-1,4,8}" # use 2 on snapdragon 8 elite
 REPEAT_COUNT="${REPEAT_COUNT:-3}"
 
-# Benchmark the bitnet inference speed of different frameworks with `bench-pp.sh`
+# Benchmark the bitnet inference speed of different frameworks with `bench-prefill.sh`
 echo "Starting benchmarks with parameters:"
 echo "  Device name: $DEVICE_NAME"
 echo "  Workspace directory: $WORKSPACE_DIR"
@@ -28,14 +28,14 @@ echo "  Results will be saved to: $RESULTS_DIR"
 # Create results directory if it doesn't exist
 mkdir -p "$RESULTS_DIR"
 
-# Pass to bench-pp.sh
+# Pass to bench-prefill.sh
 export RESULTS_DIR="$RESULTS_DIR"
 
 echo "Benchmarking I2_S_4 model..."
-"$SCRIPT_DIR/bench-pp.sh" -m "$MODEL_DIR/ggml-model-I2_S_4.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
+"$SCRIPT_DIR/bench-prefill.sh" -m "$MODEL_DIR/ggml-model-I2_S_4.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
 echo "Benchmarking I2_S_8 model..."
-"$SCRIPT_DIR/bench-pp.sh" -m "$MODEL_DIR/ggml-model-I2_S_8.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
+"$SCRIPT_DIR/bench-prefill.sh" -m "$MODEL_DIR/ggml-model-I2_S_8.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
 echo "Benchmarking I1_M_2 model..."
-"$SCRIPT_DIR/bench-pp.sh" -m "$MODEL_DIR/ggml-model-I1_M_2.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
+"$SCRIPT_DIR/bench-prefill.sh" -m "$MODEL_DIR/ggml-model-I1_M_2.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv
 
 echo "All batched decoding benchmarks completed. Results stored in $RESULTS_DIR"
