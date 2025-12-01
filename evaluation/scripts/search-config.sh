@@ -48,7 +48,7 @@ for lut2 in "${LUT2_OPTIONS[@]}"; do
                 # Loop by models sequentially to avoid OOM
                 > "$LOG_FILE"
                 for model in "${MODELS[@]}"; do
-                    "$BUILD_DIR/bin/test-vlut-gemm" search -b CPU -t "$threads" -m "$model" -ns 128,512 >> "$LOG_FILE" 2>&1
+                    "$BUILD_DIR/bin/test-vlut-gemm" search -m "$model" -t "$threads" -ns 128,512 >> "$LOG_FILE" 2>&1
                 done
                 echo "Results saved to $LOG_FILE"
                 

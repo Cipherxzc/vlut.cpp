@@ -62,7 +62,7 @@ for model in "${MODELS[@]}"; do
     LOG_FILE="$RESULTS_DIR/${model}_t${THREADS}_ns${NS//,/-}_l${LUT2}_s${ENTRY_SIZE}.log"
     
     # Run the benchmark
-    "$BUILD_DIR/bin/test-vlut-gemm" perf -b CPU -t "$THREADS" -m "$model" -ns "$NS" > "$LOG_FILE" 2>&1
+    "$BUILD_DIR/bin/test-vlut-gemm" perf -m "$model" -t "$THREADS" -ns "$NS" > "$LOG_FILE" 2>&1
     
     echo "Results saved to $LOG_FILE"
     
