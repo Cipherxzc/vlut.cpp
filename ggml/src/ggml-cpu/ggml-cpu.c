@@ -6991,67 +6991,14 @@ static void ggml_compute_forward_mul_mat_one_chunk(const struct ggml_compute_par
     }
 }
 
-// level <= 0: basic info only; 1: part of data; >= 2: all data 
-void print_tensor(FILE *outfile, const struct ggml_tensor *tensor, int level) {
-    
-    // Always print basic info of the tensor
-    fprintf(outfile, "%s (%s): %s\n", tensor->name, ggml_type_name(tensor->type), ggml_op_name(tensor->op));
-    fprintf(outfile, "ne: %ld %ld %ld %ld\n", tensor->ne[0], tensor->ne[1], tensor->ne[2], tensor->ne[3]);
 
-    if (level <= 0) {
-        return;
-    }
-
-    bool verbose = level >= 2;
-
-    if(tensor->type == GGML_TYPE_F32 || tensor->type == GGML_TYPE_F16)
-    {
-        const int64_t ne2 = verbose ? tensor->ne[2] : MIN(1, tensor->ne[2]);
-        const int64_t ne1 = verbose ? tensor->ne[1] : MIN(2, tensor->ne[1]);
-        const int64_t ne0 = verbose ? tensor->ne[0] : MIN(10, tensor->ne[0]);
-        const float *data = (const float *)tensor->data;
-        for (int i2 = 0; i2 < ne2; i2++) {
-            for (int i1 = 0; i1 < ne1; i1++){
-                const float *d = data + i2 * tensor->nb[2] + i1 * tensor->nb[1];
-                for (int i0 = 0; i0 < ne0; i0++) {
-                    fprintf(outfile, "%.3f ", d[i0]);
-                }
-                fprintf(outfile, "\n");
-            }
-            fprintf(outfile, "\n");
-        }
-
-        return;
-    }
-
-    const uint8_t *data = tensor->data;
-    const int64_t ne2 = verbose ? tensor->ne[2] : MIN(1, tensor->ne[2]);
-    const int64_t ne1 = verbose ? tensor->ne[1] : MIN(2, tensor->ne[1]);
-    const int64_t ne0 = verbose ? tensor->ne[0] : MIN(20, tensor->ne[0]);
-    for (int i2 = 0; i2 < ne2; i2++) {
-        for (int i1 = 0; i1 < ne1; i1++){
-            const uint8_t *d = data + i2 * tensor->nb[2] + i1 * tensor->nb[1];
-            for (int i0 = 0; i0 < ggml_row_size(tensor->type, ne0); i0++) {
-                fprintf(outfile, "%d ", d[i0]);
-            }
-            fprintf(outfile, "\n");
-        }
-        fprintf(outfile, "\n");
-    }
-    fprintf(outfile, "\n");
-}
-
-#if defined(BITNET_LUT) || defined(BITNET_LUT2)
-
+// Vec-LUT traits
 typedef void (*bitnet_gemm)(int ith, int nth, int n, float* GGML_RESTRICT s, size_t bs, const void* GGML_RESTRICT vx, const void* GGML_RESTRICT vy, int nr, int nc);
-typedef void (*bitnet_make_table)(int ith, int nth, const int8_t *GGML_RESTRICT y, int ntables, int nr, int n, int16_t *GGML_RESTRICT table);
 
 struct ggml_type_traits_bitnet {
     bool is_bitnet_type;
     int64_t table_entries_num;
     int64_t tile_size;
-    bitnet_make_table make_table;
-    bitnet_gemm gemm;
     bitnet_gemm gemm2;
 };
 
@@ -7061,8 +7008,6 @@ static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] 
             .is_bitnet_type = true,
             .table_entries_num = 81,
             .tile_size = 1,
-            .make_table = ggml_gemm_i2s_i8b_make_table,
-            .gemm = ggml_gemm_i2s_i8b_LUT,
             .gemm2 = ggml_gemm_i2s_i8b_LUT2,
         },
     [GGML_TYPE_I1_S] =
@@ -7070,8 +7015,6 @@ static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] 
             .is_bitnet_type = true,
             .table_entries_num = 243,
             .tile_size = 1,
-            .make_table = ggml_gemm_i1s_i8b_make_table,
-            .gemm = ggml_gemm_i1s_i8b_LUT,
             .gemm2 = ggml_gemm_i1s_i8b_LUT2,
         },
     [GGML_TYPE_I1_M] =
@@ -7079,8 +7022,6 @@ static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] 
             .is_bitnet_type = true,
             .table_entries_num = 243,
             .tile_size = 1,
-            .make_table = ggml_gemm_i1m_i8b_make_table,
-            .gemm = ggml_gemm_i1m_i8b_LUT,
             .gemm2 = ggml_gemm_i1m_i8b_LUT2,
         },
     [GGML_TYPE_I2_S_2] =
@@ -7119,29 +7060,8 @@ static const struct ggml_type_traits_bitnet type_traits_bitnet[GGML_TYPE_COUNT] 
             .gemm2 = ggml_gemm_i1m2_i8b_LUT2,
         },
 };
+// Vec-LUT traits end
 
-int16_t *tables;
-int8_t *tmp_src;
-int16_t *sum1;
-int *sum2;
-
-#endif
-
-#ifdef BITNET_DEBUG
-    long long total_time,
-    quant_time, make_table_time, convert_time, scale_time, LUT_time;
-pthread_mutex_t time_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-static struct timespec get_thread_cpu_time(){
-    struct timespec ts;
-    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
-    return ts;
-}
-
-static long long get_time_diff(const struct timespec start, const struct timespec end){
-    return (end.tv_sec - start.tv_sec) * 1000000000LL + (end.tv_nsec - start.tv_nsec);
-}
-#endif
 
 static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *params, struct ggml_tensor *dst) {
     const struct ggml_tensor *src0 = dst->src[0];
@@ -7172,30 +7092,18 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
     GGML_ASSERT(nb1 <= nb2);
     GGML_ASSERT(nb2 <= nb3);
 
-    // nb01 >= nb00 - src0 is not transposed
-    //   compute by src0 rows
 
-    // #define BITNET_LUT
-#if defined(BITNET_LUT) || defined(BITNET_LUT2)
-    // Currently use LUT for all GeMM/GeMV with bitnet weights
+
+    // All Vec-LUT GeMM codes here
+    // Currently use LUT for all GeMM/GeMV with Vec-LUT weights
     // TODO: use LUT only for large GeMM, and add a GeMV fallback
     const int gemm_lim = 0;
     bool bitnet_mulmat = type_traits_bitnet[type].is_bitnet_type && (ne11 > gemm_lim);
-
-    // All bitnet GeMM codes here
+    
     if (bitnet_mulmat) {
         // Get gemm kernel from type_traits
-#if defined(BITNET_LUT)
-        const int64_t blck_size = ggml_blck_size(type);
-        int64_t table_entries_num = type_traits_bitnet[type].table_entries_num;
-        bitnet_make_table make_table = type_traits_bitnet[type].make_table;
-        bitnet_gemm gemm = type_traits_bitnet[type].gemm;
-        assert(make_table);
-        assert(gemm);
-#elif defined(BITNET_LUT2)
         bitnet_gemm gemm = type_traits_bitnet[type].gemm2;
         assert(gemm);
-#endif // BITNET_LUT
         int64_t tile_size = type_traits_bitnet[type].tile_size;
 
         // Quantize activation (src1)
@@ -7210,7 +7118,6 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
         assert(params->wsize >= ne13 * nbw3);
         assert(ggml_n_dims(src0) == 2);
 
-#if defined(BITNET_LUT2)
         for (int64_t i13 = 0; i13 < ne13; ++i13) {
             for (int64_t i12 = 0; i12 < ne12; ++i12) {
                 const size_t wdata_size = ((ne11 % TABLE_ENTRY_SIZE) ? ne11 + TABLE_ENTRY_SIZE - (ne11 % TABLE_ENTRY_SIZE): ne11) * ne10;
@@ -7235,44 +7142,10 @@ static void ggml_compute_forward_mul_mat(const struct ggml_compute_params *param
             gemm(params->ith, params->nth, ne00, ((float *)(dst->data)) + src0_start, ne01,
                  (const char *)src0->data + src0_start * tile_size, src1_wdata, ne11, src0_end - src0_start);
         }
-
-#elif defined(BITNET_LUT)
-        for (int64_t i13 = 0; i13 < ne13; ++i13) {
-            for (int64_t i12 = 0; i12 < ne12; ++i12) {
-                for (int64_t i11 = ith; i11 < ne11; i11 += nth) {
-                    // quantize on activation's row (K dim)
-                    quantize_row_i8_b((float *)((char *)src1->data + i13 * nb13 + i12 * nb12 + i11 * nb11),
-                                      (void *)(wdata + i13 * nbw3 + i12 * nbw2 + i11 * nbw1), ne10);
-                }
-            }
-        }
-        ggml_barrier(params->threadpool);
-
-        int64_t table_num = ne10 / blck_size;
-        if (type == GGML_TYPE_I1_M) {
-            table_num = ne10 / 20 * 4;
-        }
-        int64_t src1_start = (ith * table_num) / nth;
-        int64_t src1_end = ((ith + 1) * table_num) / nth;
-
-        if (src1_start < src1_end) {
-            make_table(params->ith, params->nth, (const int8_t *)wdata + src1_start * blck_size, src1_end - src1_start,
-                       ne11, ne10, tables + src1_start * table_entries_num * TABLE_ENTRY_SIZE);
-        }
-
-        ggml_barrier(params->threadpool);
-
-        int64_t src0_start = (ith * ne01) / nth;
-        int64_t src0_end = ((ith + 1) * ne01) / nth;
-
-        if (src0_start < src0_end) {
-            gemm(params->ith, params->nth, ne00, ((float *)(dst->data)) + src0_start, ne01,
-                 (const char *)src0->data + src0_start, wdata, ne11, src0_end - src0_start);
-        }
-#endif // BITNET_LUT2
         return;
     } // bitnet_mulmat
-#endif // BITNET_LUT || BITNET_LUT2
+
+
 
     // TODO: extract to "extra_op"
 #if GGML_USE_LLAMAFILE
