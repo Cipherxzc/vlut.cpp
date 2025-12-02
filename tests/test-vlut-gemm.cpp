@@ -666,7 +666,6 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_perf(const char* 
         {"bitnet_3b",  3200, 8640,  {GGML_TYPE_Q4_0, GGML_TYPE_I2_V_4, GGML_TYPE_I1_V_2}},  // TQ not supported for d_model=3200, fallback to Q4_0
         {"llama3_8b",  4096, 14336, {GGML_TYPE_TQ2_0, GGML_TYPE_I2_V_4, GGML_TYPE_TQ1_0, GGML_TYPE_I1_V_2}},
         {"falcon_1b",  2048, 8192,  {GGML_TYPE_TQ2_0, GGML_TYPE_I2_V_4, GGML_TYPE_TQ1_0, GGML_TYPE_I1_V_2}},
-        {"trilm_1.5b", 2048, 6144,  {GGML_TYPE_TQ2_0, GGML_TYPE_I2_V_4, GGML_TYPE_TQ1_0, GGML_TYPE_I1_V_2}},
     };
 
     // Filter by model if specified
@@ -716,7 +715,6 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_search(const char
         {"bitnet_3b", 3200, 8640, test_types},
         // {"llama3_8b",  4096, 14336, test_types},
         // {"falcon_1b",  2048, 8192,  test_types},
-        // {"trilm_1.5b", 2048, 6144,  test_types},
     };
 
     // Filter by model if specified
@@ -781,7 +779,7 @@ static void usage(char** argv) {
     printf("\n");
     printf("  options:\n");
     printf("    -m model            : test only the given model\n");
-    printf("                          valid models: bitnet_3b, llama3_8b, falcon_1b, trilm_1.5b\n");
+    printf("                          valid models: bitnet_3b, llama3_8b, falcon_1b\n");
     printf("                          if omitted, all models are tested\n");
     printf("\n");
     printf("    -t threads          : number of CPU threads to use\n");
