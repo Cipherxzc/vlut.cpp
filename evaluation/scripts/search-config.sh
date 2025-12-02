@@ -2,6 +2,9 @@
 
 # Search optimal LUT and TABLE_ENTRY_SIZE config for different threads, based on GeMM performance
 
+# Search mode: [1, 2], default 1
+SEARCH_MODE=${1:-1}
+
 # Get the project root directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$SCRIPT_DIR/../.."
@@ -11,7 +14,7 @@ RESULTS_DIR="$PROJECT_ROOT/evaluation/results_search"
 mkdir -p "$RESULTS_DIR"
 
 # Initialize scores.csv with header
-echo "entry_size,threads,score" > "$RESULTS_DIR/scores.csv"
+echo "entry_size,threads,type,score" > "$RESULTS_DIR/scores${SEARCH_MODE}.csv"
 
 # Define the configurations
 ENTRY_SIZES=(16 32 64)
@@ -41,7 +44,7 @@ for entry_size in "${ENTRY_SIZES[@]}"; do
             # Loop by models sequentially to avoid OOM
             > "$LOG_FILE"
             for model in "${MODELS[@]}"; do
-                "$BUILD_DIR/bin/test-vlut-gemm" search -m "$model" -t "$threads" -ns 128,512 >> "$LOG_FILE" 2>&1
+                "$BUILD_DIR/bin/test-vlut-gemm" search${SEARCH_MODE} -m "$model" -t "$threads" -ns 128,512 >> "$LOG_FILE" 2>&1
             done
             echo "Results saved to $LOG_FILE"
             
@@ -52,9 +55,23 @@ for entry_size in "${ENTRY_SIZES[@]}"; do
             CSV_FILE="${LOG_FILE%.*}.csv"
             if [ -f "$CSV_FILE" ]; then
                 # Skip header and sum the uspr column (5th column)
-                SCORE=$(awk -F, 'NR>1 {sum+=$5; count++} END {printf "%.2f", sum/count}' "$CSV_FILE")
-                echo "$entry_size,$threads,$SCORE" >> "$RESULTS_DIR/scores.csv"
-                echo "Configuration score: $SCORE (lower is better)"
+                awk -F, -v e="$entry_size" -v t="$threads" '
+                    NR == 1 { next }   # skip header
+                    {
+                        type = $1
+                        key = type
+                        sum[key] += $5
+                        cnt[key]++
+                    }
+                    END {
+                        for (k in sum) {
+                            score = sum[k] / cnt[k]
+                            printf "%s,%s,%s,%.2f\n", e, t, k, score
+                        }
+                    }
+                ' "$CSV_FILE" >> "$RESULTS_DIR/scores${SEARCH_MODE}.csv"
+
+                echo "Aggregated scores appended to $RESULTS_DIR/scores${SEARCH_MODE}.csv"
             else
                 echo "Warning: CSV file $CSV_FILE not found. Skipping score calculation."
             fi
@@ -75,17 +92,22 @@ echo "All benchmarks completed."
 # Find the best configuration for each thread count
 echo "Finding optimal configurations for each thread count..."
 for threads in "${THREAD_COUNTS[@]}"; do
-    BEST_CONFIG=$(awk -F, -v t="$threads" '
-        $2==t {
-            if (min=="" || $3 < min) {
-                min=$3;
-                config=$1
+    BEST_CONFIG=$(
+        awk -F, -v t="$threads" '
+            NR == 1 { next }          # skip header
+            $2 == t {
+                if (min == "" || $4 < min) {
+                    min = $4
+                    best_name = $3
+                    best_entry = $1
+                }
             }
-        }
-        END {
-            if(min!="") 
-                print "Thread "t": entry_size="config", score="min
-        }
-    ' "$RESULTS_DIR/scores.csv")
+            END {
+                if (min != "") {
+                    printf "Thread %s: type=%s, entry_size=%s, score=%.2f", t, best_name, best_entry, min
+                }
+            }
+        ' "$RESULTS_DIR/scores${SEARCH_MODE}.csv"
+    )
     echo "$BEST_CONFIG"
 done

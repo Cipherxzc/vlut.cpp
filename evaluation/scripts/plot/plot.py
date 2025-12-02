@@ -11,7 +11,7 @@ def get_model_display_name(filename):
     
     if base_name.startswith("bitnet"):
         return "T-MAC"
-    elif base_name.startswith("ggml-model-I2_S"):
+    elif base_name.startswith("ggml-model-I2_V"):
         return "Ours"
     elif base_name.startswith("ggml-model-Q2_K"):
         return "llama.cpp"
@@ -21,7 +21,7 @@ def get_model_display_name(filename):
     # if base_name.startswith("3B_"):
     #     return "T-MAC"
     # elif base_name.startswith("3B-I2S"):
-    #     return "Ours I2_S"
+    #     return "Ours I2_V"
     # elif base_name.startswith("3B-I2T"):
     #     return "Ours I2_T"
     # elif base_name.startswith("3B-Q2K"):

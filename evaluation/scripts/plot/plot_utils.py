@@ -44,7 +44,7 @@ ARCH_MAP = {
 }
 
 GEMM_TYPE_VARIANTS = ['i2_s','i2_s_4','i2_s_8','i1_58_m','i1_m_2']
-E2E_TYPE_VARIANTS = ['I2_S','I2_S_4','I2_S_8','I1_M','I1_M_2']
+E2E_TYPE_VARIANTS = ['I2_V','I2_V_4','I2_V_8','I1_V','I1_V_2']
 
 GEMM_TYPE_DEVICE_MAP = {
     'aws_arm': ['i2_s','i1_m'],
@@ -56,12 +56,12 @@ GEMM_TYPE_DEVICE_MAP = {
 }
 
 E2E_TYPE_DEVICE_MAP = {
-    'aws_arm': ['I2_S','I1_M'],
-    'pc_intel': ['I2_S_8','I1_M_2'],
-    'laptop_amd': ['I2_S_4','I1_M_2'],
-    'laptop_intel': ['I2_S_4','I1_M_2'],
-    'smartphone': ['I2_S_4','I1_M_2'],
-    'orangepi': ['I2_S_4','I1_M_2'],
+    'aws_arm': ['I2_V','I1_V'],
+    'pc_intel': ['I2_V_8','I1_V_2'],
+    'laptop_amd': ['I2_V_4','I1_V_2'],
+    'laptop_intel': ['I2_V_4','I1_V_2'],
+    'smartphone': ['I2_V_4','I1_V_2'],
+    'orangepi': ['I2_V_4','I1_V_2'],
 }
 
 GEMM_TYPE_MAP = {
@@ -87,16 +87,16 @@ GEMM_TYPE_STYLES = {
 }
 
 E2E_TYPE_MAP = {
-    'I2_S': 'Ours I2 (b2.00)',
-    'I2_S_4': 'Ours I2 (b2.00)',
-    'I2_S_8': 'Ours I2 (b2.00)',
-    'I1_M': 'Ours I1 (b1.60)',
-    'I1_M_2': 'Ours I1 (b1.60)',
+    'I2_V': 'Ours I2 (b2.00)',
+    'I2_V_4': 'Ours I2 (b2.00)',
+    'I2_V_8': 'Ours I2 (b2.00)',
+    'I1_V': 'Ours I1 (b1.60)',
+    'I1_V_2': 'Ours I1 (b1.60)',
     'INT_N': 'T-MAC INT_N (b2.00)',
     'Q4_0': 'llama.cpp Q4_0 (b4.50)',
     'TQ2_0': 'llama.cpp TQ2_0 (b2.06)',
     'TQ1_0': 'llama.cpp TQ1_0 (b1.69)', 
-    'i2_s': 'bitnet.cpp I2_S (b2.00)',
+    'i2_s': 'bitnet.cpp I2_V (b2.00)',
     'tl1': 'bitnet.cpp TL1 (b2.00)',
     'tl2': 'bitnet.cpp TL2 (b1.67)',
 }
@@ -108,7 +108,7 @@ E2E_TYPE_STYLES = {
     'llama.cpp Q4_0 (b4.50)': GEMM_TYPE_STYLES['llama.cpp Q4_0 (b4.50)'],
     'llama.cpp TQ1_0 (b1.69)': GEMM_TYPE_STYLES['llama.cpp TQ1_0 (b1.69)'],
     'llama.cpp TQ2_0 (b2.06)': GEMM_TYPE_STYLES['llama.cpp TQ2_0 (b2.06)'],
-    'bitnet.cpp I2_S (b2.00)': {'color': '#E18727', 'hatch': ''},
+    'bitnet.cpp I2_V (b2.00)': {'color': '#E18727', 'hatch': ''},
     'bitnet.cpp TL1 (b2.00)': {'color': '#26828E', 'hatch': ''},
     'bitnet.cpp TL2 (b1.67)': {'color': '#7EB875', 'hatch': '//'},
 }

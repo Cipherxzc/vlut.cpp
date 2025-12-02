@@ -21,7 +21,7 @@
 
 #### Frameworks
 
-- Ours (I2_S, I1_M): cmake build, fixed model.
+- Ours (I2_V, I1_V): cmake build, fixed model.
 - llama.cpp (TQ2_0, TQ1_0): cmake build, fixed model.
 - T-MAC (INT_N): build in virtualenv, tvm (dependency) compiled.
     - **Note:** Need to convert model after comiling kernel.

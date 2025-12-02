@@ -297,7 +297,8 @@ static bool ggml_is_view_op(enum ggml_op op) {
 
 enum test_mode {
     MODE_PERF,
-    MODE_SEARCH,
+    MODE_SEARCH_I1,
+    MODE_SEARCH_I2,
 };
 
 struct test_case {
@@ -375,7 +376,7 @@ struct test_case {
     std::vector<ggml_tensor *> sentinels;
 
     void add_sentinel(ggml_context * ctx) {
-        if (mode == MODE_PERF || mode == MODE_SEARCH) {
+        if (mode == MODE_PERF || mode == MODE_SEARCH_I1 || mode == MODE_SEARCH_I2) {
             return;
         }
         ggml_tensor * sentinel = ::ggml_new_tensor_1d(ctx, GGML_TYPE_F32, sentinel_size);
@@ -416,7 +417,7 @@ struct test_case {
     }
 
     bool eval_perf(ggml_backend_t backend, const char * op_name) {
-        mode = mode == MODE_SEARCH ? MODE_SEARCH : MODE_PERF;
+        mode = MODE_PERF;
 
         static const size_t graph_nodes = 8192;
 
@@ -699,14 +700,23 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_perf(const char* 
 
 
 // Test cases for configuration search
-static std::vector<std::unique_ptr<test_case>> make_test_cases_search(const char* model_filter = nullptr, const std::vector<int>& test_ns = {}) {
+static std::vector<std::unique_ptr<test_case>> make_test_cases_search(const char* model_filter = nullptr, const std::vector<int>& test_ns = {}, test_mode mode = MODE_SEARCH_I2) {
     std::vector<std::unique_ptr<test_case>> test_cases;
+    
+    std::vector<ggml_type> test_types;
+    if (mode == MODE_SEARCH_I1) {
+        test_types = {GGML_TYPE_I1_V_2, GGML_TYPE_I1_V_4};
+    } else if (mode == MODE_SEARCH_I2) {
+        test_types = {GGML_TYPE_I2_V_2, GGML_TYPE_I2_V_4, GGML_TYPE_I2_V_8, GGML_TYPE_I2_V_16};
+    } else {
+        GGML_ABORT("fatal error");
+    }
 
     std::vector<ModelConfig> models = {
-        {"bitnet_3b",  3200, 8640,  {GGML_TYPE_I2_V}},
-        {"llama3_8b",  4096, 14336, {GGML_TYPE_I2_V}},
-        {"falcon_1b",  2048, 8192,  {GGML_TYPE_I2_V}},
-        {"trilm_1.5b", 2048, 6144,  {GGML_TYPE_I2_V}},
+        {"bitnet_3b", 3200, 8640, test_types},
+        // {"llama3_8b",  4096, 14336, test_types},
+        // {"falcon_1b",  2048, 8192,  test_types},
+        // {"trilm_1.5b", 2048, 6144,  test_types},
     };
 
     // Filter by model if specified
@@ -749,8 +759,8 @@ static bool test_backend(ggml_backend_t backend, test_mode mode, const char* mod
         return true;
     }
 
-    if (mode == MODE_SEARCH) {
-        auto test_cases = make_test_cases_search(model_filter, test_ns);
+    if (mode == MODE_SEARCH_I1 || mode == MODE_SEARCH_I2) {
+        auto test_cases = make_test_cases_search(model_filter, test_ns, mode);
         for (auto & test : test_cases) {
             test->eval_perf(backend, "MUL_MAT");
         }
@@ -766,7 +776,8 @@ static void usage(char** argv) {
     printf("\n");
     printf("  valid modes:\n");
     printf("    - perf   (default)  : run performance evaluation\n");
-    printf("    - search            : operator search / tuning mode\n");
+    printf("    - search1           : tuning mode for I1_V\n");
+    printf("    - search2           : tuning mode for I2_V\n");
     printf("\n");
     printf("  options:\n");
     printf("    -m model            : test only the given model\n");
@@ -796,8 +807,10 @@ int main(int argc, char ** argv) {
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "perf") == 0) {
             mode = MODE_PERF;
-        } else if (strcmp(argv[i], "search") == 0) {
-            mode = MODE_SEARCH;
+        } else if (strcmp(argv[i], "search1") == 0) {
+            mode = MODE_SEARCH_I1;
+        } else if (strcmp(argv[i], "search2") == 0) {
+            mode = MODE_SEARCH_I2;
         } else if (strcmp(argv[i], "-m") == 0) {
             if (i + 1 < argc) {
                 model_filter = argv[++i];
@@ -805,14 +818,14 @@ int main(int argc, char ** argv) {
                 usage(argv);
                 return 1;
             }
-        } else if (strcmp(argv[i], "-t") == 0) { // Changed from -n to -t
+        } else if (strcmp(argv[i], "-t") == 0) {  // Changed from -n to -t
             if (i + 1 < argc) {
                 n_threads = atoi(argv[++i]);
             } else {
                 usage(argv);
                 return 1;
             }
-        } else if (strcmp(argv[i], "-ns") == 0) { // Added -ns option
+        } else if (strcmp(argv[i], "-ns") == 0) {  // Added -ns option
             if (i + 1 < argc) {
                 test_ns.clear();
                 std::string ns_str = argv[++i];

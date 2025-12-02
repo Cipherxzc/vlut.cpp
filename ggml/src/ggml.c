@@ -6571,7 +6571,8 @@ size_t ggml_quantize_chunk(
             break;
         case GGML_TYPE_I2_V_2:
             // TODO
-            // result = quantize_i2_v_2(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
+            // printf("WARNING: GGML_TYPE_I2_V_2 quantization not implemented yet, using fallback. This will not affect test-vlut-gemm.\n");
+            result = quantize_i2_v(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
         case GGML_TYPE_I2_V_4:
             result = quantize_i2_v_4(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
@@ -6581,7 +6582,8 @@ size_t ggml_quantize_chunk(
             break;
         case GGML_TYPE_I2_V_16:
             // TODO
-            // result = quantize_i2_v_16(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
+            // printf("WARNING: GGML_TYPE_I2_V_16 quantization not implemented yet, using fallback. This will not affect test-vlut-gemm.\n");
+            result = quantize_i2_v(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
         case GGML_TYPE_I1_V:
             result = quantize_i1_v(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
@@ -6591,7 +6593,8 @@ size_t ggml_quantize_chunk(
             break;
         case GGML_TYPE_I1_V_4:
             // TODO
-            // result = quantize_i1_v_4(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
+            // printf("WARNING: GGML_TYPE_I1_V_4 quantization not implemented yet, using fallback. This will not affect test-vlut-gemm.\n");
+            result = quantize_i1_v(src + start, (char *)dst + start_row * row_size, nrows, n_per_row, imatrix);
             break;
         default:
             assert(false);

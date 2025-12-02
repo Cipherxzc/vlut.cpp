@@ -39,7 +39,7 @@ export RESULTS_DIR="$RESULTS_DIR"
 
 
 
-# ==================== Benchmark I2_S and I1_M ====================
+# ==================== Benchmark I2_V and I1_V ====================
 echo "Benchmarking I2_V_4 model..."
 "$SCRIPT_DIR/bench-batch-decode.sh" -m "$MODEL_DIR/ggml-model-I2_V_4.gguf" -p "$PREFILL_LEN" -g "$TOKEN_GEN_LENS" -n "$PARALLEL_SEQS" -t "$THREAD_COUNT" --csv
 echo "Benchmarking I2_V_8 model..."

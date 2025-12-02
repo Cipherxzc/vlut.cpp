@@ -10,7 +10,7 @@ show_help() {
   echo "Options:"
   echo "  -h                   Display this help message and exit"
   echo "  -w <directory>       Set the llama.cpp root directory (default: ../../ relative to script)"
-  echo "  -m <path>            Path to the model to benchmark (default: ~/models/bitnet_b1_58-3B/ggml-model-I2_S.gguf)"
+  echo "  -m <path>            Path to the model to benchmark (default: ~/models/bitnet_b1_58-3B/ggml-model-I2_V.gguf)"
   echo "  -p <list>            Input lengths in comma-separated format (default: 128)"
   echo "                       Example: -p 64,128,256"
   echo "  -t <list>            Thread counts in comma-separated format (default: 1)"
@@ -69,7 +69,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Default values
 LLAMA_ROOT="$SCRIPT_DIR/../.."
-MODEL_PATH="$HOME/models/bitnet_b1_58-3B/ggml-model-I2_S.gguf"
+MODEL_PATH="$HOME/models/bitnet_b1_58-3B/ggml-model-I2_V.gguf"
 PROMPT_LENS="128"
 THREADS="1"
 REPEATS=5
