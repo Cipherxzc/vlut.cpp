@@ -3,11 +3,14 @@
 ## Setup
 
 #### Devices
+We benchmark on four devices:
 
 - Intel PC (`pc_intel`): Intel Core i7-13700k, 8 P-Cores, AVX2.
 - ARM Server (`aws_arm`): ARM Neoverse-V1, 8 Cores, SVE.
 - AMD Laptop (`laptop_amd`): Ryzen 7 5800H, 8 Cores, AVX2.
 - Smartphone (`smartphone`): Qualcomm Snapdragon 8 Elite, 2 P-Cores, NEON.
+
+Full CPU specs are listed in Appendix.
 
 #### Models
 

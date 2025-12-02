@@ -729,62 +729,62 @@
 
 #define MAKE_TABLES_I2S_BLOCK2(g)                                                                                    \
     do {                                                                                                             \
-        gemm_make_table_i2s(table0, y_block + (((g)*group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE)); \
-        gemm_make_table_i2s(table1, y_block + (((g)*group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2v(table0, y_block + (((g)*group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2v(table1, y_block + (((g)*group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE)); \
     } while (0)
 
 #define MAKE_TABLES_I2S_BLOCK4(g)                                                                                    \
     do {                                                                                                             \
-        gemm_make_table_i2s(table0, y_block + (((g)*group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE)); \
-        gemm_make_table_i2s(table1, y_block + (((g)*group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE)); \
-        gemm_make_table_i2s(table2, y_block + (((g)*group_size + (i * tile_size + 2) * 4) * TABLE_ENTRY_SIZE)); \
-        gemm_make_table_i2s(table3, y_block + (((g)*group_size + (i * tile_size + 3) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2v(table0, y_block + (((g)*group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2v(table1, y_block + (((g)*group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2v(table2, y_block + (((g)*group_size + (i * tile_size + 2) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2v(table3, y_block + (((g)*group_size + (i * tile_size + 3) * 4) * TABLE_ENTRY_SIZE)); \
     } while (0)
 
 #define MAKE_TABLES_I2S_BLOCK8(g)                                                                                    \
     do {                                                                                                             \
-        gemm_make_table_i2s(table0, y_block + (((g)*group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE)); \
-        gemm_make_table_i2s(table1, y_block + (((g)*group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE)); \
-        gemm_make_table_i2s(table2, y_block + (((g)*group_size + (i * tile_size + 2) * 4) * TABLE_ENTRY_SIZE)); \
-        gemm_make_table_i2s(table3, y_block + (((g)*group_size + (i * tile_size + 3) * 4) * TABLE_ENTRY_SIZE)); \
-        gemm_make_table_i2s(table4, y_block + (((g)*group_size + (i * tile_size + 4) * 4) * TABLE_ENTRY_SIZE)); \
-        gemm_make_table_i2s(table5, y_block + (((g)*group_size + (i * tile_size + 5) * 4) * TABLE_ENTRY_SIZE)); \
-        gemm_make_table_i2s(table6, y_block + (((g)*group_size + (i * tile_size + 6) * 4) * TABLE_ENTRY_SIZE)); \
-        gemm_make_table_i2s(table7, y_block + (((g)*group_size + (i * tile_size + 7) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2v(table0, y_block + (((g)*group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2v(table1, y_block + (((g)*group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2v(table2, y_block + (((g)*group_size + (i * tile_size + 2) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2v(table3, y_block + (((g)*group_size + (i * tile_size + 3) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2v(table4, y_block + (((g)*group_size + (i * tile_size + 4) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2v(table5, y_block + (((g)*group_size + (i * tile_size + 5) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2v(table6, y_block + (((g)*group_size + (i * tile_size + 6) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2v(table7, y_block + (((g)*group_size + (i * tile_size + 7) * 4) * TABLE_ENTRY_SIZE)); \
     } while (0)
 
 #define MAKE_TABLES_I2S_BLOCK16(g)                                                                                    \
     do {                                                                                                              \
-        gemm_make_table_i2s(table0, y_block + (((g)*group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE));  \
-        gemm_make_table_i2s(table1, y_block + (((g)*group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE));  \
-        gemm_make_table_i2s(table2, y_block + (((g)*group_size + (i * tile_size + 2) * 4) * TABLE_ENTRY_SIZE));  \
-        gemm_make_table_i2s(table3, y_block + (((g)*group_size + (i * tile_size + 3) * 4) * TABLE_ENTRY_SIZE));  \
-        gemm_make_table_i2s(table4, y_block + (((g)*group_size + (i * tile_size + 4) * 4) * TABLE_ENTRY_SIZE));  \
-        gemm_make_table_i2s(table5, y_block + (((g)*group_size + (i * tile_size + 5) * 4) * TABLE_ENTRY_SIZE));  \
-        gemm_make_table_i2s(table6, y_block + (((g)*group_size + (i * tile_size + 6) * 4) * TABLE_ENTRY_SIZE));  \
-        gemm_make_table_i2s(table7, y_block + (((g)*group_size + (i * tile_size + 7) * 4) * TABLE_ENTRY_SIZE));  \
-        gemm_make_table_i2s(table0, y_block + (((g)*group_size + (i * tile_size + 8) * 4) * TABLE_ENTRY_SIZE));  \
-        gemm_make_table_i2s(table1, y_block + (((g)*group_size + (i * tile_size + 9) * 4) * TABLE_ENTRY_SIZE));  \
-        gemm_make_table_i2s(table2, y_block + (((g)*group_size + (i * tile_size + 10) * 4) * TABLE_ENTRY_SIZE)); \
-        gemm_make_table_i2s(table3, y_block + (((g)*group_size + (i * tile_size + 11) * 4) * TABLE_ENTRY_SIZE)); \
-        gemm_make_table_i2s(table4, y_block + (((g)*group_size + (i * tile_size + 12) * 4) * TABLE_ENTRY_SIZE)); \
-        gemm_make_table_i2s(table5, y_block + (((g)*group_size + (i * tile_size + 13) * 4) * TABLE_ENTRY_SIZE)); \
-        gemm_make_table_i2s(table6, y_block + (((g)*group_size + (i * tile_size + 14) * 4) * TABLE_ENTRY_SIZE)); \
-        gemm_make_table_i2s(table7, y_block + (((g)*group_size + (i * tile_size + 15) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2v(table0, y_block + (((g)*group_size + (i * tile_size + 0) * 4) * TABLE_ENTRY_SIZE));  \
+        gemm_make_table_i2v(table1, y_block + (((g)*group_size + (i * tile_size + 1) * 4) * TABLE_ENTRY_SIZE));  \
+        gemm_make_table_i2v(table2, y_block + (((g)*group_size + (i * tile_size + 2) * 4) * TABLE_ENTRY_SIZE));  \
+        gemm_make_table_i2v(table3, y_block + (((g)*group_size + (i * tile_size + 3) * 4) * TABLE_ENTRY_SIZE));  \
+        gemm_make_table_i2v(table4, y_block + (((g)*group_size + (i * tile_size + 4) * 4) * TABLE_ENTRY_SIZE));  \
+        gemm_make_table_i2v(table5, y_block + (((g)*group_size + (i * tile_size + 5) * 4) * TABLE_ENTRY_SIZE));  \
+        gemm_make_table_i2v(table6, y_block + (((g)*group_size + (i * tile_size + 6) * 4) * TABLE_ENTRY_SIZE));  \
+        gemm_make_table_i2v(table7, y_block + (((g)*group_size + (i * tile_size + 7) * 4) * TABLE_ENTRY_SIZE));  \
+        gemm_make_table_i2v(table0, y_block + (((g)*group_size + (i * tile_size + 8) * 4) * TABLE_ENTRY_SIZE));  \
+        gemm_make_table_i2v(table1, y_block + (((g)*group_size + (i * tile_size + 9) * 4) * TABLE_ENTRY_SIZE));  \
+        gemm_make_table_i2v(table2, y_block + (((g)*group_size + (i * tile_size + 10) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2v(table3, y_block + (((g)*group_size + (i * tile_size + 11) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2v(table4, y_block + (((g)*group_size + (i * tile_size + 12) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2v(table5, y_block + (((g)*group_size + (i * tile_size + 13) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2v(table6, y_block + (((g)*group_size + (i * tile_size + 14) * 4) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i2v(table7, y_block + (((g)*group_size + (i * tile_size + 15) * 4) * TABLE_ENTRY_SIZE)); \
     } while (0)
 
 #define MAKE_TABLES_I1_58S_BLOCK2(g)                                                                                    \
     do {                                                                                                                \
-        gemm_make_table_i1_58s(table0, y_block + (((g)*group_size + (i * tile_size + 0) * 5) * TABLE_ENTRY_SIZE)); \
-        gemm_make_table_i1_58s(table1, y_block + (((g)*group_size + (i * tile_size + 1) * 5) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i1v(table0, y_block + (((g)*group_size + (i * tile_size + 0) * 5) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i1v(table1, y_block + (((g)*group_size + (i * tile_size + 1) * 5) * TABLE_ENTRY_SIZE)); \
     } while (0)
 
 #define MAKE_TABLES_I1_58S_BLOCK4(g)                                                                                    \
     do {                                                                                                                \
-        gemm_make_table_i1_58s(table0, y_block + (((g)*group_size + (i * tile_size + 0) * 5) * TABLE_ENTRY_SIZE)); \
-        gemm_make_table_i1_58s(table1, y_block + (((g)*group_size + (i * tile_size + 1) * 5) * TABLE_ENTRY_SIZE)); \
-        gemm_make_table_i1_58s(table2, y_block + (((g)*group_size + (i * tile_size + 2) * 5) * TABLE_ENTRY_SIZE)); \
-        gemm_make_table_i1_58s(table3, y_block + (((g)*group_size + (i * tile_size + 3) * 5) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i1v(table0, y_block + (((g)*group_size + (i * tile_size + 0) * 5) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i1v(table1, y_block + (((g)*group_size + (i * tile_size + 1) * 5) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i1v(table2, y_block + (((g)*group_size + (i * tile_size + 2) * 5) * TABLE_ENTRY_SIZE)); \
+        gemm_make_table_i1v(table3, y_block + (((g)*group_size + (i * tile_size + 3) * 5) * TABLE_ENTRY_SIZE)); \
     } while (0)
 
 #define ADD_TABLE_ENTRIES_BLOCK2(nc)                                           \
@@ -973,8 +973,8 @@ void quantize_row_i8_v_tile(const float *x, void *y, int64_t n, float *scale) {
 }
 
 
-inline static void gemm_make_table_i2s(int16_t *restrict table, const int8_t *restrict y);
-inline static void gemm_make_table_i1_58s(int16_t *restrict table, const int8_t *restrict y);
+inline static void gemm_make_table_i2v(int16_t *restrict table, const int8_t *restrict y);
+inline static void gemm_make_table_i1v(int16_t *restrict table, const int8_t *restrict y);
 
 
 void ggml_gemm_i2v_i8v_lut(int ith, int nth, int n, float *restrict s, size_t bs, const void *restrict vx,
@@ -1006,7 +1006,7 @@ void ggml_gemm_i2v_i8v_lut(int ith, int nth, int n, float *restrict s, size_t bs
         // groups
         for (int g = 0; g < group_count; g++) {
             for (int i = 0; i < group_size / 4; i++) {
-                gemm_make_table_i2s(table, y_block + (g * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
+                gemm_make_table_i2v(table, y_block + (g * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict x_block = (const uint8_t *)vx + (g * group_size / 4 + i) * bs;
                 ADD_TABLE_ENTRIES_BLOCK(nc, x_block, table, sum_i16);
             }
@@ -1016,7 +1016,7 @@ void ggml_gemm_i2v_i8v_lut(int ith, int nth, int n, float *restrict s, size_t bs
         // group remain
         if (group_size_remain > 0) {
             for (int i = 0; i < group_size_remain / 4; i++) {
-                gemm_make_table_i2s(table, y_block + (group_count * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
+                gemm_make_table_i2v(table, y_block + (group_count * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict x_block = (const uint8_t *)vx + (group_count * group_size / 4 + i) * bs;
                 ADD_TABLE_ENTRIES_BLOCK(nc, x_block, table, sum_i16);
             }
@@ -1031,7 +1031,7 @@ void ggml_gemm_i2v_i8v_lut(int ith, int nth, int n, float *restrict s, size_t bs
         // groups
         for (int g = 0; g < group_count; g++) {
             for (int i = 0; i < group_size / 4; i++) {
-                gemm_make_table_i2s(table, y_block + (g * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
+                gemm_make_table_i2v(table, y_block + (g * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict x_block = (const uint8_t *)vx + (g * group_size / 4 + i) * bs;
                 ADD_TABLE_ENTRIES_BLOCK(nc, x_block, table, sum_i16);
             }
@@ -1041,7 +1041,7 @@ void ggml_gemm_i2v_i8v_lut(int ith, int nth, int n, float *restrict s, size_t bs
         // group remain
         if (group_size_remain > 0) {
             for (int i = 0; i < group_size_remain / 4; i++) {
-                gemm_make_table_i2s(table, y_block + (group_count * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
+                gemm_make_table_i2v(table, y_block + (group_count * group_size / 4 + i) * 4 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict x_block = (const uint8_t *)vx + (group_count * group_size / 4 + i) * bs;
                 ADD_TABLE_ENTRIES_BLOCK(nc, x_block, table, sum_i16);
             }
@@ -1551,7 +1551,7 @@ void ggml_gemm_i1s_i8v_lut(int ith, int nth, int n, float *restrict s, size_t bs
         // groups
         for (int g = 0; g < group_count; g++) {
             for (int i = 0; i < group_size / 5; i++) {
-                gemm_make_table_i1_58s(table, y_block + (g * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
+                gemm_make_table_i1v(table, y_block + (g * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict x_block = (const uint8_t *)vx + (g * group_size / 5 + i) * bs;
                 ADD_TABLE_ENTRIES_BLOCK(nc, x_block, table, sum_i16);
             }
@@ -1561,7 +1561,7 @@ void ggml_gemm_i1s_i8v_lut(int ith, int nth, int n, float *restrict s, size_t bs
         // group remain
         if (group_size_remain > 0) {
             for (int i = 0; i < group_size_remain / 5; i++) {
-                gemm_make_table_i1_58s(table, y_block + (group_count * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
+                gemm_make_table_i1v(table, y_block + (group_count * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict x_block = (const uint8_t *)vx + (group_count * group_size / 5 + i) * bs;
                 ADD_TABLE_ENTRIES_BLOCK(nc, x_block, table, sum_i16);
             }
@@ -1576,7 +1576,7 @@ void ggml_gemm_i1s_i8v_lut(int ith, int nth, int n, float *restrict s, size_t bs
         // groups
         for (int g = 0; g < group_count; g++) {
             for (int i = 0; i < group_size / 5; i++) {
-                gemm_make_table_i1_58s(table, y_block + (g * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
+                gemm_make_table_i1v(table, y_block + (g * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict x_block = (const uint8_t *)vx + (g * group_size / 5 + i) * bs;
                 ADD_TABLE_ENTRIES_BLOCK(nc, x_block, table, sum_i16);
             }
@@ -1586,7 +1586,7 @@ void ggml_gemm_i1s_i8v_lut(int ith, int nth, int n, float *restrict s, size_t bs
         // group remain
         if (group_size_remain > 0) {
             for (int i = 0; i < group_size_remain / 5; i++) {
-                gemm_make_table_i1_58s(table, y_block + (group_count * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
+                gemm_make_table_i1v(table, y_block + (group_count * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict x_block = (const uint8_t *)vx + (group_count * group_size / 5 + i) * bs;
                 ADD_TABLE_ENTRIES_BLOCK(nc, x_block, table, sum_i16);
             }
@@ -1642,7 +1642,7 @@ void ggml_gemm_i1v_i8v_lut(int ith, int nth, int n, float *restrict s, size_t bs
         memset(table + 121 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
         for (int g = 0; g < group_count; g++) {
             for (int i = 0; i < group_size / 5; i++) {
-                gemm_make_table_i1_58s(table, y_block + (g * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
+                gemm_make_table_i1v(table, y_block + (g * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict x_block = (const uint8_t *)vx + (g * group_size / 5 + i) * bs;
                 ADD_TABLE_ENTRIES_BLOCK(nc, x_block, table, sum_i16);
             }
@@ -1652,13 +1652,13 @@ void ggml_gemm_i1v_i8v_lut(int ith, int nth, int n, float *restrict s, size_t bs
 
         // group remain
         for (int i = 0; i < blck_num; i++) {
-            gemm_make_table_i1_58s(table, y_block + (group_count * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
+            gemm_make_table_i1v(table, y_block + (group_count * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
             const uint8_t *restrict x_block = (const uint8_t *)vx + (group_count * group_size / 5 + i) * bs;
             ADD_TABLE_ENTRIES_BLOCK(nc, x_block, table, sum_i16);
         }
         memset(table, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
         for (int i = 0; i < blck_remain; i++) {
-            gemm_make_table_i2s(table, y_block + ((group_count * group_size / 5 + blck_num) * 5 + i * 4) * TABLE_ENTRY_SIZE);
+            gemm_make_table_i2v(table, y_block + ((group_count * group_size / 5 + blck_num) * 5 + i * 4) * TABLE_ENTRY_SIZE);
             const uint8_t *restrict x_block = (const uint8_t *)vx + (group_count * group_size / 5 + blck_num + i) * bs;
             ADD_TABLE_ENTRIES_BLOCK(nc, x_block, table, sum_i16);
         }
@@ -1673,7 +1673,7 @@ void ggml_gemm_i1v_i8v_lut(int ith, int nth, int n, float *restrict s, size_t bs
         memset(table + 121 * TABLE_ENTRY_SIZE, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
         for (int g = 0; g < group_count; g++) {
             for (int i = 0; i < group_size / 5; i++) {
-                gemm_make_table_i1_58s(table, y_block + (g * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
+                gemm_make_table_i1v(table, y_block + (g * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
                 const uint8_t *restrict x_block = (const uint8_t *)vx + (g * group_size / 5 + i) * bs;
                 ADD_TABLE_ENTRIES_BLOCK(nc, x_block, table, sum_i16);
             }
@@ -1683,13 +1683,13 @@ void ggml_gemm_i1v_i8v_lut(int ith, int nth, int n, float *restrict s, size_t bs
 
         // group remain
         for (int i = 0; i < blck_num; i++) {
-            gemm_make_table_i1_58s(table, y_block + (group_count * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
+            gemm_make_table_i1v(table, y_block + (group_count * group_size / 5 + i) * 5 * TABLE_ENTRY_SIZE);
             const uint8_t *restrict x_block = (const uint8_t *)vx + (group_count * group_size / 5 + i) * bs;
             ADD_TABLE_ENTRIES_BLOCK(nc, x_block, table, sum_i16);
         }
         memset(table, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
         for (int i = 0; i < blck_remain; i++) {
-            gemm_make_table_i2s(table, y_block + ((group_count * group_size / 5 + blck_num) * 5 + i * 4) * TABLE_ENTRY_SIZE);
+            gemm_make_table_i2v(table, y_block + ((group_count * group_size / 5 + blck_num) * 5 + i * 4) * TABLE_ENTRY_SIZE);
             const uint8_t *restrict x_block = (const uint8_t *)vx + (group_count * group_size / 5 + blck_num + i) * bs;
             ADD_TABLE_ENTRIES_BLOCK(nc, x_block, table, sum_i16);
         }
@@ -1767,7 +1767,7 @@ void ggml_gemm_i1v2_i8v_lut(int ith, int nth, int n, float *restrict s, size_t b
         memset(table0, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
         memset(table1, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
         for (int i = 0; i < blck_remain; i++) {
-            gemm_make_table_i2s(table0, y_block + ((group_count * group_size / 5 + blck_num) * 5 + i * 4) * TABLE_ENTRY_SIZE);
+            gemm_make_table_i2v(table0, y_block + ((group_count * group_size / 5 + blck_num) * 5 + i * 4) * TABLE_ENTRY_SIZE);
             const uint8_t *restrict x_block = (const uint8_t *)vx + (group_count * group_size / 5 + blck_num + i) * bs - ith * nc;
             ADD_TABLE_ENTRIES_BLOCK(nc, x_block, table0, sum_i16);
         }
@@ -1802,7 +1802,7 @@ void ggml_gemm_i1v2_i8v_lut(int ith, int nth, int n, float *restrict s, size_t b
         memset(table0, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
         memset(table1, 0, sizeof(int16_t) * TABLE_ENTRY_SIZE);
         for (int i = 0; i < blck_remain; i++) {
-            gemm_make_table_i2s(table0, y_block + ((group_count * group_size / 5 + blck_num) * 5 + i * 4) * TABLE_ENTRY_SIZE);
+            gemm_make_table_i2v(table0, y_block + ((group_count * group_size / 5 + blck_num) * 5 + i * 4) * TABLE_ENTRY_SIZE);
             const uint8_t *restrict x_block = (const uint8_t *)vx + (group_count * group_size / 5 + blck_num + i) * bs - ith * nc;
             ADD_TABLE_ENTRIES_BLOCK(nc, x_block, table0, sum_i16);
         }
@@ -1883,7 +1883,7 @@ void ggml_gemm_i1v4_i8v_lut(int ith, int nth, int n, float *restrict s, size_t b
             ADD_TABLE_ENTRIES_BLOCK4(nc);
         }
         for (int i = 0; i < blck_remain; i++) {
-            gemm_make_table_i2s(table0, y_block + ((group_count * group_size / 5 + blck_num) * 5 + i * 4) * TABLE_ENTRY_SIZE);
+            gemm_make_table_i2v(table0, y_block + ((group_count * group_size / 5 + blck_num) * 5 + i * 4) * TABLE_ENTRY_SIZE);
             const uint8_t *restrict x_block = (const uint8_t *)vx + (group_count * group_size / 5 + blck_num + i) * bs;
             ADD_TABLE_ENTRIES_BLOCK(nc, x_block, table0, sum_i16);
         }
@@ -1914,7 +1914,7 @@ void ggml_gemm_i1v4_i8v_lut(int ith, int nth, int n, float *restrict s, size_t b
             ADD_TABLE_ENTRIES_BLOCK4(nc);
         }
         for (int i = 0; i < blck_remain; i++) {
-            gemm_make_table_i2s(table0, y_block + ((group_count * group_size / 5 + blck_num) * 5 + i * 4) * TABLE_ENTRY_SIZE);
+            gemm_make_table_i2v(table0, y_block + ((group_count * group_size / 5 + blck_num) * 5 + i * 4) * TABLE_ENTRY_SIZE);
             const uint8_t *restrict x_block = (const uint8_t *)vx + (group_count * group_size / 5 + blck_num + i) * bs;
             ADD_TABLE_ENTRIES_BLOCK(nc, x_block, table0, sum_i16);
         }
@@ -1959,7 +1959,7 @@ inline static void rev(int16_t *restrict t1, const int16_t *restrict t2) {
     }
 }
 
-void gemm_make_table_i2s(int16_t *restrict table, const int8_t *restrict y) {
+void gemm_make_table_i2v(int16_t *restrict table, const int8_t *restrict y) {
     const int8_t *restrict y0 = y;
     const int8_t *restrict y1 = y0 + TABLE_ENTRY_SIZE;
     const int8_t *restrict y2 = y1 + TABLE_ENTRY_SIZE;
@@ -2047,7 +2047,7 @@ void gemm_make_table_i2s(int16_t *restrict table, const int8_t *restrict y) {
     rev(table + 60 * TABLE_ENTRY_SIZE, table + 20 * TABLE_ENTRY_SIZE);
 }
 
-void gemm_make_table_i1_58s(int16_t *restrict table, const int8_t *restrict y) {
+void gemm_make_table_i1v(int16_t *restrict table, const int8_t *restrict y) {
     const int8_t *restrict y0 = y;
     const int8_t *restrict y1 = y0 + TABLE_ENTRY_SIZE;
     const int8_t *restrict y2 = y1 + TABLE_ENTRY_SIZE;

@@ -32,7 +32,7 @@ class VLutNum {
         return {-1, 0};
     }
 
-    int toI1_58() const {
+    int toI1V() const {
         int res = 0;
         for (int i = bits_.size() - 1; i >= 0; i--) {
             res = res * 3 + bits_[i] + 1;
@@ -40,9 +40,9 @@ class VLutNum {
         return res;
     }
 
-    int toI2S() const { return toI1_58(); }
+    int toI2V() const { return toI1V(); }
 
-    static VLutNum fromI1_58(int x) {
+    static VLutNum fromI1V(int x) {
         VLutNum res;
         for (int i = 0; i < 5; i++) {
             int gg = x % 3 - 1;
@@ -52,7 +52,7 @@ class VLutNum {
         return res;
     }
 
-    static VLutNum fromI2S(int x) {
+    static VLutNum fromI2V(int x) {
         VLutNum res;
         for (int i = 0; i < 4; i++) {
             int gg = x % 3 - 1;
@@ -76,7 +76,7 @@ inline void add(int x, int y, int pos) {
          << ");\n";
 }
 
-void generate_function(int s, string name) {
+void generate_function(int s, const string &name) {
     cout << "void " << name << "(int16_t *restrict table, const int8_t *restrict y) {\n";
     cout << "    const int8_t *restrict y0 = y;\n";
     cout << "    const int8_t *restrict y1 = y0 + TABLE_ENTRY_SIZE;\n";
@@ -102,51 +102,51 @@ void generate_function(int s, string name) {
     cout << "}\n";
 }
 
-void gemm_make_table_I2S() {
+void gemm_make_table_I2V() {
     for (int i = 0; i < 81; i++) {
-        VLutNum x = VLutNum::fromI2S(i), y = x;
+        VLutNum x = VLutNum::fromI2V(i), y = x;
         if (!x.validate() || i == 40) {
             continue;
         }
         auto [pos, val] = x.lowbit();
         if (val == -1) {
             y.reverse();
-            add_edge(x.toI2S(), y.toI2S(), -1);
+            add_edge(x.toI2V(), y.toI2V(), -1);
         } else if (val == 1) {
             y.bits_[pos] = 0;
-            add_edge(x.toI2S(), y.toI2S(), pos);
+            add_edge(x.toI2V(), y.toI2V(), pos);
         } else {
             assert(0);
         }
     }
 
-    generate_function(40, "gemm_make_table_i2s");
+    generate_function(40, "gemm_make_table_i2v");
 }
 
-void gemm_make_table_I1_58S() {
+void gemm_make_table_I1V() {
     for (int i = 0; i < 243; i++) {
-        VLutNum x = VLutNum::fromI1_58(i), y = x;
+        VLutNum x = VLutNum::fromI1V(i), y = x;
         if (!x.validate() || i == 121) {
             continue;
         }
         auto [pos, val] = x.lowbit();
         if (val == -1) {
             y.reverse();
-            add_edge(x.toI1_58(), y.toI1_58(), -1);
+            add_edge(x.toI1V(), y.toI1V(), -1);
         } else if (val == -1) {
             y.bits_[pos] = 0;
-            add_edge(x.toI1_58(), y.toI1_58(), pos);
+            add_edge(x.toI1V(), y.toI1V(), pos);
         } else {
             assert(0);
         }
     }
 
-    generate_function(121, "gemm_make_table_i1_58s");
+    generate_function(121, "gemm_make_table_i1v");
 }
 
 int main() {
-    gemm_make_table_I2S();
-    // gemm_make_table_I1_58S();
+    gemm_make_table_I2V();
+    // gemm_make_table_I1V();
 
     return 0;
 }
