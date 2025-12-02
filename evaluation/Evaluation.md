@@ -39,6 +39,44 @@ Full CPU specs are listed in Appendix.
 **Note:** Before running evaluation, do a final check that all models are correctly quantized!
     - I find converting Llama3 8B model to bitnet (weight + scale) format consumes a lot of memory (might OOM). If you encounter this, download the quantized models directly.
 
+## Config
+
+Selecting the right configuration is crucial for achieving optimal VLUT-based GeMM performance.
+
+### Tunable Parameters
+
+- **`entry_size`**  
+  Defines the LUT table granularity. Larger tiles reduce indexing overhead but may increase cache pressure, while smaller tiles trade computation for better cache locality.
+
+- **`I2_V_k` and `I1_V_K`**  
+  Both I1 and I2 families offer variants such as `*_V_2`, `*_V_4`, etc., each encoding a different effective `K_tile`
+
+### Recommended Starting Point
+
+From extensive experiments across Intel/AMD/ARM CPUs, we find the following settings to be strong defaults:
+
+- `entry_size = 32`  
+- `I2_V_4` or `I2_V_8`  
+- `I1_V_2`
+
+### Running the Auto-Search
+
+If you want to tune the configuration specifically for your device, we provide an automated search utility: `search-config.sh` (with `test-vlut-gemm`)
+
+#### Usage
+
+```bash
+./evaluation/scripts/search-config.sh <search_mode>
+```
+`search_mode` determines which set of VLUT variants will be explored:
+- **Search mode 1** — searches I1 variants
+- **Search mode 2** — searches I2 variants
+
+A full sweep typically completes in a few minutes and outputs aggregated scores into:
+```
+evaluation/results_search/scores<search_mode>.csv
+```
+
 ## GeMM Benchmark
 
 #### Scripts

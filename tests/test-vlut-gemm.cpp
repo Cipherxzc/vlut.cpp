@@ -704,17 +704,19 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_search(const char
     
     std::vector<ggml_type> test_types;
     if (mode == MODE_SEARCH_I1) {
-        test_types = {GGML_TYPE_I1_V_2, GGML_TYPE_I1_V_4};
+        // All Vec-LUT I1 types: {GGML_TYPE_I1_V, GGML_TYPE_I1_V_2, GGML_TYPE_I1_V_4};
+        test_types = {GGML_TYPE_I1_V, GGML_TYPE_I1_V_2};
     } else if (mode == MODE_SEARCH_I2) {
-        test_types = {GGML_TYPE_I2_V_2, GGML_TYPE_I2_V_4, GGML_TYPE_I2_V_8, GGML_TYPE_I2_V_16};
+        // All Vec-LUT I2 types: {GGML_TYPE_I2_V, GGML_TYPE_I2_V_2, GGML_TYPE_I2_V_4, GGML_TYPE_I2_V_8, GGML_TYPE_I2_V_16};
+        test_types = {GGML_TYPE_I2_V_4, GGML_TYPE_I2_V_8, GGML_TYPE_I2_V_16};
     } else {
         GGML_ABORT("fatal error");
     }
 
     std::vector<ModelConfig> models = {
         {"bitnet_3b", 3200, 8640, test_types},
-        // {"llama3_8b",  4096, 14336, test_types},
-        // {"falcon_1b",  2048, 8192,  test_types},
+        {"llama3_8b",  4096, 14336, test_types},
+        {"falcon_1b",  2048, 8192,  test_types},
     };
 
     // Filter by model if specified
