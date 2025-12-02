@@ -1,43 +1,312 @@
-# Evaluation
+# Evaluation Guide
 
-## Setup
+This documentation describes how to build vlut.cpp and reproduce our main evaluation results in the paper. We provide pre-built binaries, pre-converted models, and automatic scripts to ease the evaluation.
 
-#### Devices
-We benchmark on four devices:
+If you are looking for a quick start guide, see TODO.
 
-- Intel PC (`pc_intel`): Intel Core i7-13700k, 8 P-Cores, AVX2.
-- ARM Server (`aws_arm`): ARM Neoverse-V1, 8 Cores, SVE.
-- AMD Laptop (`laptop_amd`): Ryzen 7 5800H, 8 Cores, AVX2.
-- Smartphone (`smartphone`): Qualcomm Snapdragon 8 Elite, 2 P-Cores, NEON.
+## Preparation
 
-Full CPU specs are listed in Appendix.
+### Devices
 
-#### Models
+vlut.cpp supports ARM and x86 CPU, covering most modern devices.
 
-- BitNet 3B (`bitnet_3b`)
-    - https://huggingface.co/1bitLLM/bitnet_b1_58-3B.
-- Llama3 8B (`llama3_8b`)
-    - 1.58-bit: https://huggingface.co/HF1BitLLM/Llama3-8B-1.58-100B-tokens.
-    - 2-bit (T-MAC): https://huggingface.co/ChenMnZ/Llama-3-8b-instruct-EfficientQAT-w2g128-GPTQ.
-- Falcon 1B (`falcon_1b`)
-    - https://huggingface.co/tiiuae/Falcon3-1B-Instruct-1.58bit.
+To conduct the complete evaluation, it is recommended that you have:
 
-#### Frameworks
+- x86_64 or ARMv8 CPUs.
+- \>= xx GB RAM.
+- \>= yy GB Disk.
+- OS: Ubuntu/WSL/Android
+- (optional) Python: TODO
 
-- Ours (I2_V, I1_V): cmake build, fixed model.
-- llama.cpp (TQ2_0, TQ1_0): cmake build, fixed model.
+Notes:
+
+- Tested devices and configurations are listed in the paper.
+- Hardware and software requirements by baselines: TODO.
+
+### Models
+
+Thanks to our flexible sub-2-bit packing method, vlut.cpp supports a rich set of ternary LLMs, including [HF BitNet family](https://huggingface.co/1bitLLM), [Llama family](https://huggingface.co/HF1BitLLM), [Falcon3 family](https://huggingface.co/collections/tiiuae/falcon3), and [TriLM family](https://huggingface.co/SpectraSuite).
+
+Belows are tested models in the paper (verified, and recommended for evaluation).
+
+- HF BitNet 3B: [1bitLLM/bitnet_b1_58-3B](https://huggingface.co/1bitLLM/bitnet_b1_58-3B).
+- Llama3 8B: [HF1BitLLM/Llama3-8B-1.58-100B-tokens](https://huggingface.co/HF1BitLLM/Llama3-8B-1.58-100B-tokens) and [ChenMnZ/Llama-3-8b-instruct-EfficientQAT-w2g128-GPTQ](https://huggingface.co/ChenMnZ/Llama-3-8b-instruct-EfficientQAT-w2g128-GPTQ).
+- Falcon 1B: [tiiuae/Falcon3-1B-Instruct-1.58bit](https://huggingface.co/tiiuae/Falcon3-1B-Instruct-1.58bit).
+
+To reproduce full comparison results, you need to download the FP16/BF16 models from the above Huggingface links (or use `huggingface-cli`), and manually convert them for each framework involved in the evaluation.
+
+> Try <https://hf-mirror.com> if you have proxy issues.
+
+Besides, for evaluation of vlut.cpp, we provide pre-converted ternary models (gguf format) at TODO.
+
+## Installation
+
+### Pre-built binaries
+
+We provide pre-built binaries of vlut.cpp in TODO:release. However, it is **NOT recommended**, because:
+
+- The pre-built binaries are compiled with default configurations, which might be sub-optimal on your device. Building from source allows you to find the best-performing configuration.
+- The pre-built binaries doesn't include Python and shell scripts. To use the scripts, you still need to clone this repo.
+
+See building instructions below.
+
+### Build from source
+
+vlut.cpp has the same building process as [llama.cpp](https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md#cpu-build). Please build with `cmake`:
+
+```
+cmake -B build
+cmake --build build --config Release
+```
+
+Recommended options:
+
+- For faster compilation, add the `-j <jobs>` argument, e.g., `cmake --build build --config Release -j 4`.
+- For faster repeated compilation (e.g., when searching the optimal configuration), install `ccache`.
+
+**Important notes:**
+
+- We pre-defined several options in `cmake/vlut.cmake`, including ISA-specific optimizations and tiling configurations. Please check in TODO.
+
+### (Optional) Baseline setup
+
+To reproduce full comparison results, install baseline frameworks with official instructions:
+
+- llama.cpp: See [build.md](https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md).
+- bitnet.cpp: See [README.md](https://github.com/microsoft/BitNet/blob/main/README.md#installation).
+- T-MAC: See [README.md](https://github.com/microsoft/T-MAC/blob/main/README.md#installation)
+
+Notes:
+
+- Each baseline supports only a subset of our evaluated models, as detailed in the paper.
+- We recommend **installing all frameworks to the same workspace folder**, so our evaluation scripts use relative paths to find them correctly.
+
+## Model Conversion and Quantization
+
+### (Optional) Conversion
+
+If you download [supported models](#Models) in Huggingface format, you'll need to manually convert them to GGUF format before quantization.
+
+Setup the Python environment with `conda`, `virtualenv`, or `uv`. Install dependencies:
+
+```
+pip install -r requirements.txt
+```
+
+Then, convert models:
+
+```
+python convert_hf_to_gguf_vlut.py TODO
+```
+
+Skip this step if you use pre-converted models on TODO.
+
+### Quantization
+
+This step quantizes the converted GGUF models to vlut.cpp's format for inference.
+
+After installing vlut.cpp, run for each model:
+
+```sh
+# Usage
+./build/bin/llama-quantize <TODO.gguf> <type>
+# Example
+./build/bin/llama-quantize ~/models/bitnet_b1_58-3B/bitnet_b1_58-3B.TODO.gguf I2_V
+```
+
+Available quantization types:
+
+TODO
+
+To use the automatic evaluation scripts, we strongly recommend:
+
+- Put all model folders in the same father folder, and use the default HF model name (e.g., `bitnet_b1_58-3B`) as the child folder name.
+- Use llama.cpp's default model names: `ggml-model-{quant}.gguf`.
+- Rename models if they are not in this format.
+
+### (Optional) Setup baselines
+
+To reproduce full comparison results, follow the model quantization instructions of each baseline frameworks:
+
+- llama.cpp: See [quantize/README.md](https://github.com/ggml-org/llama.cpp/blob/master/tools/quantize/README.md).
+  - Quantization types: TQ2_0, TQ1_0.
+- bitnet.cpp: See [README.md](https://github.com/microsoft/BitNet/blob/main/README.md#installation).
+  - Quantization types: i2_s, tl1, tl2.
+- T-MAC: See [README.md](https://github.com/microsoft/T-MAC/blob/main/README.md#installation)
+  - Quantization type: INT_N.
+
+Notes:
+
+- Both T-MAC and bitnet.cpp need to re-compile kernels when changing models and quantizations. You cannot quantize all models at once and evaluate them one by one.
+- DO NOT use vlut.cpp's scripts and binaries to quantize llama.cpp's models. There might be compatibility issues.
+- 
+
+<!-- - llama.cpp (TQ2_0, TQ1_0): cmake build, fixed model.
 - T-MAC (INT_N): build in virtualenv, tvm (dependency) compiled.
     - **Note:** Need to convert model after comiling kernel.
     - **Note:** Need to tune for `n=256` in GeMM benchmark, and `n=1` (by default) in E2E.
 - bitnet.cpp (i2_s/tl1/tl2): build in conda env, compiled.
-    - **Note:** Need to re-compile kernels (will be overided) when changing models.
+    - **Note:** Need to re-compile kernels (will be overided) when changing models. -->
 
-**Note:** Put all frameworks in the same workspace folder, so the scripts use relative path to find them correctly.
 
-**Note:** Put all models folders in the same folder, **recommend** using default HF model name (e.g., `bitnet_b1_58-3B`) as folder name, and **recommend** using `llama.cpp`'s default model names: `ggml-model-{quant}.gguf` except the T-MAC models. **Rename** them to avoid potential bugs with the scripts.
+### Final check
 
-**Note:** Before running evaluation, do a final check that all models are correctly quantized!
-    - I find converting Llama3 8B model to bitnet (weight + scale) format consumes a lot of memory (might OOM). If you encounter this, download the quantized models directly.
+Before evaluation, do a final check:
+
+## Main Evaluation
+
+There are mainly 3 types of evaluation:
+
+- GeMM benchmark (kernel-level): Benchmark the kernel-level latency with specific GeMM shapes.
+- Prefilling (end-to-end):  Benchmark the end-to-end prefilling latency (i.e., TTFT).
+- Parallel decoding (end-to-end): Benchmark the parallel decoding throughput (i.e., tokens/s). 
+
+### GeMM Benchmark
+
+#### Scripts
+
+We provide the following shell scripts to benchmark GeMM performance (kernel-level):
+
+- [bench-gemm.sh](scripts/bench-gemm.sh): Benchmark vlut.cpp and llama.cpp (based on [tests/test-vlut-gemm.cpp](../tests/test-vlut-gemm.cpp)).
+- [bench-gemm-tmac.sh](scripts/bench-gemm-tmac.sh): Benchmark T-MAC (based on T-MAC's kernel tuning logs).
+  - Make sure to setup T-MAC's compilation environment first.
+  - Modify T-MAC's tuning configuration to n=256 for fair comparison.
+  - This will overide previously compiled kernels of T-MAC.
+
+#### Usage
+
+Usage of [bench-gemm.sh](scripts/bench-gemm.sh):
+
+```sh
+# Usage
+./evaluation/scripts/bench-gemm.sh <device_name> <threads> <ns> [entry_size]
+# Example
+./evaluation/scripts/bench-gemm.sh pc_intel 1 256 32
+```
+
+Explaination of the arguments:
+
+| Argument      | Explaination                                                            |
+| ------------- | ----------------------------------------------------------------------- |
+| `device_name` | Device identifier for distinguishing test devices                       |
+| `threads`     | Number of threads for testing                                           |
+| `ns`          | N dimension size of the tested GeMM shape (allows comma-separated list) |
+| `entry_size`  | Tile size on the N dimension (optional)                                 |
+
+Notes:
+
+- We use ns=256 in the paper.
+- See the script for default values.
+
+Usage of [bench-gemm-tmac.sh](scripts/bench-gemm-tmac.sh):
+
+```sh
+# Usage
+./evaluation/scripts/bench-gemm-tmac.sh [--device DEVICE_NAME] [--tmac_path TMAC_PATH]
+# Example
+./evaluation/scripts/bench-gemm-tmac.sh --device pc_intel --tmac_path ../T-MAC
+```
+
+Explaination of the arguments:
+
+| Argument    | Explaination                                      |
+| ----------- | ------------------------------------------------- |
+| `device`    | Device identifier for distinguishing test devices |
+| `tmac_path` | Root directory of T-MAC                           |
+
+### E2E Prefilling
+
+#### Scripts
+
+Use [bench-e2e-prefill.sh](scripts/bench-e2e-prefill.sh) to benchmark all frameworks (including vlut.cpp and baselines) on a specific model.
+
+- Denpends on [bench-prefill.sh](scripts/bench-e2e-prefill.sh), which uses `llama-bench` to evaluate each framework.
+
+#### Usage
+
+This script accepts environmental variables as arguments.
+
+```sh
+# Example of benchmarking with Falcon 1B
+DEVICE_NAME=custom_device MODEL_DIR=~/models/Falcon3-1B-Instruct-1.58bit ./evaluation/scripts/bench-e2e-prefill.sh
+```
+
+Notes:
+
+- Run Llama3 8B 1.58bit (for vlut.cpp, llama.cpp, and bitnet.cpp) and 2bit (for T-MAC) separately.
+- Make sure T-MAC's models use their folder name as model name (by default), e.g., `bitnet_b1_58-3B/bitnet_b1_58-3B.INT_N.gguf`.
+- Make sure all other models are named as `ggml-model-{quant}.gguf` (by default).
+- Make sure to re-compile T-MAC and bitnet.cpp for each model. They will overide the previous kernels.
+- Make backups because the script removes the target results directory at initialization.
+
+More environment variables, and their default values:
+
+```sh
+# Configuration variables that can be easily changed
+DEVICE_NAME="${DEVICE_NAME:-"mydevice"}"
+WORKSPACE_DIR="${WORKSPACE_DIR:-$SCRIPT_DIR/../../..}" # scripts -> evaluation -> vlut.cpp -> workspace
+MODEL_DIR="${MODEL_DIR:-$HOME/models/bitnet_b1_58-3B}"
+# Extract model name from model dir to separate results folder
+MODEL_NAME=$(basename "$MODEL_DIR")
+RESULTS_DIR="${RESULTS_DIR:-"${WORKSPACE_DIR}/vlut.cpp/evaluation/results_e2e_${DEVICE_NAME}/${MODEL_NAME}"}"
+PROMPT_LENGTH="${PROMPT_LENGTH:-128,256,512}"
+THREAD_COUNT="${THREAD_COUNT:-1,4,8}" # use 1, 2 on snapdragon 8 elite
+REPEAT_COUNT="${REPEAT_COUNT:-3}"
+```
+
+## E2E Batched Decoding
+
+#### Scripts
+
+Use [bench-e2e-batch.sh](scripts/bench-e2e-batch.sh) to benchmark all frameworks (including vlut.cpp and baselines) on a specific model.
+
+- Denpends on [bench-batch-decode.sh](scripts/bench-batch-decode.sh), which uses `llama-batched bench` to evaluate each framework.
+
+#### Usage
+
+This script accepts environmental variables as arguments. The usage is similar to [bench-e2e-prefill.sh](scripts/bench-e2e-prefill.sh)
+
+```sh
+# Example of benchmarking with Falcon 1B
+DEVICE_NAME=custom_device MODEL_DIR=~/models/Falcon3-1B-Instruct-1.58bit ./evaluation/scripts/bench-e2e-batch.sh
+```
+
+Notes:
+
+- T-MAC doesn't build `llama-batched-bench` by default. You can manually build it in `T-MAC/3rdparty/llama.cpp` after each compilation, or simply add it to T-MAC's building targets (modify [this line](https://github.com/microsoft/T-MAC/blob/7042f8f73330bd083bc1e4bc5ccb3f88a4904aee/tools/run_pipeline.py#L218)).
+- Make sure to read the notes for [prefilling](#usage-1). The usage is quite similar.
+
+More environment variables, and their default values:
+
+```sh
+# Configuration variables that can be easily changed
+DEVICE_NAME="${DEVICE_NAME:-"mydevice"}"
+WORKSPACE_DIR="${WORKSPACE_DIR:-$SCRIPT_DIR/../../..}" # scripts -> evaluation -> vlut.cpp -> workspace
+MODEL_DIR="${MODEL_DIR:-$HOME/models/bitnet_b1_58-3B}"
+# Extract model name from model dir to separate results folder
+MODEL_NAME=$(basename "$MODEL_DIR")
+RESULTS_DIR="${RESULTS_DIR:-"${WORKSPACE_DIR}/vlut.cpp/evaluation/results_e2e_batch_${DEVICE_NAME}/${MODEL_NAME}"}"
+PREFILL_LEN="${PREFILL_LEN:-16}"
+TOKEN_GEN_LENS="${TOKEN_GEN_LENS:-16}"
+PARALLEL_SEQS="${PARALLEL_SEQS:-64,128,256}"
+THREAD_COUNT="${THREAD_COUNT:-4}" # use 2 on snapdragon 8 elite
+```
+
+## Data Visualization
+
+We provide Python scripts (`evaluation/scripts/plot/*.py`) to automatically plot the evaluation results. To customize:
+
+- Modify device and type maps in [plot_utils](scripts/plot/plot_utils.py).
+- Modify `combinations_to_plot`, `all_archs`, and `MULTI_THREAD_CONFIG` in [plot_gemm_combined.py](scripts/plot/plot_gemm_combined.py).
+- Modify `all_archs`, `models_to_plot`, and `MULTI_THREAD_CONFIG` in [plot_e2e_prefill_combined.py](scripts/plot/plot_e2e_prefill_combined.py) and [plot_e2e_batch_combined.py](scripts/plot/plot_e2e_batch_combined.py).
+
+Put raw results in the evaluation folder, then run corresponding plotting scripts. The file strcture should look like:
+
+```
+Example
+```
+
+
 
 ## Config
 
@@ -75,333 +344,4 @@ If you want to tune the configuration specifically for your device, we provide a
 A full sweep typically completes in a few minutes and outputs aggregated scores into:
 ```
 evaluation/results_search/scores<search_mode>.csv
-```
-
-## GeMM Benchmark
-
-#### Scripts
-
-- `bench-gemm.sh`: Ours & llama.cpp GeMM (with `test-vlut-gemm`).
-- `bench-gemm-tmac.sh`: T-MAC GeMM (T-MAC is tuned for n=256, will overide previous kernels).
-    - Will copy `tmac_model_utils.py` and `tmac_platform.py` to target directory.
-        - Increased tuning timeout in `platform.py` to avoid tuning failure.
-    - **Note:** Make sure to activate T-MAC's `virtualenv` and `source build/t-mac-envs.sh` first, since we need compilation.
-
-#### Usage
-
-```bash
-./evaluation/scripts/bench-gemm.sh -h
-Usage: ./evaluation/scripts/bench-gemm.sh <device_name> <threads> <ns> [entry_size]
-Example: ./evaluation/scripts/bench-gemm.sh mydevice 4 256 32
-
-./evaluation/scripts/bench-gemm-tmac.sh -h
-Unknown argument: -h
-Usage: ./evaluation/scripts/bench-gemm-tmac.sh [--device DEVICE_NAME] [--tmac_path TMAC_PATH]
-```
-
-#### Example
-
-```bash
-./evaluation/scripts/bench-gemm.sh pc_intel 1 256 32
-./evaluation/scripts/bench-gemm-tmac.sh pc_intel
-```
-
-#### Note
-- Device name is for plotting. e.g., pc_intel, laptop_amd, etc.
-- Currently only use **ns = 256** for plotting.
-- See `.sh` for default values.
-
-## E2E Prefill
-
-#### Scripts
-
-- `bench-e2e-prefill.sh`: evaluate all frameworks on one model, need `MODEL_DIR` as input environment variable.
-    - Denpends on `bench-prefill.sh`: use `llama-bench` to evaluate one framework.
-    - **Note:** Ensure T-MAC's model uses the folder name as model name (by default). For example: `~/models/bitnet_b1_58-3B/bitnet_b1_58-3B.INT_N.gguf`, so the script can correctly find T-MAC's model.
-    - **Note:** Ensure all other models are named `ggml-model-{quant}.gguf` (by default), so the script can correctly find them.
-    - **Note:** Re-compile T-MAC and re-convert T-MAC models for n=1 before **each evaluation** (not just for model changes: we compiled for n=256 in GeMM benchmark, and it doesn't directly work for E2E evaluation).
-    - **Note:** Re-compile bitnet.cpp **each time before evaluating a new model** since the kernels are always overided by last model's compilation.
-    - **Note:** the script might `rm` the results directory in the beginning! Make backups.
-
-#### Example
-
-```bash
-# Run for each model with the command below
-# Run for Llama3 8B 1.58bit and 2bit separately since they are required by different frameworks
-DEVICE_NAME=custom_device MODEL_DIR=~/models/Falcon3-1B-Instruct-1.58bit ./evaluation/scripts/bench-e2e-prefill.sh
-```
-
-More environment variables to customize in the script:
-
-```sh
-# Get the directory where the script is located
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
-# Configuration variables that can be easily changed
-DEVICE_NAME="${DEVICE_NAME:-"mydevice"}"
-WORKSPACE_DIR="${WORKSPACE_DIR:-$SCRIPT_DIR/../../..}" # scripts -> evaluation -> vlut.cpp -> workspace
-MODEL_DIR="${MODEL_DIR:-$HOME/models/bitnet_b1_58-3B}"
-# Extract model name from model dir to separate results folder
-MODEL_NAME=$(basename "$MODEL_DIR")
-RESULTS_DIR="${RESULTS_DIR:-"${WORKSPACE_DIR}/vlut.cpp/evaluation/results_e2e_${DEVICE_NAME}/${MODEL_NAME}"}"
-PROMPT_LENGTH="${PROMPT_LENGTH:-128,256,512}"
-THREAD_COUNT="${THREAD_COUNT:-1,4,8}" # use 1, 2 on snapdragon 8 elite
-REPEAT_COUNT="${REPEAT_COUNT:-3}"
-```
-
-## E2E Batched Decoding
-
-Use `llama-batched-bench`, similar to prefill.
-
-```
-DEVICE_NAME=custom_device MODEL_DIR=~/models/Falcon3-1B-Instruct-1.58bit ./evaluation/scripts/bench-e2e-batch.sh
-```
-
-**Note:** T-MAC doesn't build `llama-batched-bench` by default. Manually build in `3rdparty/llama.cpp` after each compilation.
-
-# Appendix
-
-## CPU Specs
-
-Use `lscpu`
-
-AWS ARM:
-```
-Architecture:             aarch64
-  CPU op-mode(s):         32-bit, 64-bit
-  Byte Order:             Little Endian
-CPU(s):                   8
-  On-line CPU(s) list:    0-7
-Vendor ID:                ARM
-  Model name:             Neoverse-V1
-    Model:                1
-    Thread(s) per core:   1
-    Core(s) per socket:   8
-    Socket(s):            1
-    Stepping:             r1p1
-    BogoMIPS:             2100.00
-    Flags:                fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm ssbs paca pacg dcpodp svei8mm svebf16 i8mm bf16 dgh rng
-Caches (sum of all):      
-  L1d:                    512 KiB (8 instances)
-  L1i:                    512 KiB (8 instances)
-  L2:                     8 MiB (8 instances)
-  L3:                     32 MiB (1 instance)
-NUMA:                     
-  NUMA node(s):           1
-  NUMA node0 CPU(s):      0-7
-Vulnerabilities:          
-  Gather data sampling:   Not affected
-  Itlb multihit:          Not affected
-  L1tf:                   Not affected
-  Mds:                    Not affected
-  Meltdown:               Not affected
-  Mmio stale data:        Not affected
-  Reg file data sampling: Not affected
-  Retbleed:               Not affected
-  Spec rstack overflow:   Not affected
-  Spec store bypass:      Mitigation; Speculative Store Bypass disabled via prctl
-  Spectre v1:             Mitigation; __user pointer sanitization
-  Spectre v2:             Mitigation; CSV2, BHB
-  Srbds:                  Not affected
-  Tsx async abort:        Not affected
-```
-
-Orangepi
-```
-Architecture:           aarch64
-  CPU op-mode(s):       32-bit, 64-bit
-  Byte Order:           Little Endian
-CPU(s):                 8
-  On-line CPU(s) list:  0-7
-Vendor ID:              ARM
-  Model name:           Cortex-A55
-    Model:              0
-    Thread(s) per core: 1
-    Core(s) per socket: 4
-    Socket(s):          1
-    Stepping:           r2p0
-    CPU max MHz:        1800.0000
-    CPU min MHz:        408.0000
-    BogoMIPS:           48.00
-    Flags:              fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm lrcpc dcpop asimddp
-  Model name:           Cortex-A76
-    Model:              0
-    Thread(s) per core: 1
-    Core(s) per socket: 4
-    Socket(s):          1
-    Stepping:           r4p0
-    CPU max MHz:        2352.0000
-    CPU min MHz:        408.0000
-    BogoMIPS:           48.00
-    Flags:              fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm lrcpc dcpop asimddp
-Caches (sum of all):
-  L1d:                  384 KiB (8 instances)
-  L1i:                  384 KiB (8 instances)
-  L2:                   2.5 MiB (8 instances)
-  L3:                   3 MiB (1 instance)
-Vulnerabilities:
-  Itlb multihit:        Not affected
-  L1tf:                 Not affected
-  Mds:                  Not affected
-  Meltdown:             Not affected
-  Mmio stale data:      Not affected
-  Retbleed:             Not affected
-  Spec store bypass:    Mitigation; Speculative Store Bypass disabled via prctl
-  Spectre v1:           Mitigation; __user pointer sanitization
-  Spectre v2:           Vulnerable: Unprivileged eBPF enabled
-  Srbds:                Not affected
-  Tsx async abort:      Not affected
-```
-
-Xiaomi 15
-192KB L1 128 L1
-```
-Architecture:             aarch64
-  CPU op-mode(s):         64-bit
-  Byte Order:             Little Endian
-CPU(s):                   8
-  On-line CPU(s) list:    0-7
-Vendor ID:                Qualcomm
-  Model name:             -
-    Model:                4
-    Thread(s) per core:   1
-    Core(s) per socket:   6
-    Socket(s):            1
-    Stepping:             0x4
-    CPU(s) scaling MHz:   39%
-    CPU max MHz:          3532.8000
-    CPU min MHz:          384.0000
-    BogoMIPS:             38.40
-    Flags:                fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 asimdfhm dit uscat ilrcpc flagm ssbs sb paca pacg dcpodp flagm2 frint i8mm bf16 rng bti ecv afp rpres
-  Model name:             -
-    Model:                4
-    Thread(s) per core:   1
-    Core(s) per socket:   2
-    Socket(s):            1
-    Stepping:             0x3
-    CPU(s) scaling MHz:   24%
-    CPU max MHz:          4320.0000
-    CPU min MHz:          1017.6000
-    BogoMIPS:             38.40
-    Flags:                fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 asimdfhm dit uscat ilrcpc flagm ssbs sb paca pacg dcpodp flagm2 frint i8mm bf16 rng bti ecv afp rpres
-Vulnerabilities:
-  Gather data sampling:   Not affected
-  Itlb multihit:          Not affected
-  L1tf:                   Not affected
-  Mds:                    Not affected
-  Meltdown:               Not affected
-  Mmio stale data:        Not affected
-  Reg file data sampling: Not affected
-  Retbleed:               Not affected
-  Spec rstack overflow:   Not affected
-  Spec store bypass:      Mitigation; Speculative Store Bypass disabled via prctl
-  Spectre v1:             Mitigation; __user pointer sanitization
-  Spectre v2:             Vulnerable: Unprivileged eBPF enabled
-  Srbds:                  Not affected
-  Tsx async abort:        Not affected
-```
-
-laptop amd
-```
-Architecture:             x86_64
-  CPU op-mode(s):         32-bit, 64-bit
-  Address sizes:          48 bits physical, 48 bits virtual
-  Byte Order:             Little Endian
-CPU(s):                   16
-  On-line CPU(s) list:    0-15
-Vendor ID:                AuthenticAMD
-  Model name:             AMD Ryzen 7 5800H with Radeon Graphics
-    CPU family:           25
-    Model:                80
-    Thread(s) per core:   2
-    Core(s) per socket:   8
-    Socket(s):            1
-    Stepping:             0
-    BogoMIPS:             6387.84
-    Flags:                fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse s
-                          se2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl tsc_reliable no
-                          nstop_tsc cpuid extd_apicid pni pclmulqdq ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave
-                          avx f16c rdrand hypervisor lahf_lm cmp_legacy svm cr8_legacy abm sse4a misalignsse 3dnowprefet
-                          ch osvw topoext perfctr_core ssbd ibrs ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 erms in
-                          vpcid rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves clzero xsaveerptr
-                          arat npt nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold v_vm
-                          save_vmload umip vaes vpclmulqdq rdpid fsrm
-Virtualization features:
-  Virtualization:         AMD-V
-  Hypervisor vendor:      Microsoft
-  Virtualization type:    full
-Caches (sum of all):
-  L1d:                    256 KiB (8 instances)
-  L1i:                    256 KiB (8 instances)
-  L2:                     4 MiB (8 instances)
-  L3:                     16 MiB (1 instance)
-Vulnerabilities:
-  Gather data sampling:   Not affected
-  Itlb multihit:          Not affected
-  L1tf:                   Not affected
-  Mds:                    Not affected
-  Meltdown:               Not affected
-  Mmio stale data:        Not affected
-  Reg file data sampling: Not affected
-  Retbleed:               Not affected
-  Spec rstack overflow:   Mitigation; safe RET
-  Spec store bypass:      Mitigation; Speculative Store Bypass disabled via prctl and seccomp
-  Spectre v1:             Mitigation; usercopy/swapgs barriers and __user pointer sanitization
-  Spectre v2:             Mitigation; Retpolines; IBPB conditional; IBRS_FW; STIBP always-on; RSB filling; PBRSB-eIBRS N
-                          ot affected; BHI Not affected
-  Srbds:                  Not affected
-  Tsx async abort:        Not affected
-```
-
-pc intel
-```
-
-Architecture:             x86_64
-  CPU op-mode(s):         32-bit, 64-bit
-  Address sizes:          39 bits physical, 48 bits virtual
-  Byte Order:             Little Endian
-CPU(s):                   20
-  On-line CPU(s) list:    0-19
-Vendor ID:                GenuineIntel
-  Model name:             12th Gen Intel(R) Core(TM) i7-12700KF
-    CPU family:           6
-    Model:                151
-    Thread(s) per core:   2
-    Core(s) per socket:   10
-    Socket(s):            1
-    Stepping:             2
-    BogoMIPS:             7219.20
-    Flags:                fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse s
-                          se2 ss ht syscall nx pdpe1gb rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonst
-                          op_tsc cpuid pni pclmulqdq vmx ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadl
-                          ine_timer aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch invpcid_single ssbd i
-                          brs ibpb stibp ibrs_enhanced tpr_shadow vnmi ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 sme
-                          p bmi2 erms invpcid rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves avx_
-                          vnni umip waitpkg gfni vaes vpclmulqdq rdpid movdiri movdir64b fsrm md_clear serialize flush_l
-                          1d arch_capabilities
-Virtualization features:
-  Virtualization:         VT-x
-  Hypervisor vendor:      Microsoft
-  Virtualization type:    full
-Caches (sum of all):
-  L1d:                    480 KiB (10 instances)
-  L1i:                    320 KiB (10 instances)
-  L2:                     12.5 MiB (10 instances)
-  L3:                     25 MiB (1 instance)
-Vulnerabilities:
-  Gather data sampling:   Not affected
-  Itlb multihit:          Not affected
-  L1tf:                   Not affected
-  Mds:                    Not affected
-  Meltdown:               Not affected
-  Mmio stale data:        Not affected
-  Reg file data sampling: Vulnerable: No microcode
-  Retbleed:               Mitigation; Enhanced IBRS
-  Spec rstack overflow:   Not affected
-  Spec store bypass:      Mitigation; Speculative Store Bypass disabled via prctl and seccomp
-  Spectre v1:             Mitigation; usercopy/swapgs barriers and __user pointer sanitization
-  Spectre v2:             Mitigation; Enhanced / Automatic IBRS; IBPB conditional; RSB filling; PBRSB-eIBRS SW sequence;
-                           BHI SW loop, KVM SW loop
-  Srbds:                  Not affected
-  Tsx async abort:        Not affected
 ```
