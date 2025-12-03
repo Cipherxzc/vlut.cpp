@@ -118,11 +118,10 @@ def read_csv_files(directory, arch):
 
 def load_results_for_all_archs(archs_to_load, thread_config=None):
     """Load results for multiple architectures."""
-    script_dir = os.path.dirname(os.path.abspath(__file__))
     results_dict = {}
     
     for arch in archs_to_load:
-        results_dir = os.path.join(os.path.dirname(script_dir), f'results_e2e_prefill_{arch}')
+        results_dir = eval_path(f'results_e2e_prefill_{arch}')
         # Load results for this architecture
         df = read_csv_files(results_dir, arch)
         
@@ -579,8 +578,7 @@ def main():
             )
 
             # Generate speedup reports for single-thread configuration
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            reports_dir_single = os.path.join(os.path.dirname(script_dir), 'reports_e2e_prefill/single_thread')
+            reports_dir_single = eval_path('reports_e2e_prefill', 'single_thread')
             generate_speedup_reports(
                 results_dict_single,
                 models_to_plot,
@@ -588,9 +586,8 @@ def main():
             )
             
             # Save the single-thread plot
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            # output_file_single = os.path.join(os.path.dirname(script_dir), 'figures/e2e_prefill_comparison_single_thread.png')
-            output_file_single = os.path.join(os.path.dirname(script_dir), 'figures/e2e_prefill_comparison_single_thread.pdf')
+            # output_file_single = eval_path('figures', 'e2e_prefill_comparison_single_thread.png')
+            output_file_single = eval_path('figures', 'e2e_prefill_comparison_single_thread.pdf')
             fig_single.savefig(output_file_single, dpi=300, bbox_inches='tight')
             print(f"Single-thread comparison plot saved to {output_file_single}")
         
@@ -604,9 +601,8 @@ def main():
                 thread_mode="multi"
             )
 
-            # Generate speedup reports for single-thread configuration
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            reports_dir_multi = os.path.join(os.path.dirname(script_dir), 'reports_e2e_prefill/multi_thread')
+            # Generate speedup reports for multi-thread configuration
+            reports_dir_multi = eval_path('reports_e2e_prefill', 'multi_thread')
             generate_speedup_reports(
                 results_dict_multi,
                 models_to_plot,
@@ -614,9 +610,8 @@ def main():
             )
             
             # Save the multi-thread plot
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            # output_file_multi = os.path.join(os.path.dirname(script_dir), 'figures/e2e_prefill_comparison_multi_thread.png')
-            output_file_multi = os.path.join(os.path.dirname(script_dir), 'figures/e2e_prefill_comparison_multi_thread.pdf')
+            # output_file_multi = eval_path('figures', 'e2e_prefill_comparison_multi_thread.png')
+            output_file_multi = eval_path('figures', 'e2e_prefill_comparison_multi_thread.pdf')
             fig_multi.savefig(output_file_multi, dpi=300, bbox_inches='tight')
             print(f"Multi-thread comparison plot saved to {output_file_multi}")
         
@@ -646,9 +641,8 @@ def main():
                 thread_mode=thread_mode
             )
             
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            # output_file = os.path.join(os.path.dirname(script_dir), f'figures/e2e_prefill_comparison_{title_suffix}.png')
-            output_file = os.path.join(os.path.dirname(script_dir), f'figures/e2e_prefill_comparison_{title_suffix}.pdf')
+            # output_file = eval_path('figures', f'e2e_prefill_comparison_{title_suffix}.png')
+            output_file = eval_path('figures', f'e2e_prefill_comparison_{title_suffix}.pdf')
             fig.savefig(output_file, dpi=300, bbox_inches='tight')
             print(f"End-to-end prefill comparison plot saved to {output_file}")
 

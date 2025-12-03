@@ -167,11 +167,10 @@ def load_all_results(results_dir):
 
 def load_results_for_all_archs(archs_to_load, threads_config=None):
     """Load results for multiple architectures."""
-    script_dir = os.path.dirname(os.path.abspath(__file__))
     results_dict = {}
     
     for arch in archs_to_load:
-        results_dir = os.path.join(os.path.dirname(script_dir), f'results_gemm_{arch}')
+        results_dir = eval_path(f'results_gemm_{arch}')
         # Load results for this architecture
         df = load_all_results(results_dir)
         
@@ -630,19 +629,16 @@ def main():
             mkn_to_plot=combinations_to_plot,
             thread_mode="single"
         )
-        
         # Generate speedup reports for single-thread configuration
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        reports_dir_single = os.path.join(os.path.dirname(script_dir), 'reports_gemm/single_thread')
+        reports_dir_single = eval_path('reports_gemm', 'single_thread')
         generate_speedup_reports(
             results_dict_single,
             combinations_to_plot,
             reports_dir_single
         )
-        
+
         # Save the single-thread plot
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        output_file_single = os.path.join(os.path.dirname(script_dir), 'figures/gemm_comparison_single_thread.pdf')
+        output_file_single = eval_path('figures', 'gemm_comparison_single_thread.pdf')
         fig_single.savefig(output_file_single, dpi=300, bbox_inches='tight')
         print(f"Single-thread comparison plot saved to {output_file_single}")
         
@@ -654,17 +650,16 @@ def main():
             mkn_to_plot=combinations_to_plot,
             thread_mode="multi"
         )
-        
         # Generate speedup reports for multi-thread configuration
-        reports_dir_multi = os.path.join(os.path.dirname(script_dir), 'reports_gemm/multi_thread')
+        reports_dir_multi = eval_path('reports_gemm', 'multi_thread')
         generate_speedup_reports(
             results_dict_multi,
             combinations_to_plot,
             reports_dir_multi
         )
-        
+
         # Save the multi-thread plot
-        output_file_multi = os.path.join(os.path.dirname(script_dir), 'figures/gemm_comparison_multi_thread.pdf')
+        output_file_multi = eval_path('figures', 'gemm_comparison_multi_thread.pdf')
         fig_multi.savefig(output_file_multi, dpi=300, bbox_inches='tight')
         print(f"Multi-thread comparison plot saved to {output_file_multi}")
         
@@ -709,16 +704,15 @@ def main():
         )
         
         # Generate speedup reports
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        reports_dir = os.path.join(os.path.dirname(script_dir), f'reports/{title_suffix}')
+        reports_dir = eval_path('reports', f'{title_suffix}')
         generate_speedup_reports(
             results_dict,
             combinations_to_plot,
             reports_dir
         )
-        
+
         # Save the plot
-        output_file = os.path.join(os.path.dirname(script_dir), f'figures/gemm_comparison_{title_suffix}.pdf')
+        output_file = eval_path('figures', f'gemm_comparison_{title_suffix}.pdf')
         fig.savefig(output_file, dpi=300, bbox_inches='tight')
         print(f"Multi-architecture comparison plot saved to {output_file}")
 

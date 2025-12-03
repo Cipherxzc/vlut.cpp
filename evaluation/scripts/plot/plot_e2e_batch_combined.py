@@ -120,11 +120,10 @@ def read_batch_csv_files(directory, arch):
 
 def load_results_for_all_archs(archs_to_load, thread_config=None):
     """Load results for multiple architectures."""
-    script_dir = os.path.dirname(os.path.abspath(__file__))
     results_dict = {}
     
     for arch in archs_to_load:
-        results_dir = os.path.join(os.path.dirname(script_dir), f'results_e2e_batch_{arch}')
+        results_dir = eval_path(f'results_e2e_batch_{arch}')
         # Load results for this architecture
         df = read_batch_csv_files(results_dir, arch)
         
@@ -603,8 +602,8 @@ def main():
     
     # If a specific architecture is provided, only plot for that one
     if args.arch:
-        directory = f"evaluation/results_e2e_batch_{args.arch}"
-        combined_df = read_batch_csv_files(directory)
+        directory = eval_path(f"results_e2e_batch_{args.arch}")
+        combined_df = read_batch_csv_files(directory, args.arch)
         
         if not combined_df.empty:
             # Find unique TG values
@@ -644,8 +643,7 @@ def main():
                 )
                 
                 # Generate speedup reports for single-thread configuration
-                script_dir = os.path.dirname(os.path.abspath(__file__))
-                reports_dir_single = os.path.join(os.path.dirname(script_dir), 'reports_e2e_batch/single_thread')
+                reports_dir_single = eval_path('reports_e2e_batch', 'single_thread')
                 generate_speedup_reports(
                     results_dict_single,
                     models_to_plot,
@@ -654,7 +652,7 @@ def main():
                 
                 if fig_single:
                     # Save the single-thread plot
-                    output_dir = os.path.join(os.path.dirname(script_dir), 'figures')
+                    output_dir = eval_path('figures')
                     os.makedirs(output_dir, exist_ok=True)
                     # output_file_single = os.path.join(output_dir, f'e2e_batch_comparison_single_thread_TG{tg}.png')
                     output_file_single = os.path.join(output_dir, f'e2e_batch_comparison_single_thread_TG{tg}.pdf')
@@ -680,9 +678,8 @@ def main():
                     tg_value=tg
                 )
                 
-                # Generate speedup reports for single-thread configuration
-                script_dir = os.path.dirname(os.path.abspath(__file__))
-                reports_dir_single = os.path.join(os.path.dirname(script_dir), 'reports_e2e_batch/multi_thread')
+                # Generate speedup reports for multi-thread configuration
+                reports_dir_single = eval_path('reports_e2e_batch', 'multi_thread')
                 generate_speedup_reports(
                     results_dict_single,
                     models_to_plot,
@@ -691,7 +688,7 @@ def main():
                 
                 if fig_multi:
                     # Save the multi-thread plot
-                    output_dir = os.path.join(os.path.dirname(script_dir), 'figures')
+                    output_dir = eval_path('figures')
                     os.makedirs(output_dir, exist_ok=True)
                     # output_file_multi = os.path.join(output_dir, f'e2e_batch_comparison_multi_thread_TG{tg}.png')
                     output_file_multi = os.path.join(output_dir, f'e2e_batch_comparison_multi_thread_TG{tg}.pdf')
@@ -733,7 +730,7 @@ def main():
                 )
                 
                 if fig:
-                    output_dir = os.path.join(os.path.dirname(script_dir), 'figures')
+                    output_dir = eval_path('figures')
                     os.makedirs(output_dir, exist_ok=True)
                     # output_file = os.path.join(output_dir, f'e2e_batch_comparison_{title_suffix}_TG{tg}.png')
                     output_file = os.path.join(output_dir, f'e2e_batch_comparison_{title_suffix}_TG{tg}.pdf')

@@ -19,6 +19,20 @@ DEVICE_MAP = {
     'aws_arm': 'AWS Graviton 3 (ARM)',
 }
 
+# Centralized evaluation root directory for outputs (figures, results, reports)
+# This resolves to the `evaluation` folder regardless of the script's location.
+import os
+EVALUATION_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+def eval_path(*parts: str) -> str:
+    """Join path parts under the evaluation root.
+
+    Example:
+        eval_path('figures', 'gemm_comparison_single_thread.pdf')
+        eval_path('reports_gemm', 'single_thread')
+    """
+    return os.path.join(EVALUATION_ROOT, *parts)
+
 GEMM_TYPE_VARIANTS = ['i2_v','i2_v_4','i2_v_8','i1_v','i1_v_2']
 E2E_TYPE_VARIANTS = ['I2_V','I2_V_4','I2_V_8','I1_V','I1_V_2']
 
