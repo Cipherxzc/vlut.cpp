@@ -13,7 +13,7 @@ MIN_LENGTH_FOR_LONG = 500
 MAX_LENGTH_FOR_LONG = 1000
 MAX_WORDS_FOR_SHORT_ANSWER = 2
 
-OUTPUT_PATH = Path("./demo/longbench_en_longctx_shortans.jsonl")
+OUTPUT_PATH = Path("./data/longbench_en_longctx_shortans.jsonl")
 
 
 def main():
