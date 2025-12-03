@@ -20,11 +20,7 @@ Requirements:
 4. If unsure, choose the most likely answer.
 
 Question:
-    Which one is a fruit?
-    A. Stone
-    B. Apple
-    C. Nail
-    D. Paper
+{question}
 
 Please respond with only one letter.
 Your answer:
