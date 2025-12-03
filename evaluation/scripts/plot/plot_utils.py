@@ -6,16 +6,6 @@ DEVICE_MAP = {
     'aws_arm': 'AWS Graviton 3 (ARM)',
 }
 
-
-ARCH_MAP = {
-    'pc_intel': 'Intel Core i7-13700k',
-    'laptop_amd': 'AMD Ryzen 7 5800H',
-    'smartphone': 'Qualcomm Snapdragon 8 Elite',
-    'orangepi': 'RK3588 (ARM Cortex-A76)',
-    'aws_arm': 'AWS Graviton 3 (ARM Neoverse-V1)',
-    'laptop_intel': 'Intel Core Ultra 7 258V',
-}
-
 GEMM_TYPE_VARIANTS = ['i2_v','i2_v_4','i2_v_8','i1_v','i1_v_2']
 E2E_TYPE_VARIANTS = ['I2_V','I2_V_4','I2_V_8','I1_V','I1_V_2']
 
