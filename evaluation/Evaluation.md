@@ -2,7 +2,7 @@
 
 This documentation describes how to build vlut.cpp and reproduce our main evaluation results in the paper. We provide pre-built binaries, pre-converted models, and automatic scripts to ease the evaluation.
 
-If you are looking for a quick start guide, see TODO.
+If you are looking for a quick start guide, see [Quick Start](../README.md#quick-start).
 
 ## Preparation
 
@@ -10,22 +10,19 @@ If you are looking for a quick start guide, see TODO.
 
 vlut.cpp supports ARM and x86 CPU, covering most modern devices.
 
-To conduct the complete evaluation, it is recommended that you have:
+To run vlut.cpp on your device, it is recommended that you have:
 
-- x86_64 or ARMv8 CPUs.
-- \>= xx GB RAM.
-- \>= yy GB Disk.
-- OS: Ubuntu/WSL/Android
-- (optional) Python: TODO
+- CPU: x86_64 or ARMv8.
+- RAM: 4 GB (inference only), or 16 GB (model conversion).
+- Disk: 16 GB (vlut.cpp only), or 128 GB (all frameworks).
+- OS: Ubuntu/WSL/Android.
+- Python: >=3.10 (model conversion).
 
-Notes:
-
-- Tested devices and configurations are listed in the paper.
-- Hardware and software requirements by baselines: TODO.
+Tested devices and configurations are listed in the paper.
 
 ### Models
 
-Thanks to our flexible sub-2-bit packing method, vlut.cpp supports a rich set of ternary LLMs, including [HF BitNet family](https://huggingface.co/1bitLLM), [Llama family](https://huggingface.co/HF1BitLLM), [Falcon3 family](https://huggingface.co/collections/tiiuae/falcon3), and [TriLM family](https://huggingface.co/SpectraSuite).
+With flexible sub-2-bit packing, vlut.cpp supports a rich set of ternary LLMs, including [HF BitNet family](https://huggingface.co/1bitLLM), [Llama family](https://huggingface.co/HF1BitLLM), [Falcon3 family](https://huggingface.co/collections/tiiuae/falcon3), and [TriLM family](https://huggingface.co/SpectraSuite).
 
 Belows are tested models in the paper (verified, and recommended for evaluation).
 
@@ -33,22 +30,17 @@ Belows are tested models in the paper (verified, and recommended for evaluation)
 - Llama3 8B: [HF1BitLLM/Llama3-8B-1.58-100B-tokens](https://huggingface.co/HF1BitLLM/Llama3-8B-1.58-100B-tokens) and [ChenMnZ/Llama-3-8b-instruct-EfficientQAT-w2g128-GPTQ](https://huggingface.co/ChenMnZ/Llama-3-8b-instruct-EfficientQAT-w2g128-GPTQ).
 - Falcon 1B: [tiiuae/Falcon3-1B-Instruct-1.58bit](https://huggingface.co/tiiuae/Falcon3-1B-Instruct-1.58bit).
 
-To reproduce full comparison results, you need to download the FP16/BF16 models from the above Huggingface links (or use `huggingface-cli`), and manually convert them for each framework involved in the evaluation.
+To reproduce full comparison results, you need to download the FP16/BF16 models from Huggingface, and manually convert them for each framework.
 
 > Try <https://hf-mirror.com> if you have proxy issues.
 
-Besides, for evaluation of vlut.cpp, we provide pre-converted ternary models (gguf format) at TODO.
+For evaluation of vlut.cpp only, we provide pre-converted models: TODO.
 
 ## Installation
 
 ### Pre-built binaries
 
-We provide pre-built binaries of vlut.cpp in TODO:release. However, it is **NOT recommended**, because:
-
-- The pre-built binaries are compiled with default configurations, which might be sub-optimal on your device. Building from source allows you to find the best-performing configuration.
-- The pre-built binaries doesn't include Python and shell scripts. To use the scripts, you still need to clone this repo.
-
-See building instructions below.
+TODO
 
 ### Build from source
 
@@ -66,11 +58,11 @@ Recommended options:
 
 **Important notes:**
 
-- We pre-defined several options in `cmake/vlut.cmake`, including ISA-specific optimizations and tiling configurations. Please check in TODO.
+- We pre-defined several options in [vlut.cmake](../cmake/vlut.cmake), including ISA-specific optimizations and tiling configurations. Refer to [Configuration](#configuration) for details.
 
 ### (Optional) Baseline setup
 
-To reproduce full comparison results, install baseline frameworks with official instructions:
+To reproduce full comparison results, install and setup baseline frameworks with their official instructions:
 
 - llama.cpp: See [build.md](https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md).
 - bitnet.cpp: See [README.md](https://github.com/microsoft/BitNet/blob/main/README.md#installation).
@@ -81,11 +73,22 @@ Notes:
 - Each baseline supports only a subset of our evaluated models, as detailed in the paper.
 - We recommend **installing all frameworks to the same workspace folder**, so our evaluation scripts use relative paths to find them correctly.
 
+
+Your workspace should look like:
+
+```sh
+.
+├── BitNet
+├── T-MAC
+├── llama.cpp
+└── vlut.cpp
+```
+
 ## Model Conversion and Quantization
 
 ### (Optional) Conversion
 
-If you download [supported models](#Models) in Huggingface format, you'll need to manually convert them to GGUF format before quantization.
+If you download [supported models](#Models) in Huggingface format (e.g., safetensors), you'll need to manually convert them to GGUF format before quantization. Skip this step and go to [Quantization](#quantization) if you use pre-converted models.
 
 Setup the Python environment with `conda`, `virtualenv`, or `uv`. Install dependencies:
 
@@ -95,67 +98,95 @@ pip install -r requirements.txt
 
 Then, convert models:
 
-```
-python convert_hf_to_gguf_vlut.py TODO
+```sh
+# Example using HF BitNet 3B
+python ./convert_hf_to_gguf_vlut.py ~/models/bitnet_b1_58-3B --outfile ~/models/bitnet_b1_58-3B/bitnet_b1_58-3B.vlut.gguf
 ```
 
-Skip this step if you use pre-converted models on TODO.
+**Important notes:**
+
+- Follow this naming format so our automatic scripts work correctly.
 
 ### Quantization
 
-This step quantizes the converted GGUF models to vlut.cpp's format for inference.
+This step quantizes the converted GGUF models (still floating-point) to compactly packed format for inference.
 
-After installing vlut.cpp, run for each model:
+After building vlut.cpp, quantize each model:
 
 ```sh
 # Usage
-./build/bin/llama-quantize <TODO.gguf> <type>
-# Example
-./build/bin/llama-quantize ~/models/bitnet_b1_58-3B/bitnet_b1_58-3B.TODO.gguf I2_V
+./build/bin/llama-quantize <gguf> <type>
+
+# Example of packing HF BitNet 3B to I1_V and I2_V
+./build/bin/llama-quantize ~/models/bitnet_b1_58-3B/bitnet_b1_58-3B.vlut.gguf I1_V
+./build/bin/llama-quantize ~/models/bitnet_b1_58-3B/bitnet_b1_58-3B.vlut.gguf I2_V
+# Outputs: ~/models/bitnet_b1_58-3B/ggml-model-I1_V.gguf and ggml-model-I2_V.gguf
 ```
 
-Available quantization types:
+Besides the basic `I1_V` and `I2_V` packings, we provide more performant `I1_V_k` and `I2_V_k` packings, where `k` denotes the K-tiling configuration. Please refer to [Configuration](#configuration) for details. We recommend to run a simple performance tuning step to determine the optimal packing on your device. 
 
-TODO
+**Important notes:**
 
-To use the automatic evaluation scripts, we strongly recommend:
+- Use the default output file name (`ggml-model-{quant}.gguf`) so our automatic scripts work correctly.
+- Put all model folders in the same directory, and use their HF model names (e.g., `bitnet_b1_58-3B`) as folder names.
 
-- Put all model folders in the same father folder, and use the default HF model name (e.g., `bitnet_b1_58-3B`) as the child folder name.
-- Use llama.cpp's default model names: `ggml-model-{quant}.gguf`.
-- Rename models if they are not in this format.
+Your models directory should look like:
 
-### (Optional) Setup baselines
+```sh
+models
+├── Falcon3-1B-Instruct-1.58bit
+│   ├── Falcon3-1B-Instruct-1.58bit.vlut.gguf
+│   ├── ggml-model-I1_V.gguf
+│   ├── ...
+├── Llama3-8B-1.58-100B-tokens
+│   ├── Llama3-8B-1.58-100B-tokens.vlut.gguf
+│   ├── ggml-model-I1_V.gguf
+│   ├── ...
+└── bitnet_b1_58-3B
+    ├── bitnet_b1_58-3B.vlut.gguf
+    ├── ggml-model-I1_V.gguf
+    └── ...
+```
+
+### (Optional) Quantization for baselines
 
 To reproduce full comparison results, follow the model quantization instructions of each baseline frameworks:
 
 - llama.cpp: See [quantize/README.md](https://github.com/ggml-org/llama.cpp/blob/master/tools/quantize/README.md).
-  - Quantization types: TQ2_0, TQ1_0.
+  - Quantization types: `TQ2_0`, `TQ1_0`.
 - bitnet.cpp: See [README.md](https://github.com/microsoft/BitNet/blob/main/README.md#installation).
-  - Quantization types: i2_s, tl1, tl2.
+  - Quantization types: `i2_s`, `tl1`, `tl2`.
 - T-MAC: See [README.md](https://github.com/microsoft/T-MAC/blob/main/README.md#installation)
-  - Quantization type: INT_N.
+  - Quantization type: `INT_N`.
 
-Notes:
+**Important notes:**
 
-- Both T-MAC and bitnet.cpp need to re-compile kernels when changing models and quantizations. You cannot quantize all models at once and evaluate them one by one.
-- DO NOT use vlut.cpp's scripts and binaries to quantize llama.cpp's models. There might be compatibility issues.
-- 
+- Both T-MAC and bitnet.cpp need to re-compile kernels when changing models and quantizations. DO NOT quantize all models at once.
+- DO NOT mix converted models from different frameworks. There might be compatibility issues.
+- Keep their default model names.
 
-<!-- - llama.cpp (TQ2_0, TQ1_0): cmake build, fixed model.
-- T-MAC (INT_N): build in virtualenv, tvm (dependency) compiled.
-    - **Note:** Need to convert model after comiling kernel.
-    - **Note:** Need to tune for `n=256` in GeMM benchmark, and `n=1` (by default) in E2E.
-- bitnet.cpp (i2_s/tl1/tl2): build in conda env, compiled.
-    - **Note:** Need to re-compile kernels (will be overided) when changing models. -->
+After quantizing with all baselines, your model directory should look like:
 
-
-### Final check
-
-Before evaluation, do a final check:
+```sh
+models
+├── Falcon3-1B-Instruct-1.58bit
+├── Llama3-8B-1.58-100B-tokens
+└── bitnet_b1_58-3B
+    ├── bitnet_b1_58-3B-F16.gguf    # llama.cpp and bitnet.cpp, converted
+    ├── bitnet_b1_58-3B.INT_N.gguf  # T-MAC, converted and packed
+    ├── bitnet_b1_58-3B.vlut.gguf   # vlut.cpp, converted
+    ├── ggml-model-I1_V.gguf        # vlut.cpp, packed
+    ├── ggml-model-I1_V_2.gguf      # vlut.cpp, packed with K-tiling (optional)
+    ├── ggml-model-I2_V.gguf        # vlut.cpp, packed
+    ├── ggml-model-TQ1_0.gguf       # llama.cpp
+    ├── ggml-model-TQ2_0.gguf       # llama.cpp
+    ├── ggml-model-tl2.gguf         # bitnet.cpp
+    └── ...
+```
 
 ## Main Evaluation
 
-There are mainly 3 types of evaluation:
+There are 3 experiments in the main evaluation:
 
 - GeMM benchmark (kernel-level): Benchmark the kernel-level latency with specific GeMM shapes.
 - Prefilling (end-to-end):  Benchmark the end-to-end prefilling latency (i.e., TTFT).
@@ -180,6 +211,7 @@ Usage of [bench-gemm.sh](scripts/bench-gemm.sh):
 ```sh
 # Usage
 ./evaluation/scripts/bench-gemm.sh <device_name> <threads> <ns> [entry_size]
+
 # Example
 ./evaluation/scripts/bench-gemm.sh pc_intel 1 256 32
 ```
@@ -220,7 +252,7 @@ Explaination of the arguments:
 
 Use [bench-e2e-prefill.sh](scripts/bench-e2e-prefill.sh) to benchmark all frameworks (including vlut.cpp and baselines) on a specific model.
 
-- Denpends on [bench-prefill.sh](scripts/bench-e2e-prefill.sh), which uses `llama-bench` to evaluate each framework.
+- Depends on [bench-prefill.sh](scripts/bench-e2e-prefill.sh), which uses `llama-bench` to evaluate each framework.
 
 #### Usage
 
@@ -234,10 +266,9 @@ DEVICE_NAME=custom_device MODEL_DIR=~/models/Falcon3-1B-Instruct-1.58bit ./evalu
 Notes:
 
 - Run Llama3 8B 1.58bit (for vlut.cpp, llama.cpp, and bitnet.cpp) and 2bit (for T-MAC) separately.
-- Make sure T-MAC's models use their folder name as model name (by default), e.g., `bitnet_b1_58-3B/bitnet_b1_58-3B.INT_N.gguf`.
-- Make sure all other models are named as `ggml-model-{quant}.gguf` (by default).
+- Make sure the models are named correctly as in [Quantization](#optional-quantization-for-baselines).
 - Make sure to re-compile T-MAC and bitnet.cpp for each model. They will overide the previous kernels.
-- Make backups because the script removes the target results directory at initialization.
+- Make backups because the script will remove the target results directory at initialization.
 
 More environment variables, and their default values:
 
@@ -260,7 +291,7 @@ REPEAT_COUNT="${REPEAT_COUNT:-3}"
 
 Use [bench-e2e-batch.sh](scripts/bench-e2e-batch.sh) to benchmark all frameworks (including vlut.cpp and baselines) on a specific model.
 
-- Denpends on [bench-batch-decode.sh](scripts/bench-batch-decode.sh), which uses `llama-batched bench` to evaluate each framework.
+- Depends on [bench-batch-decode.sh](scripts/bench-batch-decode.sh), which uses `llama-batched bench` to evaluate each framework.
 
 #### Usage
 
@@ -300,48 +331,80 @@ We provide Python scripts (`evaluation/scripts/plot/*.py`) to automatically plot
 - Modify `combinations_to_plot`, `all_archs`, and `MULTI_THREAD_CONFIG` in [plot_gemm_combined.py](scripts/plot/plot_gemm_combined.py).
 - Modify `all_archs`, `models_to_plot`, and `MULTI_THREAD_CONFIG` in [plot_e2e_prefill_combined.py](scripts/plot/plot_e2e_prefill_combined.py) and [plot_e2e_batch_combined.py](scripts/plot/plot_e2e_batch_combined.py).
 
-Put raw results in the evaluation folder, then run corresponding plotting scripts. The file strcture should look like:
+Put raw results in the evaluation folder, then run corresponding plotting scripts. The evaluation folder should look like:
 
+```sh
+evaluation
+├── Evaluation.md             # this file
+├── figures                   # generated figures
+├── reports_e2e_batch         # generated reports
+├── reports_e2e_prefill
+├── reports_gemm
+├── results_e2e_batch_xxx     # raw results to load, marked with the device name
+├── results_e2e_prefill_yyy
+├── results_gemm_zzz
+├── results_gemm_tmac_zzz
+└── scripts                   # containing scripts
 ```
-Example
-```
 
+## Configuration
 
+It is crucial to select the correct configuration to achieve the best performance of vlut.cpp.
 
-## Config
+## Tiling Parameters
 
-Selecting the right configuration is crucial for achieving optimal VLUT-based GeMM performance.
+### Introduction
 
-### Tunable Parameters
+As described in the paper, we conduct N-tiling and K-tiling of the LUT. They correspond to the following tunable parameters in vlut.cpp:
 
-- **`entry_size`**  
-  Defines the LUT table granularity. Larger tiles reduce indexing overhead but may increase cache pressure, while smaller tiles trade computation for better cache locality.
+| Parameter | Description | Benefits |
+|-----------|-------------|---------|
+| `entry_size` | N-tiling size (number of LUT colomns) | SIMD addition parallelism |
+| `I2_V_k` | K-tiling size for `I2` packing | Register reuse during lookup |
+| `I1_V_k` | K-tiling size for `I1` packing | Register reuse during lookup |
 
-- **`I2_V_k` and `I1_V_K`**  
-  Both I1 and I2 families offer variants such as `*_V_2`, `*_V_4`, etc., each encoding a different effective `K_tile`
+Notes:
 
-### Recommended Starting Point
+- N-tiling configuration is determined when [compiling vlut.cpp's binaries](#build-from-source). Adjust it by setting `TABLE_ENTRY_SIZE` when configuring the project. For example, `cmake -B build-test -DTABLE_ENTRY_SIZE=64` sets N-tiling size to 64.
+- K-tiling configuration is determined when [quantizing models](#quantization) since it impacts the packed weights layout. Adjust it by setting different quantization types. For example, `I1_V_2` sets K-tiling size to 2 based on `I1_V` packing.
 
-From extensive experiments across Intel/AMD/ARM CPUs, we find the following settings to be strong defaults:
+### Tuning guide
 
-- `entry_size = 32`  
+Based on empirical results, we recommend starting from the fault settings below:
+
+- `entry_size = 32`
 - `I2_V_4` or `I2_V_8`  
 - `I1_V_2`
 
-### Running the Auto-Search
+We also provide [search-config.sh](scripts/search-config.sh) to run automatic search. It enumerates all configurations within the search space, and profiles their GeMM performance with [test-vlut-gemm.cpp](tests/test-vlut-gemm.cpp).
 
-If you want to tune the configuration specifically for your device, we provide an automated search utility: `search-config.sh` (with `test-vlut-gemm`)
-
-#### Usage
+Usage:
 
 ```bash
 ./evaluation/scripts/search-config.sh <search_mode>
 ```
-`search_mode` determines which set of VLUT variants will be explored:
-- **Search mode 1** — searches I1 variants
-- **Search mode 2** — searches I2 variants
+`search_mode` determines which packing method to explore:
+- Mode 1: `I1` variants
+- Mode 2: `I2` variants
 
 A full sweep typically completes in a few minutes and outputs aggregated scores into:
+
 ```
 evaluation/results_search/scores<search_mode>.csv
 ```
+
+After this, manually set `TABLE_ENTRY_SIZE` and quantization types to apply the changes.
+
+### ISA-specific Options
+
+We provide a few ISA-specific options that you might enable, if the compiler (e.g., `g++` or `clang++`) doesn't automatically apply ISA-specific SIMD optimizations. They are defined in [vlut.cmake](../cmake/vlut.cmake).
+
+For example, on the AWS Graviton 3 which supports ARM SVE, configure the project with:
+
+```sh
+cmake -B build -DVLUT_SVE=1
+```
+
+## Limitations
+
+TODO
