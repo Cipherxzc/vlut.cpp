@@ -227,7 +227,7 @@ def plot_all_archs_e2e_batch(results_dict, model_names=None, thread_mode="auto",
             all_quants.update(df['model_quant'].unique())
     
     # Sort the quantization values for consistent ordering
-    all_quants = sorted(all_quants)
+    all_quants = sorted(all_quants, key=lambda x: TYPE_ORDER.get(x, 999))
     
     # Find all unique batch sizes across all datasets and models
     all_batch_sizes = set()
@@ -257,7 +257,7 @@ def plot_all_archs_e2e_batch(results_dict, model_names=None, thread_mode="auto",
                     b_data = subset[subset['B'] == batch_size]
                     
                     # Get the quantization types available for this model/arch/batch size
-                    available_quants = sorted(b_data['model_quant'].unique())
+                    available_quants = sorted(b_data['model_quant'].unique(), key=lambda x: TYPE_ORDER.get(x, 999))
                     
                     if not available_quants:
                         continue  # Skip if no data for this batch size

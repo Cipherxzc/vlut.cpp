@@ -230,7 +230,7 @@ def plot_multi_arch_comparison(results_dict, mkn_to_plot=None, lut2_on=None, ent
                 all_type_a_values.add(type_a)
     
     # Sort the types for consistent ordering
-    all_type_a_values = sorted(all_type_a_values)
+    all_type_a_values = sorted(all_type_a_values, key=lambda x: TYPE_ORDER.get(x, 999))
 
     
     # Create the subplots grid for data only
@@ -286,7 +286,7 @@ def plot_multi_arch_comparison(results_dict, mkn_to_plot=None, lut2_on=None, ent
                 # If we have data, plot it
                 if not subset.empty:
                     # Sort by type_a for consistent ordering
-                    subset = subset.sort_values('type_a')
+                    subset = subset.sort_values('type_a', key=lambda x: x.map(TYPE_ORDER).fillna(999))
                     
                     # Prepare for bar chart
                     type_a_values = subset['type_a'].values
@@ -297,7 +297,7 @@ def plot_multi_arch_comparison(results_dict, mkn_to_plot=None, lut2_on=None, ent
                     bars = []
                     for i, type_a in enumerate(type_a_values):
                         style = GEMM_TYPE_STYLES.get(type_a, {'color': '#000000', 'hatch': ''})
-                        bar = ax.bar(x_pos[i], performance[i], width=0.8, linewidth=1.5,
+                        bar = ax.bar(x_pos[i], performance[i], width=1, linewidth=1.5,
                                     color=style['color'], hatch=style['hatch'],
                                     edgecolor='black', zorder=3)
                         bars.append(bar)

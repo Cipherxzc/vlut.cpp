@@ -1,3 +1,16 @@
+
+TYPE_ORDER = {
+    'Ours I2 (b2.00)': 0,
+    'Ours I1 (b1.60)': 1,
+    'T-MAC INT_N (b2.00)': 2,
+    'llama.cpp Q4_0 (b4.50)': 3,
+    'llama.cpp TQ2_0 (b2.06)': 4,
+    'llama.cpp TQ1_0 (b1.69)': 5, 
+    'bitnet.cpp I2_S (b2.00)': 6,
+    'bitnet.cpp TL1 (b2.00)': 7,
+    'bitnet.cpp TL2 (b1.67)': 8,
+}
+
 DEVICE_MAP = {
     'pc_intel': 'Intel PC (x86)',
     'laptop_amd': 'Legion 5 Pro (x86)',
@@ -39,14 +52,13 @@ GEMM_TYPE_MAP = {
     'tq2_0': 'llama.cpp TQ2_0 (b2.06)',
 }
 
-# Custom colors and patterns for each implementation type
 GEMM_TYPE_STYLES = {
-    'Ours I2 (b2.00)': {'color': '#32A178', 'hatch': ''},
+    'Ours I2 (b2.00)': {'color': '#3274A1', 'hatch': ''},
     'Ours I1 (b1.60)': {'color': '#3274A1', 'hatch': '//'},
-    'T-MAC INT_N (b2.00)': {'color': '#9067A9', 'hatch': ''},
-    'llama.cpp Q4_0 (b4.50)': {'color': '#5DA8D4', 'hatch': ''},
-    'llama.cpp TQ1_0 (b1.69)': {'color': '#D76B69', 'hatch': '//'},
-    'llama.cpp TQ2_0 (b2.06)': {'color': '#CDB236', 'hatch': ''},
+    'T-MAC INT_N (b2.00)': {'color': "#FF7F7D", 'hatch': ''},
+    'llama.cpp Q4_0 (b4.50)': {'color': '#32A178', 'hatch': '..'},
+    'llama.cpp TQ1_0 (b1.69)': {'color': '#32A178', 'hatch': '//'},
+    'llama.cpp TQ2_0 (b2.06)': {'color': '#32A178', 'hatch': ''},
 }
 
 E2E_TYPE_MAP = {
@@ -59,7 +71,7 @@ E2E_TYPE_MAP = {
     'Q4_0': 'llama.cpp Q4_0 (b4.50)',
     'TQ2_0': 'llama.cpp TQ2_0 (b2.06)',
     'TQ1_0': 'llama.cpp TQ1_0 (b1.69)', 
-    'i2_s': 'bitnet.cpp I2_V (b2.00)',
+    'i2_s': 'bitnet.cpp I2_S (b2.00)',
     'tl1': 'bitnet.cpp TL1 (b2.00)',
     'tl2': 'bitnet.cpp TL2 (b1.67)',
 }
@@ -71,9 +83,9 @@ E2E_TYPE_STYLES = {
     'llama.cpp Q4_0 (b4.50)': GEMM_TYPE_STYLES['llama.cpp Q4_0 (b4.50)'],
     'llama.cpp TQ1_0 (b1.69)': GEMM_TYPE_STYLES['llama.cpp TQ1_0 (b1.69)'],
     'llama.cpp TQ2_0 (b2.06)': GEMM_TYPE_STYLES['llama.cpp TQ2_0 (b2.06)'],
-    'bitnet.cpp I2_V (b2.00)': {'color': '#E18727', 'hatch': ''},
-    'bitnet.cpp TL1 (b2.00)': {'color': '#26828E', 'hatch': ''},
-    'bitnet.cpp TL2 (b1.67)': {'color': '#7EB875', 'hatch': '//'},
+    'bitnet.cpp I2_S (b2.00)': {'color': "#FCAD58", 'hatch': ''},
+    'bitnet.cpp TL1 (b2.00)': {'color': "#FCAD58", 'hatch': '\\\\'},
+    'bitnet.cpp TL2 (b1.67)': {'color': "#FCAD58", 'hatch': '//'},
 }
 
 GEMM_MODEL_MAP = {

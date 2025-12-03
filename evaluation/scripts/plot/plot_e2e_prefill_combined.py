@@ -193,7 +193,7 @@ def plot_all_archs_e2e_prefill(results_dict, model_names=None, thread_mode="auto
             all_quants.update(df['model_quant'].unique())
     
     # Sort the quantization values for consistent ordering
-    all_quants = sorted(all_quants)
+    all_quants = sorted(all_quants, key=lambda x: TYPE_ORDER.get(x, 999))
     
     # Prepare legend data
     legend_handles = []
@@ -227,7 +227,7 @@ def plot_all_archs_e2e_prefill(results_dict, model_names=None, thread_mode="auto
                     p_data = subset[subset['p'] == p_length]
                     
                     # Get the quantization types available for this model/arch/prompt length
-                    available_quants = sorted(p_data['model_quant'].unique())
+                    available_quants = sorted(p_data['model_quant'].unique(), key=lambda x: TYPE_ORDER.get(x, 999))
                     
                     if not available_quants:
                         continue  # Skip if no data for this prompt length
