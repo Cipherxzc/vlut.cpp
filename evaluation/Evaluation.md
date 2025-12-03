@@ -184,6 +184,15 @@ models
     └── ...
 ```
 
+### Quick Check
+
+Run a quick check to see if everything goes correctly:
+
+```sh
+# Test prompt with HF BitNet 3B, I1_V quant
+./build/bin/llama-cli -m ~/models/bitnet_b1_58-3B/ggml-model-I1_V.gguf -p "I believe the meaning of life is"
+```
+
 ## Main Evaluation
 
 There are 3 experiments in the main evaluation:
