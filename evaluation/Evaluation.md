@@ -44,7 +44,7 @@ TODO
 
 ### Build from source
 
-vlut.cpp has the same building process as [llama.cpp](https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md#cpu-build). Please build with `cmake`:
+vlut.cpp has the same building process as [llama.cpp](docs/build.md#cpu-build). Please build with `cmake`:
 
 ```
 cmake -B build

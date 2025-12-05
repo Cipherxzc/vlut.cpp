@@ -63,12 +63,12 @@ TMAC_LLAMA_CPP_DIR="$TMAC_DIR/3rdparty/llama.cpp"
 
 "$SCRIPT_DIR/bench-prefill.sh" -w "$TMAC_LLAMA_CPP_DIR" -m "$MODEL_DIR/$MODEL_NAME.INT_N.gguf" -p "$PROMPT_LENGTH" -t "$THREAD_COUNT" -r "$REPEAT_COUNT" --csv # model name is not ggml-model-...
 
-echo "Benchmarking bitnet.cpp model..."
-BITNET_CPP_DIR="$WORKSPACE_DIR/BitNet"
-
 
 
 # ==================== Benchmark bitnet.cpp if available ====================
+echo "Benchmarking bitnet.cpp model..."
+BITNET_CPP_DIR="$WORKSPACE_DIR/BitNet"
+
 if [ ! -d $BITNET_CPP_DIR ]; then
   echo "bitnet.cpp directory not found. Skipping bitnet.cpp benchmark."
   echo "All benchmarks completed. Results stored in $RESULTS_DIR"
