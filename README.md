@@ -1,15 +1,23 @@
 # vlut.cpp
 
-**vlut.cpp** is a lightweight extension of [llama.cpp](https://github.com/ggml-org/llama.cpp) that integrates **Vec-LUT**, an efficient lookup-table–based mixed-precision GeMM (mpGeMM) kernel for **ternary (1.58-bit) LLMs**, which is designed for **parallel multi-token inference** on resource-constrained CPUs.
+vlut.cpp is a lightweight extension of [llama.cpp](https://github.com/ggml-org/llama.cpp) that implements [*Vec-LUT: Vector Table Lookup for Parallel Ultra-Low-Bit LLM Inference on Edge Devices*](TODO:link).
 
-This repository contains the code and artifact evaluation guide for *"Vec-LUT: Accelerate On-Device Inference of Ternary
-LLMs with Vector Lookup Table"*
+The Vec-LUT kernel is fast for parallel ultra-low-bit LLM inference with:
 
-We conduct a comprehensive evaluation across 3 real-world ternary LLMs and 5 devices, in both single and multi-thread.
+- Lookup table (LUT)-based design that replaces dequantization and multiplication with efficient table lookup.
+- Vector LUT paradigm that performs efficient 1→N lookup and turns random lookup into contiguous vector addition.
+- Vector LUT-centric tensor layout and cache-aware streamed lookup that optimizes the memory access patterns.
 
-TODO: [main_experiments_picture]()
+Based on the Vec-LUT kernel, vlut.cpp is efficient and easy to use with:
 
-Please refer to [Evaluation.md](evaluation/Evaluation.md) for detailed instructions to evaluate FlexNN and reproduce the results.
+- llama.cpp-compatible kernel integration and similar usage.
+- Heuristic tiling strategy without costly tuning.
+
+Benchmark results of the Vec-LUT GeMM kernel vs. [T-MAC](https://github.com/microsoft/T-MAC) and [llama.cpp](https://github.com/ggml-org/llama.cpp):
+
+![Vec-LUT kernel benchmark](media/gemm_benchmark.png)
+
+To produce full results in the paper, please refer to [Evaluation.md](evaluation/Evaluation.md) for a detailed evaluation guide.
 
 ## Demo
 
@@ -17,9 +25,9 @@ TODO
 
 ## Supported Models
 
-vlut.cpp focuses on **ternary (1.58-bit) LLMs** and supports a rich set of models via flexible sub-2-bit packing. Any supported model needs to be converted to **GGUF** and then packed using vlut.cpp quantization types (e.g., `I1_V`, `I2_V`, `I1_V_k`, `I2_V_k`).
+vlut.cpp now supports a rich set ternary (1.58-bit) LLMs.
 
-**Model families (HF):**
+Supported models:
 
 - **HF BitNet family**
   - Example: [`1bitLLM/bitnet_b1_58-3B`](https://huggingface.co/1bitLLM/bitnet_b1_58-3B)
@@ -30,11 +38,9 @@ vlut.cpp focuses on **ternary (1.58-bit) LLMs** and supports a rich set of model
 - **TriLM family**
   - Example: [`SpectraSuite/TriLM_3.9B_Unpacked`](https://huggingface.co/SpectraSuite/TriLM_3.9B_Unpacked)
 
-To reproduce full comparison results involving **FP16/BF16 baselines**, please refer to the [Evaluation Guide](evaluation/Evaluation.md).
-
 ## Quick Start
 
-This section walks you through the minimum steps required to run a ternary LLM with **vlut.cpp**:
+This section walks you through the minimum steps required to run a ternary LLM with vlut.cpp:
 
 1. **Install and build** vlut.cpp.
 1. **Convert** a HuggingFace model into vlut-compatible GGUF.  
@@ -45,7 +51,7 @@ For a more detailed evaluation pipeline (GeMM, prefill, batched decoding, multi-
 
 ### 1. Installation
 
-vlut.cpp follows **the same build process as llama.cpp** (CPU build), see [how to build](docs/build.md#cpu-build).
+vlut.cpp follows the same build process as llama.cpp (CPU build), see [how to build](docs/build.md#cpu-build).
 
 Run the following commands to build vlut.cpp with 4 parallel jobs:
 
@@ -56,7 +62,7 @@ cmake --build build --config Release -j 4
 
 ### 2. Convert a HuggingFace model to GGUF
 
-Before quantization, HuggingFace-format models (safetensors) must be converted to **vlut GGUF**.
+Before quantization, HuggingFace models (safetensors) must be converted to vlut GGUF.
 
 Install dependencies:
 
