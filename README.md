@@ -123,7 +123,7 @@ example:
 
 ## Acknowledgement
 
-This project is built atop [llama.cpp]((https://github.com/ggml-org/llama.cpp)). Thanks to all the contributors for their valuable works!
+This project is built atop [llama.cpp](https://github.com/ggml-org/llama.cpp). Thanks to all the contributors for their valuable works!
 
 The LUT-based idea is inspired by [T-MAC](https://github.com/microsoft/T-MAC/), which is primarily optimized for *non-parallel* scenarios (e.g., single-batch decoding).
 
