@@ -132,6 +132,9 @@ llama_target_and_test(test-chat-template.cpp)
 llama_target_and_test(test-gguf.cpp)
 llama_target_and_test(test-backend-ops.cpp)
 
+# vec-lut-specific tests
+llama_target_and_test(test-vlut-gemm.cpp)
+
 llama_target_and_test(test-model-load-cancel.cpp  LABEL "model")
 llama_target_and_test(test-autorelease.cpp        LABEL "model")
 

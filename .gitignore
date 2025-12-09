@@ -1,3 +1,17 @@
+# Results
+
+evaluation/result*/
+evaluation/figure*/
+evaluation/report*/
+
+mytest/
+
+# Binaries in scripts/
+
+scripts/*
+!scripts/**/
+!scripts/**/*.*
+
 # Extensions
 
 *.a

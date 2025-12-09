@@ -1,8 +1,10 @@
 #include "llama-quant.h"
 
+#include "ggml.h"
 #include "llama-impl.h"
 #include "llama-model.h"
 #include "llama-model-loader.h"
+#include "llama.h"
 
 #include <algorithm>
 #include <cmath>
@@ -149,7 +151,12 @@ static ggml_type llama_tensor_get_type(quantize_state_impl & qs, ggml_type new_t
     // for arches that share the same tensor between the token embeddings and the output, we quantize the token embeddings
     // with the quantization of the output tensor
     if (name == tn(LLM_TENSOR_OUTPUT, "weight") || (!qs.has_output && name == tn(LLM_TENSOR_TOKEN_EMBD, "weight"))) {
-        if (qs.params->output_tensor_type < GGML_TYPE_COUNT) {
+        // Special case for Vec-LUT
+        if (qs.params->ftype == LLAMA_FTYPE_MOSTLY_I2_V || qs.params->ftype == LLAMA_FTYPE_MOSTLY_I2_V_4 ||
+            qs.params->ftype == LLAMA_FTYPE_MOSTLY_I2_V_8 || qs.params->ftype == LLAMA_FTYPE_MOSTLY_I1_V ||
+            qs.params->ftype == LLAMA_FTYPE_MOSTLY_I1_V_2) {
+            new_type = GGML_TYPE_Q6_K;
+        } else if (qs.params->output_tensor_type < GGML_TYPE_COUNT) {
             new_type = qs.params->output_tensor_type;
         } else {
             const int64_t nx = tensor->ne[0];
@@ -168,7 +175,12 @@ static ggml_type llama_tensor_get_type(quantize_state_impl & qs, ggml_type new_t
             }
         }
     } else if (name == "token_embd.weight") {
-        if (qs.params->token_embedding_type < GGML_TYPE_COUNT) {
+        // Special case for Vec-LUT
+        if (qs.params->ftype == LLAMA_FTYPE_MOSTLY_I2_V || qs.params->ftype == LLAMA_FTYPE_MOSTLY_I2_V_4 ||
+            qs.params->ftype == LLAMA_FTYPE_MOSTLY_I2_V_8 || qs.params->ftype == LLAMA_FTYPE_MOSTLY_I1_V ||
+            qs.params->ftype == LLAMA_FTYPE_MOSTLY_I1_V_2) {
+            new_type = GGML_TYPE_Q4_K;
+        } else if (qs.params->token_embedding_type < GGML_TYPE_COUNT) {
             new_type = qs.params->token_embedding_type;
         } else {
             if (ftype == LLAMA_FTYPE_MOSTLY_IQ2_XXS || ftype == LLAMA_FTYPE_MOSTLY_IQ2_XS ||
@@ -372,7 +384,8 @@ static ggml_type llama_tensor_get_type(quantize_state_impl & qs, ggml_type new_t
         const int64_t ny = tensor->ne[1];
         const int64_t qk_k = ggml_blck_size(new_type);
 
-        if (nx % qk_k != 0) {
+        if (nx % qk_k != 0 && new_type != GGML_TYPE_I1_V && new_type != GGML_TYPE_I1_V_2 &&
+            new_type != GGML_TYPE_I1_V_4) {
             LLAMA_LOG_WARN("\n\n%s : tensor cols %" PRId64 " x %" PRId64 " are not divisible by %" PRId64 ", required for %s", __func__, nx, ny, qk_k, ggml_type_name(new_type));
             convert_incompatible_tensor = true;
         } else {
@@ -502,6 +515,12 @@ static void llama_model_quantize_impl(const std::string & fname_inp, const std::
         case LLAMA_FTYPE_MOSTLY_IQ4_XS:  default_type = GGML_TYPE_IQ4_XS;  break;
         case LLAMA_FTYPE_MOSTLY_IQ3_S:   default_type = GGML_TYPE_IQ3_S;   break;
         case LLAMA_FTYPE_MOSTLY_IQ3_M:   default_type = GGML_TYPE_IQ3_S;   break;
+        // Vec-LUT types
+        case LLAMA_FTYPE_MOSTLY_I2_V:    default_type = GGML_TYPE_I2_V;    break;
+        case LLAMA_FTYPE_MOSTLY_I2_V_4:  default_type = GGML_TYPE_I2_V_4;  break;
+        case LLAMA_FTYPE_MOSTLY_I2_V_8:  default_type = GGML_TYPE_I2_V_8;  break;
+        case LLAMA_FTYPE_MOSTLY_I1_V:    default_type = GGML_TYPE_I1_V;    break;
+        case LLAMA_FTYPE_MOSTLY_I1_V_2:  default_type = GGML_TYPE_I1_V_2;  break;
 
         default: throw std::runtime_error(format("invalid output file type %d\n", ftype));
     }
@@ -857,7 +876,13 @@ static void llama_model_quantize_impl(const std::string & fname_inp, const std::
             const int64_t nrows = tensor->ne[1];
 
             static const int64_t min_chunk_size = 32 * 512;
-            const int64_t chunk_size = (n_per_row >= min_chunk_size ? n_per_row : n_per_row * ((min_chunk_size + n_per_row - 1)/n_per_row));
+            int64_t chunk_size = (n_per_row >= min_chunk_size ? n_per_row : n_per_row * ((min_chunk_size + n_per_row - 1)/n_per_row));
+            if (new_type == GGML_TYPE_I2_V || new_type == GGML_TYPE_I2_V_4 || new_type == GGML_TYPE_I2_V_8 ||
+                new_type == GGML_TYPE_I2_V_16 || new_type == GGML_TYPE_I1_V || new_type == GGML_TYPE_I1_V_2 ||
+                new_type == GGML_TYPE_I1_V_4) {
+                // for Vec-LUT type, we need to quantize the whole matrix at once
+                chunk_size = n_per_row * nrows;
+            }
 
             const int64_t nelements_matrix = tensor->ne[0] * tensor->ne[1];
             const int64_t nchunk = (nelements_matrix + chunk_size - 1)/chunk_size;
@@ -879,7 +904,9 @@ static void llama_model_quantize_impl(const std::string & fname_inp, const std::
 
         // update the gguf meta data as we go
         gguf_set_tensor_type(ctx_outs[cur_split].get(), name.c_str(), new_type);
-        GGML_ASSERT(gguf_get_tensor_size(ctx_outs[cur_split].get(), gguf_find_tensor(ctx_outs[cur_split].get(), name.c_str())) == new_size);
+        if (new_type != GGML_TYPE_I1_V && new_type != GGML_TYPE_I1_V_2 && new_type != GGML_TYPE_I1_V_4) {
+            GGML_ASSERT(gguf_get_tensor_size(ctx_outs[cur_split].get(), gguf_find_tensor(ctx_outs[cur_split].get(), name.c_str())) == new_size);
+        }
         gguf_set_tensor_data(ctx_outs[cur_split].get(), name.c_str(), new_data);
 
         // write tensor data + padding
