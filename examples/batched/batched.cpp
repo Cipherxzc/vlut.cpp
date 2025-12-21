@@ -8,6 +8,14 @@
 #include <string>
 #include <vector>
 
+static std::string sanitize_text(const std::string & text) {
+    std::string result = text;
+    for (auto & c : result) {
+        if (c == '\n') c = ' ';
+    }
+    return result;
+}
+
 static void print_usage(int, char ** argv) {
     LOG("\nexample usage:\n");
     LOG("\n    %s -m model.gguf -p \"Hello my name is\" -n 32 -np 4\n", argv[0]);
@@ -93,12 +101,7 @@ int main(int argc, char ** argv) {
     }
 
     // print the prompt token-by-token
-
-    LOG("\n");
-
-    for (auto id : tokens_list) {
-        LOG("%s", common_token_to_piece(ctx, id).c_str());
-    }
+    // prompt printing removed for streaming UI
 
     // create a llama_batch
     // we use this object to submit token data for decoding
@@ -148,6 +151,19 @@ int main(int argc, char ** argv) {
         LOG("\n\n%s: generating %d sequences ...\n", __func__, n_parallel);
     }
 
+    // colors for the sequences
+    const std::vector<std::string> colors = {
+        "\033[31m", "\033[32m", "\033[33m", "\033[34m", "\033[35m", "\033[36m"
+    };
+    const std::string reset_color = "\033[0m";
+
+    // print initial state
+    LOG("\n");
+    for (int i = 0; i < n_parallel; ++i) {
+        LOG("%s[SEQ %d]%s %s\n", colors[i % colors.size()].c_str(), i, reset_color.c_str(), sanitize_text(params.prompt).c_str());
+    }
+    fflush(stdout);
+
     // main loop
 
     // we will store the parallel decoded sequences in this vector
@@ -178,20 +194,31 @@ int main(int argc, char ** argv) {
             // is it an end of generation? -> mark the stream as finished
             if (llama_vocab_is_eog(vocab, new_token_id) || n_cur == n_predict) {
                 i_batch[i] = -1;
-                LOG("\n");
+                // LOG("\n");
                 if (n_parallel > 1) {
-                    LOG_INF("%s: stream %d finished at n_cur = %d", __func__, i, n_cur);
+                    // LOG_INF("%s: stream %d finished at n_cur = %d", __func__, i, n_cur);
                 }
 
                 continue;
             }
 
-            // if there is only one stream, we print immediately to stdout
-            if (n_parallel == 1) {
-                LOG("%s", common_token_to_piece(ctx, new_token_id).c_str());
-            }
+            std::string new_piece = common_token_to_piece(ctx, new_token_id);
+            streams[i] += new_piece;
 
-            streams[i] += common_token_to_piece(ctx, new_token_id);
+            // update the display for this sequence
+            // move cursor up
+            printf("\033[%dA", n_parallel - i);
+            // move to start of line
+            printf("\r");
+            // print the line
+            printf("%s[SEQ %d]%s %s%s", colors[i % colors.size()].c_str(), i, reset_color.c_str(), sanitize_text(params.prompt).c_str(), sanitize_text(streams[i]).c_str());
+            // clear the rest of the line
+            printf("\033[K"); 
+            // move cursor down
+            printf("\033[%dB", n_parallel - i);
+            // move to start of line
+            printf("\r");
+            fflush(stdout);
 
             i_batch[i] = batch.n_tokens;
 
@@ -215,13 +242,13 @@ int main(int argc, char ** argv) {
         }
     }
 
-    if (n_parallel > 1) {
-        LOG("\n");
+    // if (n_parallel > 1) {
+    //     LOG("\n");
 
-        for (int32_t i = 0; i < n_parallel; ++i) {
-            LOG("sequence %d:\n\n%s%s\n\n", i, params.prompt.c_str(), streams[i].c_str());
-        }
-    }
+    //     for (int32_t i = 0; i < n_parallel; ++i) {
+    //         LOG("sequence %d:\n\n%s%s\n\n", i, params.prompt.c_str(), streams[i].c_str());
+    //     }
+    // }
 
     const auto t_main_end = ggml_time_us();
 
