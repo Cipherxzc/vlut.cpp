@@ -9,6 +9,8 @@ vlut.cpp is a lightweight extension of [llama.cpp](https://github.com/ggml-org/l
 - Serving (mixed parallel input and output).
 - Parallel test-time scaling and speculative decoding (parallel output).
 
+> Looking for a leaner checkout? See [docs/root_cleanup.md](docs/root_cleanup.md) for a quick list of optional root-level files you can remove.
+
 The Vec-LUT kernel is fast with:
 
 - Lookup table (LUT)-based design that replaces dequantization and multiplication with efficient table lookup.
