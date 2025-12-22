@@ -8,14 +8,14 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # --- Configuration ---
-DATA_PATH = Path("demo/completion copy.jsonl")
+DATA_PATH = Path("demo/completion.jsonl")
 # DATA_PATH = Path("demo/completion.jsonl")
 LLAMA_SERVER_BIN = "./build/bin/llama-server"
 
-# 48.53s 4.73s 18.69s
+# 18.69s 27.35s
 MODEL_PATH = str(Path("~/models/Llama3-8B-1.58-100B-tokens/ggml-model-TQ1_0.gguf").expanduser())
 
-# Total Program Time: 21.36s 1.63s 9.74s
+# 9.74s 10.11s
 # MODEL_PATH = str(Path("~/models/Llama3-8B-1.58-100B-tokens/ggml-model-I1_V_2.gguf").expanduser())
 
 # --- Execution Mode ---
@@ -61,11 +61,16 @@ def run_api_completion(index, prompt, n_predict, expected):
     }
 
     start_q = time.time()
+    prompt_tokens = -1
     try:
         response = requests.post(API_URL, json=payload)
         response.raise_for_status()
+        json_resp = response.json()
+        # print(f"JSON Response: {json.dumps(json_resp, indent=2)}")
         # Change 2: Added .strip() to remove leading/trailing whitespace
-        result_text = response.json().get("content", "").strip() 
+        result_text = json_resp.get("content", "").strip()
+        timings = json_resp.get("timings", {})
+        prompt_tokens = timings.get("prompt_n", -1)
     except requests.exceptions.RequestException as e:
         result_text = f"[Error: {e}]"
     
@@ -76,7 +81,8 @@ def run_api_completion(index, prompt, n_predict, expected):
         "prompt": prompt,
         "result": result_text,
         "expected": expected,
-        "elapsed": end_q - start_q
+        "elapsed": end_q - start_q,
+        "prompt_tokens": prompt_tokens
     }
 
 def process_sequential(dataset):
@@ -95,7 +101,7 @@ def process_sequential(dataset):
         res = run_api_completion(i+1, prompt, n_predict, expected)
         
         print(f"Result: \"{res['result']}\" | Expected: \"{res['expected']}\"")
-        print(f"[Latency: {res['elapsed']:.2f}s]")
+        print(f"[Latency: {res['elapsed']:.2f}s] [Prompt Tokens: {res['prompt_tokens']}]")
 
         # Check accuracy
         if res['result'] == expected:
@@ -129,7 +135,7 @@ def process_parallel(dataset):
                 print(f"\n[Test Case {res['index']} Finished]")
                 print(f"Prompt: \"{res['prompt']}\"")
                 print(f"Result: \"{res['result']}\" | Expected: \"{res['expected']}\"")
-                print(f"[Latency: {res['elapsed']:.2f}s]")
+                print(f"[Latency: {res['elapsed']:.2f}s] [Prompt Tokens: {res['prompt_tokens']}]")
                 
                 # Check accuracy
                 # Note: res['expected'] was passed in raw, but we stripped expected locally in loop

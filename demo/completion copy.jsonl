@@ -1,5 +1,0 @@
-{"prompt": "The capital city of France is famous for the Eiffel Tower. The name of this city is", "expected": "Paris", "n_predict": 1}
-{"prompt": "When you look up at the sky on a clear, sunny day, the color you see is usually", "expected": "blue", "n_predict": 1}
-{"prompt": "The first man to walk on the moon was an American astronaut named Neil", "expected": "Armstrong", "n_predict": 1}
-{"prompt": "To calculate the area of a circle, you multiply Pi by the square of the", "expected": "radius", "n_predict": 1}
-{"prompt": "Romeo and Juliet is a famous tragedy written by William", "expected": "Shakespeare", "n_predict": 1}
