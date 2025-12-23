@@ -16,6 +16,41 @@ static std::string sanitize_text(const std::string & text) {
     return result;
 }
 
+static std::string last_two_path_components(const std::string & path) {
+    if (path.empty()) {
+        return path;
+    }
+
+    // treat both '/' and '\\' as separators
+    auto is_sep = [](char c) { return c == '/' || c == '\\'; };
+
+    // find last separator
+    std::string::size_type last = std::string::npos;
+    for (std::string::size_type i = path.size(); i-- > 0;) {
+        if (is_sep(path[i])) {
+            last = i;
+            break;
+        }
+    }
+
+    if (last == std::string::npos) {
+        // single component
+        return path;
+    }
+
+    // find the separator before the last component
+    std::string::size_type prev = std::string::npos;
+    for (std::string::size_type i = last; i-- > 0;) {
+        if (is_sep(path[i])) {
+            prev = i;
+            break;
+        }
+    }
+
+    std::string::size_type start = (prev == std::string::npos) ? 0 : prev + 1;
+    return path.substr(start);
+}
+
 static void print_usage(int, char ** argv) {
     LOG("\nexample usage:\n");
     LOG("\n    %s -m model.gguf -p \"Hello my name is\" -n 32 -np 4\n", argv[0]);
@@ -148,7 +183,13 @@ int main(int argc, char ** argv) {
     //}
 
     if (n_parallel > 1) {
-        LOG("\n\n%s: generating %d sequences ...\n", __func__, n_parallel);
+        const std::string model_display = last_two_path_components(params.model);
+
+        // clear screen and move cursor to top-left so this line is at the top
+        printf("\033[2J\033[H");
+        fflush(stdout);
+
+        LOG("%s: generating %d sequences with %s\n", __func__, n_parallel, model_display.c_str());
     }
 
     // const std::vector<std::string> colors = {
