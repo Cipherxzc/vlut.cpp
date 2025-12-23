@@ -151,16 +151,35 @@ int main(int argc, char ** argv) {
         LOG("\n\n%s: generating %d sequences ...\n", __func__, n_parallel);
     }
 
-    // colors for the sequences
+    // const std::vector<std::string> colors = {
+    //     "\033[38;5;33m",  // deep blue
+    //     "\033[38;5;163m", // purple magenta
+    //     "\033[38;5;35m",  // teal green
+    //     "\033[38;5;214m", // orange
+    //     "\033[38;5;170m", // violet
+    //     "\033[38;5;36m",  // dark cyan
+    // };
     const std::vector<std::string> colors = {
-        "\033[31m", "\033[32m", "\033[33m", "\033[34m", "\033[35m", "\033[36m"
+        "\033[38;5;69m",  // cornflower blue
+        "\033[38;5;169m", // orchid
+        "\033[38;5;71m",  // sea green
+        "\033[38;5;179m", // gold
+        "\033[38;5;135m", // medium purple
+        "\033[38;5;73m",  // turquoise
     };
     const std::string reset_color = "\033[0m";
+    const std::string bold = "\033[1m";
+    const std::string dim = "\033[2m"; //prompt
 
     // print initial state
     LOG("\n");
     for (int i = 0; i < n_parallel; ++i) {
-        LOG("%s[SEQ %d]%s %s\n", colors[i % colors.size()].c_str(), i, reset_color.c_str(), sanitize_text(params.prompt).c_str());
+        LOG("%s%s▸ %2d │%s %s\n", 
+            bold.c_str(),
+            colors[i % colors.size()].c_str(), 
+            i, 
+            reset_color.c_str(), 
+            sanitize_text(params.prompt).c_str());
     }
     fflush(stdout);
 
@@ -210,8 +229,17 @@ int main(int argc, char ** argv) {
             printf("\033[%dA", n_parallel - i);
             // move to start of line
             printf("\r");
-            // print the line
-            printf("%s[SEQ %d]%s %s%s", colors[i % colors.size()].c_str(), i, reset_color.c_str(), sanitize_text(params.prompt).c_str(), sanitize_text(streams[i]).c_str());
+            // print the line with highlighted current token
+            printf("%s%s▸ %2d │%s %s%s%s%s", 
+                bold.c_str(),
+                colors[i % colors.size()].c_str(), 
+                i, 
+                reset_color.c_str(), 
+                dim.c_str(),
+                sanitize_text(params.prompt).c_str(),
+                reset_color.c_str(),
+                sanitize_text(streams[i]).c_str()
+            );
             // clear the rest of the line
             printf("\033[K"); 
             // move cursor down
