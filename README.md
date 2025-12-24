@@ -5,7 +5,7 @@
 
 vlut.cpp (lookup table-based) vs. [llama.cpp](https://github.com/ggml-org/llama.cpp) (dequantization-based) running [Llama3-8B-1.58-100B-tokens](https://huggingface.co/HF1BitLLM/Llama3-8B-1.58-100B-tokens) on Intel Core Ultra 7 258V (see [run_batched_decode.sh](evaluation/demo/run_batched_decode.sh)):
 
-https://raw.githubusercontent.com/Cipherxzc/vlut.cpp/demo/media/llama_parallel_decode_demo_480p.mp4
+https://github.com/user-attachments/assets/157d36e9-478d-46e7-b8a3-ac0ddb8e0187
 
 vlut.cpp vs. [llama.cpp](https://github.com/ggml-org/llama.cpp) vs. [T-MAC](https://github.com/microsoft/T-MAC) in GeMM kernel benchmark (see [Evaluation.md](evaluation/Evaluation.md) for a detailed evaluation guide):
 
