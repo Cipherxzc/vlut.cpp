@@ -3,8 +3,8 @@
 set -euo pipefail
 
 BIN="./build/bin/llama-batched"
-# MODEL_DIR="$HOME/models/Llama3-8B-1.58-100B-tokens"
-MODEL_DIR="$HOME/models/bitnet_b1_58-3B"
+MODEL_DIR="$HOME/models/Llama3-8B-1.58-100B-tokens"
+# MODEL_DIR="$HOME/models/bitnet_b1_58-3B"
 MODEL1="$MODEL_DIR/ggml-model-I1_V_2.gguf"	# vlut.cpp I1_V_2 (1.60 bpw ternary)
 MODEL2="$MODEL_DIR/ggml-model-TQ1_0.gguf"	# llama.cpp TQ1_0 (1.69 bpw ternary)
 
@@ -36,7 +36,7 @@ fi
 tput civis
 trap 'tput cnorm' EXIT INT TERM
 
-COMMON_ARGS="-np 32 -n 24 -t 1 --temp 0.5 --repeat-penalty 1.5"
+COMMON_ARGS="-np 32 -n 16 -t 1 --temp 0.5 --repeat-penalty 1.5"
 
 $BIN -m $MODEL1 -p "I believe" $COMMON_ARGS
 echo "" >&2

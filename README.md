@@ -3,6 +3,16 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![arXiv](https://img.shields.io/badge/arXiv-2512.06443-b31b1b.svg)](https://arxiv.org/abs/2512.06443)
 
+vlut.cpp (lookup table-based) vs. [llama.cpp](https://github.com/ggml-org/llama.cpp) (dequantization-based) running [Llama3-8B-1.58-100B-tokens](https://huggingface.co/HF1BitLLM/Llama3-8B-1.58-100B-tokens) on Intel Core Ultra 7 258V (see [run_batched_decode.sh](evaluation/demo/run_batched_decode.sh)):
+
+[![Watch the video](https://raw.githubusercontent.com/Cipherxzc/vlut.cpp/master/media/llama_parallel_decode_demo.jpg)](https://raw.githubusercontent.com/Cipherxzc/vlut.cpp/master/media/llama_parallel_decode_demo.mp4)
+
+vlut.cpp vs. [llama.cpp](https://github.com/ggml-org/llama.cpp) vs. [T-MAC](https://github.com/microsoft/T-MAC) in GeMM kernel benchmark (see [Evaluation.md](evaluation/Evaluation.md) for a detailed evaluation guide):
+
+![Vec-LUT kernel benchmark](media/gemm_benchmark.png)
+
+## Introduction
+
 vlut.cpp is a lightweight extension of [llama.cpp](https://github.com/ggml-org/llama.cpp) that implements [*Vec-LUT: Vector Table Lookup for Parallel Ultra-Low-Bit LLM Inference on Edge Devices*](https://arxiv.org/abs/2512.06443). It targets *parallel ultra-low-bit* LLM inference. Parallel scenarios include:
 
 - Prefilling (parallel input, most common).
@@ -19,16 +29,6 @@ Based on the Vec-LUT kernel, vlut.cpp is efficient and easy to use with:
 
 - llama.cpp-compatible kernel integration and similar usage.
 - Heuristic tiling strategy without costly tuning.
-
-Benchmark results of the Vec-LUT GeMM kernel vs. [T-MAC](https://github.com/microsoft/T-MAC) and [llama.cpp](https://github.com/ggml-org/llama.cpp):
-
-![Vec-LUT kernel benchmark](media/gemm_benchmark.png)
-
-To reproduce full results in the paper, please refer to [Evaluation.md](evaluation/Evaluation.md) for a detailed evaluation guide. We provide automatic scripts to ease the evaluation.
-
-## Demo
-
-TODO
 
 ## Supported Platforms
 
