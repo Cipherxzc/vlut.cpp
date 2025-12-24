@@ -1,0 +1,5 @@
+{"prompt": "The capital city of France is famous for the Eiffel Tower and the Louvre Museum. The name of this city is", "expected": "Paris", "n_predict": 1}
+{"prompt": "The first man to walk on the moon during the Apollo 11 mission in 1969 was an American astronaut named Neil", "expected": "Armstrong", "n_predict": 1}
+{"prompt": "To calculate the area of a circle in geometry class, you need to multiply Pi (approximately 3.14159) by the square of the", "expected": "radius", "n_predict": 1}
+{"prompt": "Romeo and Juliet is a famous tragedy about two young star-crossed lovers from feuding families in Verona, written by William", "expected": "Shakespeare", "n_predict": 1}
+{"prompt": "The theory of relativity changed our understanding of time and space, and it was famously developed in 1905 by Albert", "expected": "Einstein", "n_predict": 1}
