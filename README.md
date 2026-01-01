@@ -2,6 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![arXiv](https://img.shields.io/badge/arXiv-2512.06443-b31b1b.svg)](https://arxiv.org/abs/2512.06443)
+[![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Collection-blue)](https://huggingface.co/collections/XXXXyu/vlutcpp)
 
 vlut.cpp (lookup table-based) vs. [llama.cpp](https://github.com/ggml-org/llama.cpp) (dequantization-based) running [Llama3-8B-1.58-100B-tokens](https://huggingface.co/HF1BitLLM/Llama3-8B-1.58-100B-tokens) on Intel Core Ultra 7 258V (see [run_batched_decode.sh](evaluation/demo/run_batched_decode.sh)):
 
@@ -51,6 +52,8 @@ vlut.cpp now supports a rich set of ternary (1.58-bit) LLMs:
 - **TriLM family**
   - Example: [`SpectraSuite/TriLM_3.9B_Unpacked`](https://huggingface.co/SpectraSuite/TriLM_3.9B_Unpacked)
 
+We provide pre-converted models for immediate on-device deployment with vlut.cpp. Checkout [1.58-bit LLMs for vlut.cpp](https://huggingface.co/collections/XXXXyu/vlutcpp) on Huggingface.
+
 ## Quick Start
 
 This section walks you through the minimum steps required to run a ternary LLM with vlut.cpp:
@@ -75,7 +78,7 @@ cmake --build build --config Release -j 4
 
 ### 2. Convert a HuggingFace model to GGUF
 
-Before quantization, HuggingFace models (safetensors) must be converted to vlut GGUF.
+Before quantization, HuggingFace models (safetensors) must be converted to vlut GGUF. Skip this step if you use our pre-converted models.
 
 Install dependencies:
 
@@ -91,24 +94,27 @@ python ./convert_hf_to_gguf_vlut.py ~/models/bitnet_b1_58-3B --outfile ~/models/
 
 ### 3. Quantize the model with Vec-LUT packings
 
-vlut.cpp provides lossless ternary packings **I1** and **I2**, with optional K-tiling variants (e.g., `I1_V_2`, `I2_V_4`).
+vlut.cpp provides lossless ternary packings **I1** and **I2**, with optional K-tiling variants (e.g., `I1_V_2`, `I2_V_4`). Skip this step if you use our pre-converted models.
 
 Quantize the converted GGUF:
 
 ```bash
 ./build/bin/llama-quantize ~/models/bitnet_b1_58-3B/bitnet_b1_58-3B.vlut.gguf I1_V_2
 
-./build/bin/llama-quantize ~/models/bitnet_b1_58-3B/bitnet_b1_58-3B.vlut.gguf I2_V_8
+./build/bin/llama-quantize ~/models/bitnet_b1_58-3B/bitnet_b1_58-3B.vlut.gguf I2_V_4
 ```
 
 The quantized model will be saved as `ggml-model-{quant_type}.gguf`.
 
 ### 4. Run inference
 
-Use `llama-cli` to perform a quick functional check:
+Use `llama-batched` to run a parallel inference:
 
 ```bash
-./build/bin/llama-cli -m model.gguf -p "I believe the meaning of life is" -no-cnv
+./build/bin/llama-batched \
+  -m ~/models/bitnet_b1_58-3B/ggml-model-I2_V_4.gguf \
+  -p "I believe the meaning of life is" \
+  -np 32 -n 16 -t 1 --temp 0.5 --repeat-penalty 1.5
 ```
 
 ### 5. Benchmark performance

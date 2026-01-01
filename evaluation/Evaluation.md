@@ -34,7 +34,7 @@ To reproduce full comparison results, you need to download the FP16/BF16 models 
 
 > Try <https://hf-mirror.com> if you have proxy issues.
 
-For evaluation of vlut.cpp only, we provide pre-converted models: TODO.
+We provide pre-converted models for immediate on-device deployment with vlut.cpp. Checkout [1.58-bit LLMs for vlut.cpp](https://huggingface.co/collections/XXXXyu/vlutcpp) on Huggingface.
 
 ## Installation
 
@@ -190,7 +190,10 @@ Run a quick check to see if everything goes correctly:
 
 ```sh
 # Test prompt with HF BitNet 3B, I1_V quant
-./build/bin/llama-cli -m ~/models/bitnet_b1_58-3B/ggml-model-I1_V.gguf -p "I believe the meaning of life is"
+./build/bin/llama-batched \
+  -m ~/models/bitnet_b1_58-3B/ggml-model-I1_V.gguf \
+  -p "I believe the meaning of life is" \
+  -np 32 -n 16 -t 1 --temp 0.5 --repeat-penalty 1.5
 ```
 
 ## Main Evaluation
