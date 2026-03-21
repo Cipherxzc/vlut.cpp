@@ -3,6 +3,12 @@
 # Get the directory where the script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+warn() {
+  echo "Warning: $*" >&2
+}
+
+FAILURES=0
+
 # Configuration variables that can be easily changed
 DEVICE_NAME="${DEVICE_NAME:-"mydevice"}"
 WORKSPACE_DIR="${WORKSPACE_DIR:-$SCRIPT_DIR/../../..}" # scripts -> evaluation -> vlut.cpp -> workspace
@@ -37,15 +43,30 @@ mkdir -p "$RESULTS_DIR"
 # Pass to bench-batch-decode.sh
 export RESULTS_DIR="$RESULTS_DIR"
 
+run_batch_bench() {
+  local framework_name="$1"
+  local model_path="$2"
+  shift 2
+
+  if [ ! -f "$model_path" ]; then
+    warn "$framework_name: model file not found at $model_path. Skipping."
+    return 0
+  fi
+
+  if ! "$SCRIPT_DIR/bench-batch-decode.sh" "$@" -m "$model_path" -p "$PREFILL_LEN" -g "$TOKEN_GEN_LENS" -n "$PARALLEL_SEQS" -t "$THREAD_COUNT" --csv; then
+    warn "$framework_name: benchmark failed for $(basename "$model_path")."
+    FAILURES=$((FAILURES + 1))
+  fi
+}
 
 
 # ==================== Benchmark I2_V and I1_V ====================
 echo "Benchmarking I2_V_4 model..."
-"$SCRIPT_DIR/bench-batch-decode.sh" -m "$MODEL_DIR/ggml-model-I2_V_4.gguf" -p "$PREFILL_LEN" -g "$TOKEN_GEN_LENS" -n "$PARALLEL_SEQS" -t "$THREAD_COUNT" --csv
+run_batch_bench "vlut.cpp" "$MODEL_DIR/ggml-model-I2_V_4.gguf"
 echo "Benchmarking I2_V_8 model..."
-"$SCRIPT_DIR/bench-batch-decode.sh" -m "$MODEL_DIR/ggml-model-I2_V_8.gguf" -p "$PREFILL_LEN" -g "$TOKEN_GEN_LENS" -n "$PARALLEL_SEQS" -t "$THREAD_COUNT" --csv
+run_batch_bench "vlut.cpp" "$MODEL_DIR/ggml-model-I2_V_8.gguf"
 echo "Benchmarking I1_V_2 model..."
-"$SCRIPT_DIR/bench-batch-decode.sh" -m "$MODEL_DIR/ggml-model-I1_V_2.gguf" -p "$PREFILL_LEN" -g "$TOKEN_GEN_LENS" -n "$PARALLEL_SEQS" -t "$THREAD_COUNT" --csv
+run_batch_bench "vlut.cpp" "$MODEL_DIR/ggml-model-I1_V_2.gguf"
 
 
 
@@ -53,8 +74,12 @@ echo "Benchmarking I1_V_2 model..."
 echo "Benchmarking TQ2_0 and TQ1_0 model with llama.cpp..."
 LLAMA_CPP_DIR="$WORKSPACE_DIR/llama.cpp"
 
-"$SCRIPT_DIR/bench-batch-decode.sh" -w "$LLAMA_CPP_DIR" -m "$MODEL_DIR/ggml-model-TQ2_0.gguf" -p "$PREFILL_LEN" -g "$TOKEN_GEN_LENS" -n "$PARALLEL_SEQS" -t "$THREAD_COUNT" --csv
-"$SCRIPT_DIR/bench-batch-decode.sh" -w "$LLAMA_CPP_DIR" -m "$MODEL_DIR/ggml-model-TQ1_0.gguf" -p "$PREFILL_LEN" -g "$TOKEN_GEN_LENS" -n "$PARALLEL_SEQS" -t "$THREAD_COUNT" --csv
+if [ ! -d "$LLAMA_CPP_DIR" ]; then
+  warn "llama.cpp directory not found at $LLAMA_CPP_DIR. Skipping llama.cpp benchmarks."
+else
+  run_batch_bench "llama.cpp" "$MODEL_DIR/ggml-model-TQ2_0.gguf" -w "$LLAMA_CPP_DIR"
+  run_batch_bench "llama.cpp" "$MODEL_DIR/ggml-model-TQ1_0.gguf" -w "$LLAMA_CPP_DIR"
+fi
 
 
 
@@ -63,7 +88,11 @@ echo "Benchmarking T-MAC model..."
 TMAC_DIR="$WORKSPACE_DIR/T-MAC"
 TMAC_LLAMA_CPP_DIR="$TMAC_DIR/3rdparty/llama.cpp"
 
-"$SCRIPT_DIR/bench-batch-decode.sh" -w "$TMAC_LLAMA_CPP_DIR" -m "$MODEL_DIR/$MODEL_NAME.INT_N.gguf" -p "$PREFILL_LEN" -g "$TOKEN_GEN_LENS" -n "$PARALLEL_SEQS" -t "$THREAD_COUNT" --csv # model name is not ggml-model-...
+if [ ! -d "$TMAC_LLAMA_CPP_DIR" ]; then
+  warn "T-MAC llama.cpp directory not found at $TMAC_LLAMA_CPP_DIR. Skipping T-MAC benchmarks."
+else
+  run_batch_bench "T-MAC" "$MODEL_DIR/$MODEL_NAME.INT_N.gguf" -w "$TMAC_LLAMA_CPP_DIR" # model name is not ggml-model-...
+fi
 
 
 
@@ -71,15 +100,18 @@ TMAC_LLAMA_CPP_DIR="$TMAC_DIR/3rdparty/llama.cpp"
 echo "Benchmarking bitnet.cpp model..."
 BITNET_CPP_DIR="$WORKSPACE_DIR/BitNet"
 
-if [ ! -d $BITNET_CPP_DIR ]; then
-  echo "bitnet.cpp directory not found. Skipping bitnet.cpp benchmark."
-  echo "All benchmarks completed. Results stored in $RESULTS_DIR"
-  exit 0
+if [ ! -d "$BITNET_CPP_DIR" ]; then
+  warn "bitnet.cpp directory not found at $BITNET_CPP_DIR. Skipping bitnet.cpp benchmarks."
+else
+  # one of these would work
+  run_batch_bench "bitnet.cpp" "$MODEL_DIR/ggml-model-tl2.gguf" -w "$BITNET_CPP_DIR"
+  run_batch_bench "bitnet.cpp" "$MODEL_DIR/ggml-model-tl1.gguf" -w "$BITNET_CPP_DIR"
+  run_batch_bench "bitnet.cpp" "$MODEL_DIR/ggml-model-i2_s.gguf" -w "$BITNET_CPP_DIR"
 fi
 
-# one of these would work
-"$SCRIPT_DIR/bench-batch-decode.sh" -w "$BITNET_CPP_DIR" -m "$MODEL_DIR/ggml-model-tl2.gguf" -p "$PREFILL_LEN" -g "$TOKEN_GEN_LENS" -n "$PARALLEL_SEQS" -t "$THREAD_COUNT" --csv
-"$SCRIPT_DIR/bench-batch-decode.sh" -w "$BITNET_CPP_DIR" -m "$MODEL_DIR/ggml-model-tl1.gguf" -p "$PREFILL_LEN" -g "$TOKEN_GEN_LENS" -n "$PARALLEL_SEQS" -t "$THREAD_COUNT" --csv
-"$SCRIPT_DIR/bench-batch-decode.sh" -w "$BITNET_CPP_DIR" -m "$MODEL_DIR/ggml-model-i2_s.gguf" -p "$PREFILL_LEN" -g "$TOKEN_GEN_LENS" -n "$PARALLEL_SEQS" -t "$THREAD_COUNT" --csv
+if [ $FAILURES -ne 0 ]; then
+  warn "$FAILURES benchmark invocation(s) failed. Results stored in $RESULTS_DIR"
+  exit 1
+fi
 
 echo "All batched decoding benchmarks completed. Results stored in $RESULTS_DIR"

@@ -37,7 +37,7 @@ vlut.cpp supports all mainstream CPUs (Intel, AMD, ARM), and operating systems (
 
 > We recommend using the [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/en-us/windows/wsl/install) on Windows, and [Termux](https://termux.dev/en) on Android. They provide Linux-like development environments.
 
-Please refer to [Evaluation.md](evaluation/Evaluation.md#devices) for recommended specifications to run the evaluation.
+Please refer to [Evaluation.md](evaluation/Evaluation.md#environment) for recommended specifications to run the evaluation.
 
 ## Supported Models
 
@@ -52,16 +52,16 @@ vlut.cpp now supports a rich set of ternary (1.58-bit) LLMs:
 - **TriLM family**
   - Example: [`SpectraSuite/TriLM_3.9B_Unpacked`](https://huggingface.co/SpectraSuite/TriLM_3.9B_Unpacked)
 
-We provide pre-converted models for immediate on-device deployment with vlut.cpp. Checkout [1.58-bit LLMs for vlut.cpp](https://huggingface.co/collections/XXXXyu/vlutcpp) on Huggingface.
+We provide pre-converted models for immediate on-device deployment with vlut.cpp. Check out [1.58-bit LLMs for vlut.cpp](https://huggingface.co/collections/XXXXyu/vlutcpp) on Huggingface.
 
 ## Quick Start
 
 This section walks you through the minimum steps required to run a ternary LLM with vlut.cpp:
 
 1. **Install and build** vlut.cpp.
-1. **Convert** a HuggingFace model into vlut-compatible GGUF.  
-2. **Quantize** the model using Vec-LUT packings (I1 / I2).  
-3. **Run** inference using `llama-cli` or benchmark with `llama-bench`.
+2. **Convert** a HuggingFace model into vlut-compatible GGUF.
+3. **Quantize** the model using Vec-LUT packings (I1 / I2).
+4. **Run** inference using `llama-batched` or benchmark with `llama-bench`.
 
 For a more detailed evaluation pipeline (GeMM, prefill, batched decoding, multi-framework comparison), see [Evaluation.md](evaluation/Evaluation.md).
 
@@ -121,7 +121,7 @@ Use `llama-batched` to run a parallel inference:
 
 `llama-bench` lets you measure the performance of the inference for various parameters.
 
-example:
+Example:
 
 ```bash
 ./build/bin/llama-bench -m model.gguf -t 4 -p 128 -n 0

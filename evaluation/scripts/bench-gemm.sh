@@ -9,7 +9,7 @@ ENTRY_SIZE=$4
 # Check if required arguments are provided
 if [ -z "$DEVICE_NAME" ] || [ -z "$THREADS" ] || [ -z "$NS" ]; then
     echo "Usage: $0 <device_name> <threads> <ns> [entry_size]"
-    echo "Example: $0 mydevice 4 \"128,256\" on 32"
+    echo "Example: $0 mydevice 4 \"128,256\" 32"
     exit 1
 fi
 
@@ -61,6 +61,8 @@ for model in "${MODELS[@]}"; do
     
     # Process the log file to CSV using test-to-csv.sh
     "$SCRIPT_DIR/test-to-csv.sh" "$LOG_FILE"
+    # Use test-to-csv-backup.sh if your system awk doesn't recognize the above
+    # "$SCRIPT_DIR/test-to-csv-backup.sh" "$LOG_FILE"
     
     echo "Processed results to ${LOG_FILE%.*}.csv"
 done

@@ -205,6 +205,12 @@ echo "Running command: $CMD"
 echo "Command: $CMD" > "$OUTPUT_FILE"
 echo "----------------------------------------" >> "$OUTPUT_FILE"
 eval "$CMD" >> "$OUTPUT_FILE" 2>&1
+BENCH_STATUS=$?
+
+if [ $BENCH_STATUS -ne 0 ]; then
+  echo "Batched benchmark failed with exit code $BENCH_STATUS. See $OUTPUT_FILE for details." >&2
+  exit $BENCH_STATUS
+fi
 
 echo "Batched benchmark completed. Results saved to $OUTPUT_FILE"
 
