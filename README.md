@@ -1,7 +1,8 @@
 # vlut.cpp
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![arXiv](https://img.shields.io/badge/arXiv-2512.06443-b31b1b.svg)](https://arxiv.org/abs/2512.06443)
+[![DOI](https://img.shields.io/badge/DOI-10.1145%2F3745756.3809200-blue)](https://doi.org/10.1145/3745756.3809200)
+[![arXiv](https://img.shields.io/badge/arXiv-2512.06443-b31b1b.svg)](https://dl.acm.org/doi/10.1145/3745756.3809200)
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Collection-blue)](https://huggingface.co/collections/XXXXyu/vlutcpp)
 
 vlut.cpp (lookup table-based) vs. [llama.cpp](https://github.com/ggml-org/llama.cpp) (dequantization-based) running [Llama3-8B-1.58-100B-tokens](https://huggingface.co/HF1BitLLM/Llama3-8B-1.58-100B-tokens) on Intel Core Ultra 7 258V (see [run_batched_decode.sh](evaluation/demo/run_batched_decode.sh)):
@@ -12,9 +13,13 @@ vlut.cpp vs. [llama.cpp](https://github.com/ggml-org/llama.cpp) vs. [T-MAC](http
 
 ![Vec-LUT kernel benchmark](media/gemm_benchmark.png)
 
+## News
+
+- [ Jun. 2026 ] Our paper [Vec-LUT](https://dl.acm.org/doi/10.1145/3745756.3809200) received the Best Paper Award Runner-up at ACM MobiSys 2026. Congrats and thanks to co-authors! [ [Slides](./media/veclut_slides_mobisys_2026.pdf) ]
+
 ## Introduction
 
-vlut.cpp is a lightweight extension of [llama.cpp](https://github.com/ggml-org/llama.cpp) that implements [*Vec-LUT: Vector Table Lookup for Parallel Ultra-Low-Bit LLM Inference on Edge Devices*](https://arxiv.org/abs/2512.06443). It targets *parallel ultra-low-bit* LLM inference. Parallel scenarios include:
+vlut.cpp is a lightweight extension of [llama.cpp](https://github.com/ggml-org/llama.cpp) that implements [*Vec-LUT: Vector Table Lookup for Parallel Ultra-Low-Bit LLM Inference on Edge Devices*](https://dl.acm.org/doi/10.1145/3745756.3809200). It targets *parallel ultra-low-bit* LLM inference. Parallel scenarios include:
 
 - Prefilling (parallel input, most common).
 - Serving (mixed parallel input and output).
@@ -135,14 +140,14 @@ The LUT-based idea is inspired by [T-MAC](https://github.com/microsoft/T-MAC/), 
 
 ## Citation
 
-If you find this project useful, please cite our [paper](https://arxiv.org/abs/2512.06443):
+If you find this project useful, please cite our [paper](https://dl.acm.org/doi/10.1145/3745756.3809200):
 
 ```bibtex
-@article{li2025veclut,
+@inproceedings{li2026vec,
   title={Vec-LUT: Vector Table Lookup for Parallel Ultra-Low-Bit LLM Inference on Edge Devices},
   author={Li, Xiangyu and Yin, Chengyu and Wang, Weijun and Wei, Jianyu and Cao, Ting and Liu, Yunxin},
-  journal={arXiv preprint arXiv:2512.06443},
-  year={2025},
-  url={https://arxiv.org/abs/2512.06443}
+  booktitle={Proceedings of the 24th Annual International Conference on Mobile Systems, Applications and Services},
+  pages={216--230},
+  year={2026}
 }
 ```
